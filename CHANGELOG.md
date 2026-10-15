@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.2] - Unreleased
+
+- Keep newly drawn ordinary shapes editable after release, with move, resize and rotation controls.
+- Update pending shape colors, outline, fill, thickness and opacity live; commit one drawing when starting another operation, keep it editable on Enter, and cancel it with Escape.
+- Preserve layer order and opacity in pending previews, and settle pending artwork before file, clipboard and layer operations.
+
 ## [0.2.1] - 2026-10-15
 
 - Show a live outline and pixel dimensions while resizing the canvas, with eight edge and corner handles.

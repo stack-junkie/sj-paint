@@ -2,8 +2,8 @@
 
 Stack Junkie Paint (SJ Paint) is a Microsoft Paint-inspired drawing app for Windows and Linux, with brushes, shapes, selections, text and layers. Windows is the primary desktop platform; a browser edition is available too.
 
-Version: 0.2.1
-<!-- sj-paint-version: 0.2.1 -->
+Version: 0.2.2
+<!-- sj-paint-version: 0.2.2 -->
 
 SJ Paint is an independent implementation whose baseline goal is to match Microsoft Paint's appearance, features and behavior 1:1. That baseline is unfinished. Project-specific features come after the baseline is completed and verified. It is not a Microsoft product. The [parity ledger](PARITY.md) records implemented features, missing behavior and verification limits.
 
@@ -13,16 +13,16 @@ SJ Paint is an independent implementation whose baseline goal is to match Micros
 
 ### Windows
 
-Download the [v0.2.1 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.1/sj-paint-0.2.1-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
+Download the [v0.2.2 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.2/sj-paint-0.2.2-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
 
 The Windows executable is currently unsigned; it has no Authenticode signature.
 
 ### Linux
 
-Download the [v0.2.1 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.1/sj-paint-0.2.1-linux-x64.tar.gz), then run:
+Download the [v0.2.2 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.2/sj-paint-0.2.2-linux-x64.tar.gz), then run:
 
 ```sh
-tar -xzf sj-paint-0.2.1-linux-x64.tar.gz
+tar -xzf sj-paint-0.2.2-linux-x64.tar.gz
 ./sj-paint/run-paint.sh
 ```
 
@@ -34,7 +34,7 @@ To install a copy for your user and add SJ Paint to the Linux application menu:
 
 The installer copies the app to `~/.local/opt/sj-paint`, creates `~/.local/share/applications/io.stackjunkie.sjpaint.desktop`, and installs icons under `~/.local/share/icons/hicolor/`. It does not require a system-wide installation.
 
-Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.1). Use a normal desktop user.
+Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.2). Use a normal desktop user.
 
 Linux needs Electron's GTK, NSS, X11 and ALSA system libraries. Ubuntu 22.04 package names include `libgtk-3-0`, `libnss3`, `libatk-bridge2.0-0`, `libxdamage1` and `libasound2`; names vary by distribution. Normal startup keeps Chromium sandboxing enabled and does not add `--no-sandbox`.
 

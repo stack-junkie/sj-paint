@@ -1,5 +1,6 @@
 import { chromium } from 'playwright-core';
 import { verifyInteractions } from './verify-interactions.mjs';
+import { verifyPendingShapesDesktop } from './verify-pending-shapes-desktop.mjs';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -153,6 +154,7 @@ try {
   })()`);
   fixturesOwned = true;
   await verifyInteractions(page, check);
+  await verifyPendingShapesDesktop(page, check);
   const command = async (menu, action) => {
     await page.getByRole('button', { name: menu, exact: true }).click();
     await page.locator(`[data-command="${action}"]`).click();

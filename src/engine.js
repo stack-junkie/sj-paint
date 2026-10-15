@@ -275,39 +275,48 @@ export class PaintDocument extends EventTarget {
   }
 
   /** Render into a caller-owned display canvas without allocating an export snapshot. */
-  renderTo(ctx, { includeSelection = true, onlyActive = false } = {}) {
+  renderTo(ctx, { includeSelection = true, onlyActive = false, layerPreview = null } = {}) {
+    if (layerPreview && typeof layerPreview.paint !== 'function') throw new TypeError('A layer preview requires a paint callback.');
     ctx.save();
-    ctx.resetTransform();
-    ctx.globalAlpha = 1;
-    ctx.globalCompositeOperation = 'source-over';
-    ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
-    if (this.background !== null && !onlyActive) {
-      ctx.fillStyle = this.background;
-      ctx.fillRect(0, 0, this.width, this.height);
-    }
-    for (const layer of this.layers) {
-      if ((onlyActive && layer.id !== this.activeLayerId) || !layer.visible) continue;
-      ctx.globalAlpha = layer.opacity;
-      if (includeSelection && this.selection?.layerId === layer.id) {
-        if (layer.opacity === 1) {
-          ctx.drawImage(layer.canvas, 0, 0);
-          ctx.drawImage(this.selection.canvas, this.selection.x, this.selection.y);
-        } else {
-          // Apply layer opacity once to the combined layer and its floating pixels.
-          // One reusable scratch surface avoids allocating a full layer on every drag.
+    try {
+      ctx.resetTransform();
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = 'source-over';
+      ctx.clearRect(0, 0, ctx.canvas.width, ctx.canvas.height);
+      if (this.background !== null && !onlyActive) {
+        ctx.fillStyle = this.background;
+        ctx.fillRect(0, 0, this.width, this.height);
+      }
+      for (const layer of this.layers) {
+        if ((onlyActive && layer.id !== this.activeLayerId) || !layer.visible) continue;
+        ctx.globalAlpha = layer.opacity;
+        const selection = includeSelection && this.selection?.layerId === layer.id ? this.selection : null;
+        const preview = layerPreview?.layerId === layer.id ? layerPreview : null;
+        if (preview || (selection && layer.opacity !== 1)) {
+          // Composite temporary content within its layer before applying opacity.
+          // Share one scratch surface between selections and pending shape previews.
           if (!this._compositeScratch || this._compositeScratch.width !== this.width || this._compositeScratch.height !== this.height) {
             this._compositeScratch = createCanvas(this.width, this.height);
           }
           const combined = this._compositeScratch;
           const scratch = context(combined);
-          scratch.clearRect(0, 0, this.width, this.height);
-          scratch.drawImage(layer.canvas, 0, 0);
-          scratch.drawImage(this.selection.canvas, this.selection.x, this.selection.y);
+          scratch.save();
+          try {
+            scratch.resetTransform();
+            scratch.globalAlpha = 1;
+            scratch.globalCompositeOperation = 'source-over';
+            scratch.clearRect(0, 0, this.width, this.height);
+            scratch.drawImage(layer.canvas, 0, 0);
+            if (selection) scratch.drawImage(selection.canvas, selection.x, selection.y);
+            if (preview) preview.paint(scratch);
+          } finally { scratch.restore(); }
           ctx.drawImage(combined, 0, 0);
+        } else {
+          ctx.drawImage(layer.canvas, 0, 0);
+          if (selection) ctx.drawImage(selection.canvas, selection.x, selection.y);
         }
-      } else ctx.drawImage(layer.canvas, 0, 0);
-    }
-    ctx.restore();
+      }
+    } finally { ctx.restore(); }
   }
 
   _stampSelection() {
