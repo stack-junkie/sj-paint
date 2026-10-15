@@ -8,6 +8,19 @@ The initial reference was Windows 11 Microsoft.Paint 11.2605.81.0. [REA](https:/
 
 The reference informed the toolbar, selection/image/tool/brush/shape/color groups, layers panel and zoom/status layout. The implementation uses newly drawn icons and independent rendering code. Microsoft binaries, icons and model weights are not bundled.
 
+## Interaction comparison, 2026-10-15
+
+Reference: installed Microsoft.Paint 11.2605.81.0, a separate disposable Untitled window. The owner's existing drawing was not edited. SJ Paint comparison starts from 0.2.0.
+
+| Scenario | Reference evidence | SJ Paint result |
+| --- | --- | --- |
+| Canvas resize feedback, issue #1 | Owner reported the live outline and changing pixel dimensions. Direct observation confirmed eight handles, final dimensions, and top-left growth translating artwork to preserve opposite edges. | 0.2.1 adds all eight handles, a transient outline and live dimensions. Shared browser/desktop tests inspect the held-pointer state before release, then commit and undo. |
+| Resize cancellation and limits | Exact Paint Escape, capture-loss and resource-limit behavior has not been captured. | SJ Paint explicitly cancels an interrupted preview without changing pixels/history; its own engine limits still apply. These are robustness checks, not established equivalence. |
+| Pending rectangle | Direct observation: after mouse release Paint retains resize/rotation handles. Escape removes that pending rectangle. | Still different: SJ Paint rasterizes ordinary shapes on release. Editable pending shapes remain required. |
+| Interrupted drawing | Source audit found that cancellation could leave pending curves/polygons detached from their transaction and that history commands could leave stale brush canvases. | Shared gesture cleanup now clears transient geometry and pointer ownership together with the transaction. Exact Paint keyboard-interruption semantics remain unverified. |
+
+The native automation API performs a drag atomically. Attempts to snapshot an in-flight drag returned settled frames, so this pass does not claim an independently captured Microsoft Paint mid-drag frame. The resize feedback requirement is grounded in the owner's report; automated intermediate-state assertions run against SJ Paint.
+
 ## Implemented features
 
 - Dark and light layouts, palette and custom colors, tool sizes, opacity, zoom, grid, rulers, full screen, collapsible toolbar and layers panel.

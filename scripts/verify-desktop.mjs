@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core';
+import { verifyInteractions } from './verify-interactions.mjs';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -151,6 +152,7 @@ try {
     return true;
   })()`);
   fixturesOwned = true;
+  await verifyInteractions(page, check);
   const command = async (menu, action) => {
     await page.getByRole('button', { name: menu, exact: true }).click();
     await page.locator(`[data-command="${action}"]`).click();

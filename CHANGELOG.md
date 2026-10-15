@@ -2,6 +2,13 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.1] - 2026-10-15
+
+- Show a live outline and pixel dimensions while resizing the canvas, with eight edge and corner handles.
+- Preserve opposite edges and translate existing layers when resizing from the top or left; commit one undoable change on release.
+- Cancel interrupted gestures cleanly, preventing stale brush or pending geometry state from bypassing undo and unsaved-change tracking.
+- Show selection dimensions during rectangle selection and test held-pointer feedback, cancellation, zoom and history through the real UI.
+
 ## [0.2.0] - 2026-10-15
 
 - Rename the app to Stack Junkie Paint (SJ Paint), with Windows as the primary platform and Linux support retained.

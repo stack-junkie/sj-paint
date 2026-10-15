@@ -317,10 +317,46 @@ export class PaintDocument extends EventTarget {
     this.selection = null;
   }
 
+  resizeCanvas(width, height, { offsetX = 0, offsetY = 0 } = {}) {
+    const [nextWidth, nextHeight] = assertDocumentBudget(width, height, this.layers.length);
+    if (!Number.isSafeInteger(offsetX) || !Number.isSafeInteger(offsetY)) {
+      throw new RangeError('Canvas offsets must be finite safe integers.');
+    }
+    if (nextWidth === this.width && nextHeight === this.height && offsetX === 0 && offsetY === 0) return;
+    this._edit('Resize canvas', () => {
+      // Build the replacement surfaces before changing any document-owned state.
+      // This also leaves an enclosing transaction intact if a surface fails to draw.
+      const layers = this.layers.map(layer => {
+        const canvas = createCanvas(nextWidth, nextHeight);
+        const ctx = context(canvas);
+        ctx.drawImage(layer.canvas, offsetX, offsetY);
+        if (this.selection?.layerId === layer.id) {
+          // Commit floating pixels within the old canvas boundary, then translate
+          // them with their layer, just as stamping before resizing would do.
+          ctx.save();
+          ctx.beginPath();
+          ctx.rect(offsetX, offsetY, this.width, this.height);
+          ctx.clip();
+          ctx.drawImage(this.selection.canvas, this.selection.x + offsetX, this.selection.y + offsetY);
+          ctx.restore();
+        }
+        return { ...layer, canvas };
+      });
+      this.layers = layers;
+      this.selection = null;
+      this.width = nextWidth;
+      this.height = nextHeight;
+      this._compositeScratch = null;
+    });
+  }
+
   resize(width, height, { scale = false, skewX = 0, skewY = 0, target = 'selection-or-document' } = {}) {
     const [baseWidth, baseHeight] = dimensions(width, height);
     if (![skewX, skewY].every(value => Number.isFinite(Number(value)) && Math.abs(Number(value)) < 89)) {
       throw new RangeError('Skew angles must be between -89 and 89 degrees.');
+    }
+    if (!scale && Number(skewX) === 0 && Number(skewY) === 0 && (!this.selection || target === 'document')) {
+      return this.resizeCanvas(baseWidth, baseHeight);
     }
     const sx = Math.tan(Number(skewX) * Math.PI / 180);
     const sy = Math.tan(Number(skewY) * Math.PI / 180);

@@ -1,4 +1,7 @@
 import { chromium } from 'playwright-core';
+import { verifyInteractions } from './verify-interactions.mjs';
+import { verifyCanvasEngine } from './verify-canvas-engine.mjs';
+import { verifyGestureCancellation } from './verify-gesture-cancellation.mjs';
 import { createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -13,6 +16,9 @@ const checks=[];const check=(name,ok,detail)=>{checks.push({name,ok,detail});if(
 try{
  await page.goto('http://127.0.0.1:5187');await page.waitForFunction(()=>window.paintApp);await page.waitForTimeout(100);
  check('app loads',errors.length===0,errors);check('pristine document closes without warning',await page.evaluate(()=>window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
+ await verifyInteractions(page,check,{capturePreview:true});
+ await verifyCanvasEngine(page,check);
+ await verifyGestureCancellation(page,check);
  await page.screenshot({path:path.join(output,'paint-dark.png')});
  const r=await page.locator('#overlay').boundingBox();
  await page.mouse.move(r.x+80,r.y+80);await page.mouse.down();await page.mouse.move(r.x+240,r.y+140,{steps:20});await page.mouse.up();
