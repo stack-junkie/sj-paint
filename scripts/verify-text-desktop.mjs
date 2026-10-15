@@ -58,8 +58,13 @@ export async function verifyTextDesktop(page, check) {
     await type('    indented'); await page.locator('[data-action="commit-text"]').click();
     await page.waitForFunction(value => document.querySelector('#canvas').toDataURL() !== value, smallBlank, { polling: 100 });
     const indented = await ink();
-    check('desktop Apply text preserves four leading spaces', indented.minX - plain.minX >= 25 && indented.minX - plain.minX <= 28,
-      { plain, indented });
+    const expectedSpaces = await page.evaluate(() => {
+      const c = document.createElement('canvas').getContext('2d');
+      c.font = `${document.querySelector('#font-size').value}px "${document.querySelector('#font').value}"`;
+      return c.measureText('    ').width;
+    });
+    check('desktop Apply text preserves four leading spaces', Math.abs(indented.minX - plain.minX - expectedSpaces) <= 1,
+      { plain, indented, expectedSpaces });
     await page.keyboard.press('Control+z'); await waitPixels(smallBlank);
 
     await type('Draft'); await page.locator('[data-action="bold"]').click(); await page.keyboard.press('Control+y');
@@ -87,9 +92,21 @@ export async function verifyTextDesktop(page, check) {
     for (const [action, active] of Object.entries(initial.styles)) if (await page.locator(`[data-action="${action}"]`).evaluate(el => el.classList.contains('active')) !== active)
       await page.locator(`[data-action="${action}"]`).click();
     await page.locator('[data-menu="brushes"]').click(); await page.locator('[data-command="tool:brush"]').click();
+    // Undo restores pixels but leaves redo entries. New resets the fixture's
+    // history and document identity through the same public path as the user.
+    await page.locator('#overlay').focus(); await page.keyboard.press('Control+n');
+    await page.waitForFunction(initial => document.title === 'Untitled - Stack Junkie Paint' &&
+      document.querySelector('[data-action="undo"]').disabled && document.querySelector('[data-action="redo"]').disabled &&
+      document.querySelector('#canvas').width === initial.width && document.querySelector('#canvas').height === initial.height,
+      initial, { polling: 100 });
     await page.getByRole('button', { name: 'Fit to window', exact: true }).click();
+    await page.waitForFunction(() => {
+      const canvas = document.querySelector('#overlay'), rect = canvas.getBoundingClientRect(), zoom = Number(document.querySelector('#zoom-presets').value);
+      return Math.abs(rect.width - canvas.width * zoom) < 0.01 && Math.abs(rect.height - canvas.height * zoom) < 0.01;
+    }, null, { polling: 100 });
   }
-  check('desktop text fixture restores blank canvas dimensions and clears its undo history', await pixels() === blank &&
-    await page.locator('[data-action="undo"]').isDisabled() && await page.locator('#canvas').evaluate((canvas, initial) =>
+  check('desktop text fixture restores a clean blank canvas with no undo or redo history', await pixels() === blank &&
+    await page.title() === 'Untitled - Stack Junkie Paint' && await page.locator('[data-action="undo"]').isDisabled() &&
+    await page.locator('[data-action="redo"]').isDisabled() && await page.locator('#canvas').evaluate((canvas, initial) =>
       canvas.width === initial.width && canvas.height === initial.height, initial));
 }
