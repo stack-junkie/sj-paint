@@ -49,6 +49,12 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.1 canvas resizing and interruption recovery
+
+The headless browser suite passed 114 checks. The actual packaged Windows app passed 51 checks in a hidden window, preserving the user's clipboard. The Linux package passed 48 checks in an isolated Ubuntu 22.04 Xvfb container, including its private clipboard. Four atomic-save tests also passed. Native chooser responses remained harness-controlled.
+
+Shared pointer tests inspect the resize preview and dimensions before release at 50%, 100% and 200% zoom, then verify growth, shrinkage, anchoring, cancellation, no-op history and undo/redo. Engine tests cover layered pixels, floating selections and allocation failure. Additional browser checks cover interrupted drawing, stale transactions and pointer ownership. The reference evidence and unknowns are listed above; these checks do not establish exact Paint rendering or unobserved command behavior.
+
 ### Version 0.2.0 Linux and desktop registration
 
 The packaged Linux app passed 23 real runtime checks under Ubuntu 22.04 Xvfb, including native file operations, legacy project migration, all six exports and isolated clipboard use. The per-user installer passed 47 separate checks using a harmless executable fixture with the real launcher and SVG. GIO parsed the desktop file, discovered its application ID, reported it eligible for display and launched the fixture. Special-character paths, retained backups and refusal of unowned destinations were exercised. This establishes installer behavior without claiming a real GNOME/KDE app-drawer visual test.

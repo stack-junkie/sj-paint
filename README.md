@@ -110,6 +110,8 @@ Clipboard access requires browser support and permission. Printing depends on th
 
 ## Verification and known limits
 
+Version 0.2.1 passed 114 headless browser checks, 51 hidden Windows package checks, 48 Linux package checks under Xvfb and four atomic-save tests. The new interaction checks inspect resize outlines and dimensions while the pointer is held, then exercise commit, cancellation, anchoring and undo/redo. Windows clipboard access remained skipped; Linux used its private container clipboard. Native chooser responses were supplied by the harness. These results cover the tested interactions, not full Microsoft Paint parity.
+
 The actual packaged Windows 0.2.0 app passed drawing, undo/redo, file export and project compatibility checks. The window was confirmed hidden at the start and end. Checks covered native `.sjpaint` saving, legacy `.linuxpaint` migration with pixels retained, all six image exports and PNG reopening. Native chooser responses were supplied by the harness; the real preload bridge, codecs and filesystem ran. The Windows clipboard check was intentionally skipped to preserve the user's clipboard. The headless browser suite passed 35 checks, and all four atomic-save tests passed.
 
 The packaged Linux 0.2.0 app passed 23 checks under Ubuntu 22.04 Xvfb, including its isolated clipboard. The Linux installer passed 47 checks using a harmless executable fixture: GIO parsed and discovered the menu entry, marked it eligible for display and launched it through the installed launcher. Tests also covered special-character paths, retained backups and refusal to overwrite unrelated files. This verifies desktop registration and launcher behavior, not the appearance of every desktop shell.
