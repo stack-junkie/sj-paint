@@ -94,12 +94,19 @@ export async function verifyPaintProjectDesktop(page, check, { main, waitForFile
       await pixels() === beforePng && await page.locator('#layer-list .layer').count() === 2 && (await page.title()).includes('•'));
 
     await page.locator('#layer-list [data-visible]').first().click();
-    await page.waitForFunction(() => document.title.includes('•'), null, { polling: 100 });
+    // Raster export already left this layered document dirty. Wait for this
+    // visibility change to render before taking the unchanged-on-error snapshot.
+    await page.waitForFunction(previous =>
+      document.querySelector('#layer-list [data-visible]').title === 'Show layer' &&
+      document.querySelector('#canvas').toDataURL() !== previous, beforePng, { polling: 100 });
     const hidden = await snapshot(); await fixture('desktop-hidden-layer.paint');
     await openSaveAs('desktop-hidden-layer'); const failed = failure();
     await page.locator('#dialog button[type="submit"]').click(); await failed;
+    const afterFailure = await snapshot();
+    const wroteUnsupported = await main('__sjPaintVerification.fs.existsSync(__sjPaintVerification.file)');
     check('desktop .paint export rejects hidden layers without writing or marking the drawing saved',
-      !await main('__sjPaintVerification.fs.existsSync(__sjPaintVerification.file)') && JSON.stringify(hidden) === JSON.stringify(await snapshot()));
+      !wroteUnsupported && JSON.stringify(hidden) === JSON.stringify(afterFailure),
+      { wroteUnsupported, changedFields: Object.keys(hidden).filter(key => JSON.stringify(hidden[key]) !== JSON.stringify(afterFailure[key])) });
   } finally {
     if (await page.locator('#dialog').evaluate(dialog => dialog.open)) await page.locator('#dialog-cancel').click();
     await page.locator('#overlay').focus(); await page.keyboard.press('Control+n');
