@@ -2,7 +2,7 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.3] - Unreleased
+## [0.2.3] - 2026-10-15
 
 - Preserve the complete selection session so Escape restores original pixels after moving or resizing a released selection.
 - Match selection Undo/Redo and Enter retention, and restore the pending session if another document operation fails.

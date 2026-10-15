@@ -110,6 +110,8 @@ Clipboard access requires browser support and permission. Printing depends on th
 
 ## Verification and known limits
 
+Version 0.2.3 passed 213 headless browser checks, 68 hidden Windows package checks, 65 isolated Linux package checks and four atomic-save tests. New checks cover selection-session cancellation and history, Enter retention, thin selections, failed-command rollback and delayed clipboard target changes. Browser clipboard races use private stubs; Windows clipboard remains untouched and Linux uses its container clipboard.
+
 Version 0.2.2 passed 160 headless browser checks, 59 hidden Windows package checks, 56 isolated Linux package checks and four atomic-save tests. New cases cover pending-shape styling, movement, resizing, rotation, cancellation, command settlement and layer-aware previews. Clipboard/print settlement checks in the browser use stubbed output adapters; the Linux package uses its private clipboard. Full reference parity remains unfinished.
 
 Version 0.2.1 passed 114 headless browser checks, 51 hidden Windows package checks, 48 Linux package checks under Xvfb and four atomic-save tests. The new interaction checks inspect resize outlines and dimensions while the pointer is held, then exercise commit, cancellation, anchoring and undo/redo. Windows clipboard access remained skipped; Linux used its private container clipboard. Native chooser responses were supplied by the harness. These results cover the tested interactions, not full Microsoft Paint parity.

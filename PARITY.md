@@ -53,7 +53,7 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ### Version 0.2.3 selection sessions
 
-The browser suite passed 213 checks. Selection session tests cover cancellation, saved-state identity, commitment, undo/redo, crop/delete, layer changes, failed allocation and asynchronous clipboard target changes. Clipboard races use deferred browser adapters and do not touch the operating-system clipboard. Packaged Windows and Linux checks are pending. Large-document latency and peak process memory have not been measured; retained history and temporary snapshots have separate bounded ownership.
+The browser suite passed 213 checks. Selection session tests cover cancellation, saved-state identity, commitment, undo/redo, crop/delete, layer changes, failed allocation and asynchronous clipboard target changes. Clipboard races use deferred browser adapters and do not touch the operating-system clipboard. The packaged Windows app passed 68 checks with its window hidden and clipboard untouched; isolated Linux passed 65, including its private clipboard. Both packages exercise selection move/resize cancellation and undo/redo through public controls. Four atomic-save tests passed. Large-document latency and peak process memory have not been measured; retained history and temporary snapshots have separate bounded ownership.
 
 ### Version 0.2.2 pending ordinary shapes
 
