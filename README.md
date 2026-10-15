@@ -112,7 +112,7 @@ Clipboard access requires browser support and permission. Printing depends on th
 
 ## Verification and known limits
 
-Version 0.2.4 passed 267 headless browser checks, 76 hidden Windows package checks, 73 isolated Linux package checks and four atomic-save tests. New checks cover free selection rotation, anchored resizing, transformed clipboard output, cancellation and the two-step placement/crop history. Preview and committed pixels compare exactly, including over lower layers. Native chooser responses remain harness-controlled; Windows clipboard stays untouched. Full reference parity remains unfinished.
+Version 0.2.5 passed 304 headless browser checks, 89 hidden Windows package checks, 86 isolated Linux package checks and four atomic-save tests. The native project codec passed 18 groups locally, including two owned Paint fixtures. New checks cover .paint import/export, format-preserving saves, unsupported variants and edits made while file operations wait. Native chooser responses remain harness-controlled; Windows clipboard stays untouched. Full reference parity remains unfinished.
 
 Version 0.2.3 passed 213 headless browser checks, 68 hidden Windows package checks, 65 isolated Linux package checks and four atomic-save tests. New checks cover selection-session cancellation and history, Enter retention, thin selections, failed-command rollback and delayed clipboard target changes. Browser clipboard races use private stubs; Windows clipboard remains untouched and Linux uses its container clipboard.
 

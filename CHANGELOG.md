@@ -2,12 +2,13 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.5] - Unreleased
+## [0.2.5] - 2026-10-15
 
 - Open and save the observed Microsoft Paint .paint project variant, preserving layer order, names, pixel transparency and separate canvas background.
 - Add .paint to Open, Open project, drag and drop, Save As and format-preserving Ctrl+S on Windows, Linux and browser builds.
 - Reject unsupported project variants and exports with hidden layers or layer opacity before replacing documents or writing output; retain .sjpaint for those states.
 - Bound format parsing and decompression, and cancel delayed opens if the current drawing changes.
+- Preserve newer drawing and text edits during delayed file operations, and keep subsequent Ctrl+S in the chosen raster format after Save As.
 
 ## [0.2.4] - 2026-10-15
 

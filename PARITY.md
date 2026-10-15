@@ -58,6 +58,14 @@ Two disposable files saved by Paint 11.2605.81.0 establish the supported variant
 
 A separate transparent sample with a partially transparent rectangle opened correctly in Paint. Its native PNG export changed center RGB from (180,80,40) to (179,79,39), retaining alpha 128. Canvas-based import tests therefore declare a one-unit partial-alpha RGB tolerance; opaque pixels and alpha are checked exactly. Layer background bytes are preserved directly, without canvas rounding. Saving the reference with one layer hidden produced a byte-identical file, so hidden-layer persistence is not established and is not claimed.
 
+### Version 0.2.5 native project support
+
+The browser suite passed 304 checks. New cases exercise native project Open, Open project, drag and drop, Save As and Ctrl+S, plus malformed files, unsupported exports and atomic document replacement. Deferred file operations preserve newer drawing edits, unfinished text and replacement-document identity. Saving a native project as PNG switches subsequent Ctrl+S to PNG while retaining its editable layers in memory. The codec suite passed 18 groups locally, including two owned native fixtures; CI omits those ignored binary fixtures and runs the synthetic groups.
+
+The final packaged Windows app passed 89 checks with its window hidden and clipboard untouched. Isolated Linux passed 86, including its private clipboard. Four atomic-save tests passed. Both packages exercise native project binary IPC, real filesystem round trips, unsupported-export preservation and PNG format continuity. Chooser responses remain harness-controlled.
+
+Native Paint also showed a flattening warning before PNG Save As, then retained its editable layers with the PNG filename. SJ Paint now matches that next-save format behavior, but the exact warning interaction remains unresolved.
+
 ### Version 0.2.4 selection transforms
 
 The browser suite passed 267 checks. New cases cover source-preserving affine transforms, inverse rotation, anchored resizing, transformed Cut output, rotation-control edges and placement outside the canvas, cancellation, and separate placement/crop undo steps. Geometry comparisons allow 0.00001 document pixels for floating-point arithmetic. Preview, commit and crop pixels compare exactly within SJ Paint, including lower-layer composition; this does not establish pixel-exact Microsoft Paint rasterization.
