@@ -1,4 +1,5 @@
 import PROJECT from './project-format.json' with { type: 'json' };
+import { matrix, translation, multiply, inverse, mapPoint, around, rotation, selectionGeometry, hitSelectionGeometry, gestureTransform, paintSelection, ownsDocumentPoint } from './selection-transform.js';
 
 export const PAINT_LIMITS = Object.freeze({
   maxDimension: 16384, maxPixels: 32 * 1024 * 1024, maxLayers: 64,
@@ -41,21 +42,17 @@ const copy = canvas => {
   context(result).drawImage(canvas, 0, 0);
   return result;
 };
-const copySelection = selection => selection ? { ...selection, canvas: copy(selection.canvas), mask: selection.mask?.slice() } : null;
+function makeSelection({ canvas, mask, layerId, transform = translation(0, 0) }) {
+  const selected = { canvas, mask, layerId, transform: matrix(transform) };
+  // Compatibility views for existing integrations. Geometry has one canonical owner.
+  for (const key of ['x', 'y', 'width', 'height']) {
+    Object.defineProperty(selected, key, { enumerable: true, get() { return selectionGeometry(this).bounds[key]; } });
+  }
+  return selected;
+}
+const copySelection = selection => selection ? makeSelection({ ...selection, canvas: copy(selection.canvas), mask: selection.mask?.slice() }) : null;
 const stateBytes = state => state.layers.reduce((total, layer) => total + layer.canvas.width * layer.canvas.height * 4, 0) +
   (state.selection ? state.selection.canvas.width * state.selection.canvas.height * 4 + (state.selection.mask?.byteLength ?? 0) : 0);
-
-function transformedMask(selection, width, height, inverse) {
-  const mask = new Uint8Array(width * height);
-  for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
-    const point = inverse(x + 0.5, y + 0.5);
-    const sx = Math.floor(point[0]), sy = Math.floor(point[1]);
-    if (sx >= 0 && sy >= 0 && sx < selection.width && sy < selection.height) {
-      mask[y * width + x] = selection.mask?.[sy * selection.width + sx] ?? 1;
-    }
-  }
-  return mask;
-}
 
 function colorBytes(color) {
   if (typeof color !== 'string' || !CSS.supports('color', color)) throw new TypeError('Invalid selection key color.');
@@ -81,11 +78,12 @@ function sameState(a, b) {
       a.activeLayerId !== b.activeLayerId || a.layers.length !== b.layers.length ||
       Boolean(a.selection) !== Boolean(b.selection)) return false;
   if (a.selection) {
-    for (const key of ['x', 'y', 'width', 'height', 'layerId']) {
+    for (const key of ['layerId']) {
       if (a.selection[key] !== b.selection[key]) return false;
     }
+    if (!a.selection.transform.every((value, index) => value === b.selection.transform[index])) return false;
     if (!sameCanvas(a.selection.canvas, b.selection.canvas)) return false;
-    const pixels = a.selection.width * a.selection.height;
+    const pixels = a.selection.canvas.width * a.selection.canvas.height;
     for (let i = 0; i < pixels; i++) if ((a.selection.mask?.[i] ?? 1) !== (b.selection.mask?.[i] ?? 1)) return false;
   }
   return a.layers.every((layer, index) => {
@@ -111,7 +109,7 @@ function sameSavedContent(a, b) {
         const ctx = context(target);
         ctx.clearRect(0, 0, target.width, target.height);
         ctx.drawImage(source, 0, -y);
-        if (selection) ctx.drawImage(selection.canvas, selection.x, selection.y - y);
+        paintSelection(ctx, selection, 0, -y);
       }
       if (!sameCanvas(first, second)) return false;
     }
@@ -176,7 +174,7 @@ export class PaintDocument extends EventTarget {
     const selection = this.selection;
     return Object.freeze({ document: this, generation: this._documentStartRevision, revision: this._revision,
       epoch: this._editEpoch, layer: this.activeLayer, layerId: this.activeLayerId, canvas: this.activeLayer?.canvas,
-      selection, selectionCanvas: selection?.canvas, mask: selection?.mask,
+      selection, selectionCanvas: selection?.canvas, mask: selection?.mask, transform: selection?.transform,
       x: selection?.x, y: selection?.y, width: selection?.width, height: selection?.height,
       selectionLayerId: selection?.layerId, transaction: this._transaction });
   }
@@ -417,8 +415,10 @@ export class PaintDocument extends EventTarget {
         ctx.globalAlpha = layer.opacity;
         const selection = includeSelection && this.selection?.layerId === layer.id ? this.selection : null;
         const preview = layerPreview?.layerId === layer.id ? layerPreview : null;
-        if (preview || (selection && layer.opacity !== 1)) {
-          // Composite temporary content within its layer before applying opacity.
+        if (preview || selection) {
+          // Rasterize temporary content within its layer before compositing.
+          // Rotated edge coverage must be quantized before blending with lower layers,
+          // even at opacity 1, exactly as it is when the selection is committed.
           // Share one scratch surface between selections and pending shape previews.
           if (!this._compositeScratch || this._compositeScratch.width !== this.width || this._compositeScratch.height !== this.height) {
             this._compositeScratch = createCanvas(this.width, this.height);
@@ -432,13 +432,12 @@ export class PaintDocument extends EventTarget {
             scratch.globalCompositeOperation = 'source-over';
             scratch.clearRect(0, 0, this.width, this.height);
             scratch.drawImage(layer.canvas, 0, 0);
-            if (selection) scratch.drawImage(selection.canvas, selection.x, selection.y);
+            paintSelection(scratch, selection);
             if (preview) preview.paint(scratch);
           } finally { scratch.restore(); }
           ctx.drawImage(combined, 0, 0);
         } else {
           ctx.drawImage(layer.canvas, 0, 0);
-          if (selection) ctx.drawImage(selection.canvas, selection.x, selection.y);
         }
       }
     } finally { ctx.restore(); }
@@ -447,7 +446,7 @@ export class PaintDocument extends EventTarget {
   _stampSelection() {
     if (!this.selection) return;
     const target = this.layers.find(layer => layer.id === this.selection.layerId);
-    if (target) context(target.canvas).drawImage(this.selection.canvas, this.selection.x, this.selection.y);
+    if (target) paintSelection(context(target.canvas), this.selection);
     this.selection = null;
   }
 
@@ -471,7 +470,7 @@ export class PaintDocument extends EventTarget {
           ctx.beginPath();
           ctx.rect(offsetX, offsetY, this.width, this.height);
           ctx.clip();
-          ctx.drawImage(this.selection.canvas, this.selection.x + offsetX, this.selection.y + offsetY);
+          paintSelection(ctx, this.selection, offsetX, offsetY);
           ctx.restore();
         }
         return { ...layer, canvas };
@@ -497,120 +496,100 @@ export class PaintDocument extends EventTarget {
     const determinant = 1 - sx * sy;
     if (Math.abs(determinant) < 1e-8) throw new RangeError('This combination of skew angles collapses the image to a line.');
     const [nextWidth, nextHeight] = dimensions(Math.ceil(baseWidth + Math.abs(sx) * baseHeight), Math.ceil(baseHeight + Math.abs(sy) * baseWidth));
-    if (this.selection && target !== 'document') this.assertSelectionSize(nextWidth, nextHeight);
-    else assertDocumentBudget(nextWidth, nextHeight, this.layers.length);
-    const selectionTarget = Boolean(this.selection && target !== 'document');
+    if (this.selection && target !== 'document') {
+      const source = this.selection, frame = selectionGeometry(source), [a, b, c, d, e, f] = source.transform;
+      const basis = matrix([a*source.canvas.width/frame.frameWidth, b*source.canvas.width/frame.frameWidth,
+        c*source.canvas.height/frame.frameHeight, d*source.canvas.height/frame.frameHeight, e, f]);
+      const skew = matrix([1, sy, sx, 1, sx < 0 ? -sx*baseHeight : 0, sy < 0 ? -sy*baseWidth : 0]);
+      const transform = multiply(basis, multiply(skew, scale ?
+        matrix([baseWidth/source.canvas.width, 0, 0, baseHeight/source.canvas.height, 0, 0]) : translation(0, 0)));
+      if (scale) { this._setSelectionTransform(transform, 'Resize selection'); return; }
+      // Unscaled boundary changes deliberately crop or pad source pixels. Geometry gestures never do.
+      this._validateSelectionTransform({ canvas: { width: baseWidth, height: baseHeight }, transform });
+      this._edit('Resize selection bounds', () => {
+        const canvas = createCanvas(baseWidth, baseHeight), ctx = context(canvas);
+        ctx.imageSmoothingEnabled = true; ctx.imageSmoothingQuality = 'low';
+        ctx.drawImage(source.canvas, 0, 0, frame.frameWidth, frame.frameHeight);
+        const mask = new Uint8Array(baseWidth*baseHeight);
+        for (let y = 0; y < baseHeight; y++) for (let x = 0; x < baseWidth; x++) {
+          const px = Math.floor((x+.5)*source.canvas.width/frame.frameWidth), py = Math.floor((y+.5)*source.canvas.height/frame.frameHeight);
+          if (px < source.canvas.width && py < source.canvas.height) mask[y*baseWidth+x] = source.mask?.[py*source.canvas.width+px] ?? 1;
+        }
+        this.selection = makeSelection({ canvas, mask, layerId: source.layerId, transform });
+      }, { selection: true });
+      return;
+    }
+    assertDocumentBudget(nextWidth, nextHeight, this.layers.length);
     this._edit('Resize', () => {
-      const transform = source => {
+      this.layers = this.layers.map(layer => {
         const base = createCanvas(baseWidth, baseHeight);
-        if (scale) context(base).drawImage(source, 0, 0, baseWidth, baseHeight);
-        else context(base).drawImage(source, 0, 0);
-        const canvas = createCanvas(nextWidth, nextHeight);
-        const ctx = context(canvas);
-        ctx.setTransform(1, sy, sx, 1, sx < 0 ? -sx * baseHeight : 0, sy < 0 ? -sy * baseWidth : 0);
+        if (scale) context(base).drawImage(layer.canvas, 0, 0, baseWidth, baseHeight);
+        else context(base).drawImage(layer.canvas, 0, 0);
+        const canvas = createCanvas(nextWidth, nextHeight), ctx = context(canvas);
+        ctx.setTransform(1, sy, sx, 1, sx < 0 ? -sx*baseHeight : 0, sy < 0 ? -sy*baseWidth : 0);
         ctx.drawImage(base, 0, 0);
-        return canvas;
-      };
-      if (this.selection && target !== 'document') {
-        const selection = this.selection;
-        const mask = transformedMask(selection, nextWidth, nextHeight, (x, y) => {
-          x -= sx < 0 ? -sx * baseHeight : 0;
-          y -= sy < 0 ? -sy * baseWidth : 0;
-          const bx = (x - sx * y) / determinant, by = (y - sy * x) / determinant;
-          if (bx < 0 || by < 0 || bx >= baseWidth || by >= baseHeight) return [-1, -1];
-          return [scale ? bx * selection.width / baseWidth : bx, scale ? by * selection.height / baseHeight : by];
-        });
-        this.selection.canvas = transform(this.selection.canvas);
-        this.selection.mask = mask;
-        this.selection.width = nextWidth;
-        this.selection.height = nextHeight;
-      } else {
-        this._stampSelection();
-        for (const layer of this.layers) layer.canvas = transform(layer.canvas);
-        this.width = nextWidth;
-        this.height = nextHeight;
-      }
-    }, { selection: selectionTarget });
+        return { ...layer, canvas };
+      });
+      this.width = nextWidth; this.height = nextHeight;
+    });
   }
   crop() {
     if (!this.selection) return;
-    assertDocumentBudget(this.selection.width, this.selection.height, this.layers.length);
+    const { x, y, width, height } = this.getSelectionGeometry().bounds;
+    assertDocumentBudget(width, height, this.layers.length);
+    // Accept placement first. Crop has its own undo entry and keeps other layers unrotated.
     this._edit('Crop', () => {
-      const selection = this.selection;
-      const { x, y, width, height } = selection;
-      for (const layer of this.layers) {
+      const layers = this.layers.map(layer => {
         const canvas = createCanvas(width, height);
-        const ctx = context(canvas);
-        ctx.drawImage(layer.canvas, -x, -y);
-        if (selection.layerId === layer.id) ctx.drawImage(selection.canvas, 0, 0);
-        layer.canvas = canvas;
-      }
-      this.selection = null;
+        context(canvas).drawImage(layer.canvas, -x, -y);
+        return { ...layer, canvas };
+      });
+      this.layers = layers;
       this.width = width;
       this.height = height;
-    }, { selection: true, finishSelection: true });
+    });
   }
   rotate(degrees) {
     if (!Number.isFinite(Number(degrees))) throw new TypeError('Rotation must be a finite angle.');
     const angle = ((Number(degrees) % 360) + 360) % 360;
     if (!angle) return;
     const radians = angle * Math.PI / 180;
+    if (this.selection) {
+      const transform = multiply(around(this.getSelectionGeometry().center, rotation(radians)), this.selection.transform);
+      this._setSelectionTransform(transform, 'Rotate selection');
+      return;
+    }
     const rotatedDimensions = source => dimensions(
       Math.ceil(source.width * Math.abs(Math.cos(radians)) + source.height * Math.abs(Math.sin(radians)) - 1e-8),
       Math.ceil(source.width * Math.abs(Math.sin(radians)) + source.height * Math.abs(Math.cos(radians)) - 1e-8));
-    const [rotatedWidth, rotatedHeight] = rotatedDimensions(this.selection?.canvas ?? this.layers[0].canvas);
-    if (this.selection) this.assertSelectionSize(rotatedWidth, rotatedHeight);
-    else assertDocumentBudget(rotatedWidth, rotatedHeight, this.layers.length);
-    const transform = source => {
-      const [w, h] = rotatedDimensions(source);
-      const canvas = createCanvas(w, h);
-      const ctx = context(canvas);
-      ctx.translate(w / 2, h / 2);
-      ctx.rotate(radians);
-      ctx.drawImage(source, -source.width / 2, -source.height / 2);
-      return canvas;
-    };
-    const selectionTarget = Boolean(this.selection);
+    const [width, height] = rotatedDimensions(this.layers[0].canvas);
+    assertDocumentBudget(width, height, this.layers.length);
     this._edit('Rotate', () => {
-      if (this.selection) {
-        const { width, height } = this.selection;
-        const mask = transformedMask(this.selection, rotatedWidth, rotatedHeight, (x, y) => {
-          const dx = x - rotatedWidth / 2, dy = y - rotatedHeight / 2;
-          return [dx * Math.cos(radians) + dy * Math.sin(radians) + width / 2,
-            -dx * Math.sin(radians) + dy * Math.cos(radians) + height / 2];
-        });
-        this.selection.canvas = transform(this.selection.canvas);
-        this.selection.mask = mask;
-        this.selection.width = this.selection.canvas.width;
-        this.selection.height = this.selection.canvas.height;
-        this.selection.x += Math.round((width - this.selection.width) / 2);
-        this.selection.y += Math.round((height - this.selection.height) / 2);
-      } else {
-        for (const layer of this.layers) layer.canvas = transform(layer.canvas);
-        this.width = this.layers[0].canvas.width;
-        this.height = this.layers[0].canvas.height;
-      }
-    }, { selection: selectionTarget });
+      this.layers = this.layers.map(layer => {
+        const canvas = createCanvas(width, height), ctx = context(canvas);
+        ctx.translate(width / 2, height / 2); ctx.rotate(radians);
+        ctx.drawImage(layer.canvas, -layer.canvas.width / 2, -layer.canvas.height / 2);
+        return { ...layer, canvas };
+      });
+      this.width = width; this.height = height;
+    });
   }
   flip(horizontal = true) {
-    const selectionTarget = Boolean(this.selection);
+    if (this.selection) {
+      const source = this.selection;
+      const reflection = around([source.canvas.width/2, source.canvas.height/2], matrix([horizontal ? -1 : 1, 0, 0, horizontal ? 1 : -1, 0, 0]));
+      this._setSelectionTransform(multiply(source.transform, reflection), 'Flip selection');
+      return;
+    }
     this._edit('Flip', () => {
-      const flipCanvas = source => {
-        const canvas = createCanvas(source.width, source.height);
-        const ctx = context(canvas);
-        ctx.translate(horizontal ? source.width : 0, horizontal ? 0 : source.height);
+      this.layers = this.layers.map(layer => {
+        const canvas = createCanvas(layer.canvas.width, layer.canvas.height), ctx = context(canvas);
+        ctx.translate(horizontal ? canvas.width : 0, horizontal ? 0 : canvas.height);
         ctx.scale(horizontal ? -1 : 1, horizontal ? 1 : -1);
-        ctx.drawImage(source, 0, 0);
-        return canvas;
-      };
-      if (this.selection) {
-        const selection = this.selection;
-        selection.mask = transformedMask(selection, selection.width, selection.height,
-          (x, y) => [horizontal ? selection.width - x : x, horizontal ? y : selection.height - y]);
-        selection.canvas = flipCanvas(selection.canvas);
-      }
-      else for (const layer of this.layers) layer.canvas = flipCanvas(layer.canvas);
-    }, { selection: selectionTarget });
+        ctx.drawImage(layer.canvas, 0, 0);
+        return { ...layer, canvas };
+      });
+    });
   }
   clear() {
     if (this.selection) { this.deleteSelection(); return; }
@@ -622,7 +601,9 @@ export class PaintDocument extends EventTarget {
   invertColors() {
     const selectionTarget = Boolean(this.selection);
     this._edit('Invert colors', () => {
-      const ctx = context(this.selection?.canvas ?? this.activeLayer.canvas);
+      const selected = this.selection;
+      const edited = selected ? copy(selected.canvas) : this.activeLayer.canvas;
+      const ctx = context(edited);
       const image = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
       for (let i = 0; i < image.data.length; i += 4) {
         if (!image.data[i + 3]) continue;
@@ -631,6 +612,7 @@ export class PaintDocument extends EventTarget {
         image.data[i + 2] = 255 - image.data[i + 2];
       }
       ctx.putImageData(image, 0, 0);
+      if (selected) this.selection = makeSelection({ ...selected, canvas: edited });
     }, { selection: selectionTarget });
   }
 
@@ -760,7 +742,7 @@ export class PaintDocument extends EventTarget {
     }
     ctx.putImageData(captured, 0, 0);
     source.putImageData(pixels, x, y);
-    this.selection = { x, y, width, height, canvas, mask, layerId: this.activeLayerId };
+    this.selection = makeSelection({ canvas, mask, layerId: this.activeLayerId, transform: translation(x, y) });
   }
   selectRect(x, y, width, height, options = {}) {
     if (![x, y, width, height].every(Number.isFinite)) return;
@@ -793,10 +775,9 @@ export class PaintDocument extends EventTarget {
       const selected = this.selection;
       const mask = new Uint8Array(this.width * this.height).fill(1);
       let count = mask.length;
-      for (let y = 0; y < selected.height; y++) for (let x = 0; x < selected.width; x++) {
-        if (!(selected.mask?.[y * selected.width + x] ?? 1)) continue;
-        const dx = selected.x + x, dy = selected.y + y;
-        if (dx >= 0 && dy >= 0 && dx < this.width && dy < this.height) { mask[dy * this.width + dx] = 0; count--; }
+      const inv = inverse(selected.transform);
+      for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+        if (ownsDocumentPoint(selected, x+.5, y+.5, inv)) { mask[y*this.width+x] = 0; count--; }
       }
       if (!count) { this._stampSelection(); return; }
       this._capture(0, 0, this.width, this.height, null, { transparent: false }, mask);
@@ -805,27 +786,77 @@ export class PaintDocument extends EventTarget {
   selectAll() { this.selectRect(0, 0, this.width, this.height); }
   deselect() { this.commitSelection(); }
   deleteSelection() { if (this.selection) this._edit('Delete selection', () => { this.selection = null; }, { selection: true, finishSelection: true }); }
+  getSelectionGeometry({ zoom = 1 } = {}) {
+    return this.selection ? selectionGeometry(this.selection, zoom) : null;
+  }
+  hitSelection(point, { zoom = 1 } = {}) {
+    return this.selection ? hitSelectionGeometry(this.selection, point, zoom) : null;
+  }
+  _validateSelectionTransform(selection) {
+    inverse(selection.transform);
+    const { width, height } = selectionGeometry(selection).bounds;
+    const [w, h] = dimensions(width, height);
+    const sourcePixels = selection.canvas.width * selection.canvas.height;
+    assertDocumentBudget(this.width, this.height, this.layers.length, Math.max(sourcePixels, w*h));
+    return selection;
+  }
+  _setSelectionTransform(transform, label = 'Transform selection') {
+    if (!this.selection) return;
+    const next = this._validateSelectionTransform(makeSelection({ ...this.selection, transform }));
+    if (next.transform.every((value, index) => value === this.selection.transform[index])) return;
+    this._edit(label, () => { this.selection = next; }, { selection: true });
+  }
+  beginSelectionTransform(hit, point) {
+    if (!this.selection || !Array.isArray(point) || point.length !== 2 || !point.every(Number.isFinite) ||
+      !hit || !['move', 'resize', 'rotate'].includes(hit.kind) ||
+      (hit.kind === 'resize' && (!Number.isInteger(hit.index) || hit.index < 0 || hit.index > 7))) return false;
+    if (this._transaction) return false;
+    this.begin('Transform selection');
+    this._transaction.selectionGesture = { hit: { ...hit }, start: [...point], source: this.selection };
+    return true;
+  }
+  updateSelectionTransform(point) {
+    const gesture = this._transaction?.selectionGesture;
+    if (!gesture || !Array.isArray(point) || point.length !== 2 || !point.every(Number.isFinite)) return;
+    this._setSelectionTransform(gestureTransform(gesture.source, gesture.hit, gesture.start, point));
+  }
+  translateSelection(dx, dy) {
+    if (!this.selection || !Number.isFinite(dx) || !Number.isFinite(dy)) return;
+    this._setSelectionTransform(multiply(translation(dx, dy), this.selection.transform), 'Move selection');
+  }
   moveSelection(x, y) {
     if (!this.selection || !Number.isFinite(x) || !Number.isFinite(y)) return;
-    this._edit('Move selection', () => { this.selection.x = Math.round(x); this.selection.y = Math.round(y); }, { selection: true });
+    const bounds = this.getSelectionGeometry().bounds;
+    this.translateSelection(Math.round(x)-bounds.x, Math.round(y)-bounds.y);
   }
-  resizeSelection(width, height, { x = this.selection?.x, y = this.selection?.y, source = this.selection } = {}) {
-    if (!this.selection || !source || !Number.isFinite(x) || !Number.isFinite(y)) return;
-    [width, height] = this.assertSelectionSize(width, height);
-    this._edit('Resize selection', () => {
-      const canvas = createCanvas(width, height);
-      context(canvas).drawImage(source.canvas, 0, 0, width, height);
-      const mask = transformedMask(source, width, height, (px, py) => [px * source.width / width, py * source.height / height]);
-      Object.assign(this.selection, { x: Math.round(x), y: Math.round(y), width, height, canvas, mask });
-    }, { selection: true });
+  resizeSelection(width, height, { x, y, source = this.selection } = {}) {
+    if (!this.selection || !source) return;
+    [width, height] = dimensions(width, height);
+    const geometry = selectionGeometry(source), [a, b, c, d, e, f] = source.transform;
+    let transform = matrix([a*width/geometry.frameWidth, b*width/geometry.frameWidth,
+      c*height/geometry.frameHeight, d*height/geometry.frameHeight, e, f]);
+    if (x !== undefined || y !== undefined) {
+      if (!Number.isFinite(x) || !Number.isFinite(y)) return;
+      const bounds = selectionGeometry({ ...source, transform }).bounds;
+      transform = multiply(translation(Math.round(x)-bounds.x, Math.round(y)-bounds.y), transform);
+    }
+    this._setSelectionTransform(transform, 'Resize selection');
+  }
+  selectionCanvas() {
+    if (!this.selection) return null;
+    this._validateSelectionTransform(this.selection);
+    const { x, y, width, height } = this.getSelectionGeometry().bounds;
+    const canvas = createCanvas(width, height);
+    paintSelection(context(canvas), this.selection, -x, -y);
+    return canvas;
   }
   pasteCanvas(canvas) {
     if (!canvas || typeof canvas.getContext !== 'function') throw new TypeError('Paste requires a canvas.');
     this.assertSelectionSize(canvas.width, canvas.height);
     this._startSelection('Paste', () => {
       this._stampSelection();
-      this.selection = { x: 0, y: 0, width: canvas.width, height: canvas.height, canvas: copy(canvas),
-        mask: new Uint8Array(canvas.width * canvas.height).fill(1), layerId: this.activeLayerId };
+      this.selection = makeSelection({ canvas: copy(canvas),
+        mask: new Uint8Array(canvas.width * canvas.height).fill(1), layerId: this.activeLayerId });
     });
   }
 
@@ -834,10 +865,12 @@ export class PaintDocument extends EventTarget {
     if (typeof color !== 'string' || !CSS.supports('color', color)) throw new TypeError('Invalid fill color.');
     const selected = this.selection;
     const canvas = selected?.canvas ?? this.activeLayer.canvas;
-    x = Math.floor(x - (selected?.x ?? 0)); y = Math.floor(y - (selected?.y ?? 0));
+    if (selected) [x, y] = mapPoint(inverse(selected.transform), [x, y]);
+    x = Math.floor(x); y = Math.floor(y);
     if (x < 0 || y < 0 || x >= canvas.width || y >= canvas.height) return;
     this._edit('Fill', () => {
-      const ctx = context(canvas);
+      const edited = selected ? copy(canvas) : canvas;
+      const ctx = context(edited);
       const image = ctx.getImageData(0, 0, canvas.width, canvas.height);
       const data = image.data;
       const swatch = context(createCanvas(1, 1));
@@ -875,6 +908,7 @@ export class PaintDocument extends EventTarget {
         }
       }
       ctx.putImageData(image, 0, 0);
+      if (selected) this.selection = makeSelection({ ...selected, canvas: edited });
     }, { selection: Boolean(selected) });
   }
 
@@ -885,7 +919,7 @@ export class PaintDocument extends EventTarget {
         let canvas = layer.canvas;
         if (this.selection?.layerId === layer.id) {
           canvas = copy(canvas);
-          context(canvas).drawImage(this.selection.canvas, this.selection.x, this.selection.y);
+          paintSelection(context(canvas), this.selection);
         }
         return { id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity, png: canvas.toDataURL('image/png') };
       }) };

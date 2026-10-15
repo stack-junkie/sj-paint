@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.4] - Unreleased
+
+- Rotate raster selections freely with an editable frame and a rotation control, including above the canvas edge.
+- Preserve original selection pixels and masks through move, resize, rotate and flip operations; render and copy the transformed result from one shared geometry model.
+- Match the observed crop history: accept transformed placement first, then record the crop as a separate undoable edit.
+
 ## [0.2.3] - 2026-10-15
 
 - Preserve the complete selection session so Escape restores original pixels after moving or resizing a released selection.

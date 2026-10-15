@@ -8,6 +8,8 @@ import { verifyLayerPreview } from './verify-layer-preview.mjs';
 import { verifyClipboardOwnership } from './verify-clipboard-ownership.mjs';
 import { verifySelectionInteractions } from './verify-selection-interactions.mjs';
 import { verifySelectionSession } from './verify-selection-session.mjs';
+import { verifySelectionRotation } from './verify-selection-rotation.mjs';
+import { verifySelectionTransform } from './verify-selection-transform.mjs';
 import { createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -29,6 +31,8 @@ try{
  await verifyLayerPreview(page,check);
  await verifyPendingShapes(page,check);
  await verifySelectionSession(page,check);
+ await verifySelectionTransform(page,check);
+ await verifySelectionRotation(page,check);
  await verifySelectionInteractions(page,check);
  await verifyClipboardOwnership(page,check);
  await page.screenshot({path:path.join(output,'paint-dark.png')});
@@ -89,7 +93,7 @@ try{
    d.invertColors();p=d.composite().getContext('2d');const invertedColors=[...p.getImageData(15,15,1,1).data].join(',')==='0,255,255,255';
    const t=new PaintDocument(40,40);t.setBackground(null);t.begin();const tc=t.activeLayer.canvas.getContext('2d');tc.fillStyle='#fff';tc.fillRect(0,0,40,40);tc.fillStyle='#f00';tc.fillRect(5,5,8,8);t.commit();t.markSaved();const initial=t.composite().toDataURL();t.setSelectionTransparency(true,'#ffffff');t.selectRect(0,0,20,20);const transparent=t.selection.canvas.getContext('2d').getImageData(0,0,1,1).data[3]===0;t.deselect();const keyLossless=t.composite().toDataURL()===initial&&!t.dirty;
    t.selectPolygon([[0,0],[19,0],[0,19]]);const before=t.composite().toDataURL();t.invertSelection();t.invertSelection();const doubleInvert=t.composite().toDataURL()===before;
-   const original={...t.selection};t.resizeSelection(30,30,{x:2,y:2,source:original});const resizedMask=t.selection.mask.length===900&&t.selection.canvas.width===30;
+   const original={...t.selection};t.resizeSelection(30,30,{x:2,y:2,source:original});const geometry=t.getSelectionGeometry(),output=t.selectionCanvas();const resizedMask=t.selection.mask===original.mask&&t.selection.canvas===original.canvas&&geometry.frameWidth===30&&geometry.frameHeight===30&&output.width===30&&output.height===30;
    return {invertedRegion,invertedColors,transparent,keyLossless,doubleInvert,resizedMask};
  });
  for(const [name,ok] of Object.entries(selectionFeatures))check(name,ok,null);

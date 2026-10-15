@@ -79,11 +79,12 @@ export async function verifySelectionSession(page, check) {
     record('layer mutation settles selection before recording its own independent edit', separatedHistory && propertyUndo && project(layered) === layerBaseline);
 
     const cropped = fixture(), cropBaseline = project(cropped), cropUndo = cropped._undo.length;
-    cropped.selectRect(2, 2, 3, 3); cropped.moveSelection(6, 2); cropped.crop();
-    const croppedProject = project(cropped), cropFinal = cropped.width === 3 && cropped.height === 3 && !cropped.selection && !cropped.hasSelectionSession && cropped._undo.length === cropUndo + 1;
-    cropped.undo(); const cropRestores = project(cropped) === cropBaseline && !cropped.selection;
-    cropped.redo();
-    record('crop accepts the entire selection session as one reversible edit', cropFinal && cropRestores && project(cropped) === croppedProject && !cropped.selection);
+    cropped.selectRect(2, 2, 3, 3); cropped.moveSelection(6, 2); const cropPlaced = project(cropped); cropped.crop();
+    const croppedProject = project(cropped), cropFinal = cropped.width === 3 && cropped.height === 3 && !cropped.selection && !cropped.hasSelectionSession && cropped._undo.length === cropUndo + 2;
+    cropped.undo(); const cropRestores = project(cropped) === cropPlaced && !cropped.selection;
+    cropped.undo(); const placementRestores = project(cropped) === cropBaseline && !cropped.selection;
+    cropped.redo(); cropped.redo();
+    record('crop records accepted selection placement before its separate reversible crop', cropFinal && cropRestores && placementRestores && project(cropped) === croppedProject && !cropped.selection);
     const deleted = fixture(), deleteBaseline = project(deleted), deleteUndo = deleted._undo.length;
     deleted.selectRect(2, 2, 3, 3); deleted.moveSelection(6, 2); deleted.deleteSelection();
     const deletionFinal = pixel(deleted, 3, 3)[3] === 0 && pixel(deleted, 7, 3)[3] === 0 && deleted._undo.length === deleteUndo + 1 && !deleted.hasSelectionSession;
@@ -109,12 +110,12 @@ export async function verifySelectionSession(page, check) {
     const originalDrawImage = CanvasRenderingContext2D.prototype.drawImage;
     let failedDraw = false;
     CanvasRenderingContext2D.prototype.drawImage = function (...args) {
-      if (this.canvas.width === 9 && this.canvas.height === 7) throw new Error('Injected selection resize failure');
+      if (args[0] === invalid.selection?.canvas) throw new Error('Injected selection export failure');
       return originalDrawImage.apply(this, args);
     };
-    try { invalid.resizeSelection(9, 7); } catch (error) { failedDraw = error.message === 'Injected selection resize failure'; }
+    try { invalid.selectionCanvas(); } catch (error) { failedDraw = error.message === 'Injected selection export failure'; }
     finally { CanvasRenderingContext2D.prototype.drawImage = originalDrawImage; }
-    record('failed selection transform rolls back its checkpoint and preserves the session baseline', failedDraw && project(invalid) === invalidBefore &&
+    record('failed transformed selection export preserves the session baseline and pending pixels', failedDraw && project(invalid) === invalidBefore &&
       selected(invalid) === invalidSelection && invalid._selectionSession === invalidSession && invalid._transaction === null && invalid._undo.length === invalidHistory);
 
     const atomic = fixture();

@@ -169,6 +169,17 @@ export async function verifyClipboardOwnership(page, check) {
       !normalCut.selection && normalCut.redAlpha === 0 && normalCut.blue.join(',') === '0,0,255,255' &&
       normalCut.copiedSize.join(',') === '4,4' && normalCut.copiedPixel.join(',') === '255,0,0,255' && normalCut.undo === cutBefore + 1 && normalCut.dirty, normalCut);
 
+    await page.evaluate(key => { const c = window[key]; c.fixture(); c.doc.resizeSelection(8, 4); c.doc.rotate(90); }, key);
+    await command('cut', { menu: true }); await finish('cut');
+    const transformedCut = await page.evaluate(async key => {
+      const c = window[key], job = [...c.jobs].reverse().find(job => job.kind === 'write');
+      const image = await c.bitmap(job.copied[0]);
+      try { return { width: image.width, height: image.height, selection: Boolean(c.doc.selection) }; }
+      finally { image.close(); }
+    }, key);
+    record('Cut copies the rotated resized result rather than the retained source raster',
+      transformedCut.width === 4 && transformedCut.height === 8 && !transformedCut.selection, transformedCut);
+
     const pasteBefore = await page.evaluate(key => { const c = window[key]; c.fixture(20, false); return c.doc._undo.length; }, key);
     await command('paste');
     await finish('paste');
