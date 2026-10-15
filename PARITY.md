@@ -49,6 +49,12 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.2 pending ordinary shapes
+
+The browser suite passed 160 checks, including 14 geometry groups, nine layer-preview groups and public UI shape workflows. Geometry comparisons tolerate only 0.00001 document pixels for DOMMatrix arithmetic; preview and committed display pixels compare exactly. The packaged Windows app passed 59 checks with its window hidden and clipboard untouched. The isolated Linux package passed 56 checks, including its private clipboard. Four atomic-save tests passed.
+
+The package checks exercise pending release, recoloring, Enter retention, movement, Escape and a committed drawing's single undo step. Browser tests additionally cover rotation, anchored resize, output settlement and interruption ownership. Browser clipboard and print settlement checks use stubbed output adapters, not actual native printing. The native chooser remains harness-controlled. Unobserved Paint behavior remains explicitly open above.
+
 ### Version 0.2.1 canvas resizing and interruption recovery
 
 The headless browser suite passed 114 checks. The actual packaged Windows app passed 51 checks in a hidden window, preserving the user's clipboard. The Linux package passed 48 checks in an isolated Ubuntu 22.04 Xvfb container, including its private clipboard. Four atomic-save tests also passed. Native chooser responses remained harness-controlled.

@@ -2,7 +2,7 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.2] - Unreleased
+## [0.2.2] - 2026-10-15
 
 - Keep newly drawn ordinary shapes editable after release, with move, resize and rotation controls.
 - Update pending shape colors, outline, fill, thickness and opacity live; commit one drawing when starting another operation, keep it editable on Enter, and cancel it with Escape.

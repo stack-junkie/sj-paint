@@ -110,6 +110,8 @@ Clipboard access requires browser support and permission. Printing depends on th
 
 ## Verification and known limits
 
+Version 0.2.2 passed 160 headless browser checks, 59 hidden Windows package checks, 56 isolated Linux package checks and four atomic-save tests. New cases cover pending-shape styling, movement, resizing, rotation, cancellation, command settlement and layer-aware previews. Clipboard/print settlement checks in the browser use stubbed output adapters; the Linux package uses its private clipboard. Full reference parity remains unfinished.
+
 Version 0.2.1 passed 114 headless browser checks, 51 hidden Windows package checks, 48 Linux package checks under Xvfb and four atomic-save tests. The new interaction checks inspect resize outlines and dimensions while the pointer is held, then exercise commit, cancellation, anchoring and undo/redo. Windows clipboard access remained skipped; Linux used its private container clipboard. Native chooser responses were supplied by the harness. These results cover the tested interactions, not full Microsoft Paint parity.
 
 The actual packaged Windows 0.2.0 app passed drawing, undo/redo, file export and project compatibility checks. The window was confirmed hidden at the start and end. Checks covered native `.sjpaint` saving, legacy `.linuxpaint` migration with pixels retained, all six image exports and PNG reopening. Native chooser responses were supplied by the harness; the real preload bridge, codecs and filesystem ran. The Windows clipboard check was intentionally skipped to preserve the user's clipboard. The headless browser suite passed 35 checks, and all four atomic-save tests passed.
