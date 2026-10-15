@@ -52,6 +52,12 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.4 selection transforms
+
+The browser suite passed 267 checks. New cases cover source-preserving affine transforms, inverse rotation, anchored resizing, transformed Cut output, rotation-control edges and placement outside the canvas, cancellation, and separate placement/crop undo steps. Geometry comparisons allow 0.00001 document pixels for floating-point arithmetic. Preview, commit and crop pixels compare exactly within SJ Paint, including lower-layer composition; this does not establish pixel-exact Microsoft Paint rasterization.
+
+The packaged Windows app passed 76 checks in its hidden window with the clipboard untouched. Isolated Linux passed 73 checks, including its private clipboard. Both exercise rotation and its cancellation/history through public controls. Four atomic-save tests passed. Chooser responses remain harness-controlled; modifier behavior, crossing resize edges, complete keyboard accessibility and exact control appearance remain unverified.
+
 ### Version 0.2.3 selection sessions
 
 The browser suite passed 213 checks. Selection session tests cover cancellation, saved-state identity, commitment, undo/redo, crop/delete, layer changes, failed allocation and asynchronous clipboard target changes. Clipboard races use deferred browser adapters and do not touch the operating-system clipboard. The packaged Windows app passed 68 checks with its window hidden and clipboard untouched; isolated Linux passed 65, including its private clipboard. Both packages exercise selection move/resize cancellation and undo/redo through public controls. Four atomic-save tests passed. Large-document latency and peak process memory have not been measured; retained history and temporary snapshots have separate bounded ownership.
