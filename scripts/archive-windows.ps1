@@ -16,7 +16,10 @@ try {
     $archiveName = "sj-paint-$version-windows-x64.zip"
     $archive = Join-Path $projectRoot "release\$archiveName"
     Compress-Archive -LiteralPath $appStage -DestinationPath $archive -Force
-    $digest = (Get-FileHash -LiteralPath $archive -Algorithm SHA256).Hash.ToLowerInvariant()
+    $stream = [IO.File]::OpenRead($archive)
+    $sha256 = [Security.Cryptography.SHA256]::Create()
+    try { $digest = [BitConverter]::ToString($sha256.ComputeHash($stream)).Replace('-', '').ToLowerInvariant() }
+    finally { $stream.Dispose(); $sha256.Dispose() }
     [IO.File]::WriteAllText("$archive.sha256", "$digest  $archiveName`n", [Text.UTF8Encoding]::new($false))
     Write-Output "Created release/$archiveName and its SHA-256 checksum"
 } finally {
