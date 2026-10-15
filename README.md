@@ -112,6 +112,8 @@ Clipboard access requires browser support and permission. Printing depends on th
 
 ## Verification and known limits
 
+Version 0.2.7 passed 443 headless browser checks, 124 hidden Windows package checks, 120 isolated Linux package checks and 16 local TIFF codec groups. New cases cover TIFF import/reopen, long-word text and indentation, draft ownership and keyboard focus. Native chooser responses remain harness-controlled; Windows clipboard stays untouched.
+
 Version 0.2.6 passed 366 headless browser checks, 96 hidden Windows package checks, 92 isolated Linux package checks and four atomic-save tests. Eraser checks cover observed square coverage, alpha-preserving color replacement, cursor alignment, cancellation and layer history. Native chooser responses remain harness-controlled; Windows clipboard stays untouched.
 
 Version 0.2.5 passed 304 headless browser checks, 89 hidden Windows package checks, 86 isolated Linux package checks and four atomic-save tests. The native project codec passed 18 groups locally, including two owned Paint fixtures. New checks cover .paint import/export, format-preserving saves, unsupported variants and edits made while file operations wait. Native chooser responses remain harness-controlled; Windows clipboard stays untouched. Full reference parity remains unfinished.

@@ -38,6 +38,8 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 
 ## Baseline gaps and unresolved behavior
 
+Microsoft documents a mixture of device-specific local models and account-backed cloud services for Paint AI. Cocreator, Image Creator, generative fill, object select and sticker generation have separate requirements. No equivalent backend has been selected or connected for SJ Paint, and matching their output is not established. See [Microsoft Paint application card](https://learn.microsoft.com/en-us/windows/ai/cards/microsoft-paint-application-card) and [Copilot+ Paint requirements](https://support.microsoft.com/en-us/windows/ai/ai-apps/use-copilot-pc-features-in-paint), checked 2026-10-15. This documentation is capability context, not a runtime observation of the pinned reference build.
+
 | Area | Current behavior |
 | --- | --- |
 | Microsoft services and AI | No Microsoft account, sharing or cloud integration. Cocreator, Image Creator, generative fill/erase, object selection and AI background removal are not implemented. |
@@ -54,6 +56,8 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 ## Verification history
 
 ### Version 0.2.7 TIFF, text and keyboard controls
+
+The browser suite passed 443 checks, hidden Windows passed 124, isolated Linux passed 120, and 16 TIFF codec groups passed locally. Four atomic-save tests passed.
 
 Two owned Paint TIFF saves establish native LZW/predictor-2 RGBA8 compatibility: an opaque 128 by 128 color grid (1334 bytes, SHA-256 `e9dea64dc8bc57c6d134256a3b63cb7f1bb97133be874d3c7b10f6a8008999d5`) and a partially transparent 200 by 100 sample (956 bytes, SHA-256 `cdaddd4653fe257673a040780b40232945724326cb09546d953ea1426cb4ed45`). Decoded bytes match the corresponding native .paint and PNG pixels exactly. Synthetic codec cases also exercise both byte orders, strip codecs, predictor, orientation, alpha and malformed inputs. Imported metadata is not retained.
 
