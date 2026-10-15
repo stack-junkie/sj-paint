@@ -24,8 +24,8 @@
     "test:windows": "node scripts/test-windows.mjs"
   },
   "devDependencies": {
-    "electron": "^38.0.0",
-    "electron-builder": "^26.0.12",
+    "electron": "44.7.2",
+    "electron-builder": "26.15.3",
     "playwright-core": "1.56.1",
     "vite": "^7.1.0"
   },

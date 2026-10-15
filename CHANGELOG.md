@@ -6,6 +6,7 @@ Changes are grouped by version. New headings created by the version helper remai
 
 - Rename the app to Stack Junkie Paint (SJ Paint), with Windows as the primary platform and Linux support retained.
 - Add a portable Windows x64 package and real hidden-window Windows verification.
+- Update the bundled Electron runtime to 44.7.2 to address published runtime security advisories.
 - Add a per-user Linux installer, app-drawer launcher and original SJ Paint icons.
 - Save layered projects as `.sjpaint` while retaining import of existing `.linuxpaint` files.
 - Keep the full Microsoft Paint appearance, feature and behavior baseline explicit; project-specific additions follow parity.
