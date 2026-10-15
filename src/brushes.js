@@ -1,6 +1,5 @@
 export const BRUSHES = [
   { id: 'pencil', label: 'Pencil' },
-  { id: 'eraser', label: 'Eraser' },
   { id: 'brush', label: 'Brush' },
   { id: 'calligraphy', label: 'Calligraphy brush' },
   { id: 'calligraphy-pen', label: 'Calligraphy pen' },
@@ -61,7 +60,7 @@ export function createStroke(ctx, tool, options = {}) {
   const opacity = clamp(finite(options.opacity, 1), 0, 1) * ctx.globalAlpha;
   const random = randomSource(options.seed ?? Math.floor(Math.random() * 4294967296));
   const transform = ctx.getTransform();
-  const pressureSensitive = !['eraser', 'marker', 'calligraphy-pen', 'airbrush'].includes(tool);
+  const pressureSensitive = !['marker', 'calligraphy-pen', 'airbrush'].includes(tool);
   const spacing = Math.max(0.35, size * (tool === 'airbrush' ? 0.16 : tool === 'watercolor' ? 0.13 : 0.075));
   const pigmentOpacity = tool === 'marker' ? 0.58 : tool === 'watercolor' ? 0.28 : 1;
   let base;
@@ -103,11 +102,11 @@ export function createStroke(ctx, tool, options = {}) {
     const grainCount = Math.min(240, Math.max(12, Math.ceil(radius * 5)));
     context.save();
     try {
-      context.fillStyle = tool === 'eraser' ? '#000000' : color;
+      context.fillStyle = color;
       context.strokeStyle = color;
       context.lineCap = 'round';
 
-      if (tool === 'pencil' || tool === 'brush' || tool === 'eraser') {
+      if (tool === 'pencil' || tool === 'brush') {
         ellipse(context, x, y, radius, radius);
       } else if (tool === 'calligraphy' || tool === 'calligraphy-pen') {
         ellipse(context, x, y, radius, Math.max(0.3, radius * (tool === 'calligraphy' ? 0.23 : 0.1)), -Math.PI / 4);
@@ -198,7 +197,7 @@ export function createStroke(ctx, tool, options = {}) {
       ctx.clearRect(left, top, width, height);
       ctx.drawImage(base.canvas, left, top, width, height, left, top, width, height);
       ctx.globalAlpha = opacity * pigmentOpacity;
-      ctx.globalCompositeOperation = tool === 'eraser' ? 'destination-out' : 'source-over';
+      ctx.globalCompositeOperation = 'source-over';
       ctx.drawImage(paint.canvas, left, top, width, height, left, top, width, height);
     } finally {
       ctx.restore();

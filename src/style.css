@@ -18,3 +18,5 @@
 .resize-handle[data-handle="se"]{right:-5px;bottom:-5px;cursor:nwse-resize}
 .resizing-canvas .resize-handle{opacity:0}
 #selection-rotation{position:absolute;z-index:4;width:18px;height:18px;min-width:18px;min-height:18px;padding:1px;border:1px solid #555;border-radius:50%;color:#333;background:#fff;transform:translate(-50%,-50%);cursor:grab;touch-action:none}#selection-rotation:active{cursor:grabbing}
+
+#eraser-cursor{position:absolute;z-index:4;pointer-events:none;background:#fff;border:1px solid #000;box-sizing:border-box}

@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.6] - Unreleased
+
+- Match observed square erasing, continuous diagonal coverage and right-button Color 1 to Color 2 replacement while preserving alpha.
+- Give the eraser its own size and cursor footprint, independent of brush opacity, and cancel interrupted strokes without stale history.
+- Keep the eraser cursor aligned during zoom and scrolling, and retain fractional zoom presets in the dropdown.
+
 ## [0.2.5] - 2026-10-15
 
 - Open and save the observed Microsoft Paint .paint project variant, preserving layer order, names, pixel transparency and separate canvas background.

@@ -11,6 +11,8 @@ import { verifySelectionSession } from './verify-selection-session.mjs';
 import { verifySelectionRotation } from './verify-selection-rotation.mjs';
 import { verifySelectionTransform } from './verify-selection-transform.mjs';
 import { verifyPaintProject } from './verify-paint-project.mjs';
+import { verifyEraser } from './verify-eraser.mjs';
+import { verifyEraserInteractions } from './verify-eraser-interactions.mjs';
 import { verifyRasterImport } from './verify-raster-import.mjs';
 import { createServer } from 'vite';
 import fs from 'node:fs/promises';
@@ -38,6 +40,8 @@ try{
  await verifySelectionInteractions(page,check);
  await verifyClipboardOwnership(page,check);
  await verifyPaintProject(page,check);
+ await verifyEraser(page,check);
+ await verifyEraserInteractions(page,check);
  await verifyRasterImport(page,check);
  await page.screenshot({path:path.join(output,'paint-dark.png')});
  const r=await page.locator('#overlay').boundingBox();
@@ -103,7 +107,7 @@ try{
  for(const [name,ok] of Object.entries(selectionFeatures))check(name,ok,null);
  const rasterTools=await page.evaluate(async()=>{
    const {createStroke,BRUSHES}=await import('/src/brushes.js');const {PaintDocument}=await import('/src/engine.js');
-   const brushes=BRUSHES.map(({id})=>{const c=document.createElement('canvas');c.width=100;c.height=60;const ctx=c.getContext('2d');if(id==='eraser'){ctx.fillStyle='#000';ctx.fillRect(0,0,100,60);}const before=c.toDataURL();const stroke=createStroke(ctx,id,{color:'#ff0000',size:12,opacity:.7,seed:12});stroke.move(10,20,.5);stroke.move(80,40,.5);stroke.end();return {id,changed:before!==c.toDataURL()};});
+   const brushes=BRUSHES.map(({id})=>{const c=document.createElement('canvas');c.width=100;c.height=60;const ctx=c.getContext('2d');const before=c.toDataURL();const stroke=createStroke(ctx,id,{color:'#ff0000',size:12,opacity:.7,seed:12});stroke.move(10,20,.5);stroke.move(80,40,.5);stroke.end();return {id,changed:before!==c.toDataURL()};});
    const d=new PaintDocument(40,30);d.setBackground(null);d.begin();const c=d.activeLayer.canvas.getContext('2d');c.fillStyle='#ff0000';c.fillRect(0,0,10,10);d.commit();d.flip(true);const flipped=d.composite().getContext('2d').getImageData(35,5,1,1).data[0]===255;d.rotate(90);const rotated=d.width===30&&d.height===40&&d.composite().getContext('2d').getImageData(25,35,1,1).data[0]===255;d.resize(60,80,{scale:true});const scaled=d.width===60&&d.height===80&&d.composite().getContext('2d').getImageData(50,70,1,1).data[0]===255;
    return {brushes,flipped,rotated,scaled};
  });

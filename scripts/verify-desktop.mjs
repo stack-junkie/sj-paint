@@ -1,3 +1,4 @@
+import { verifyEraserDesktop } from './verify-eraser-desktop.mjs';
 import { chromium } from 'playwright-core';
 import { verifyInteractions } from './verify-interactions.mjs';
 import { verifyPendingShapesDesktop } from './verify-pending-shapes-desktop.mjs';
@@ -161,6 +162,7 @@ try {
   await verifySelectionDesktop(page, check);
   await verifySelectionRotationDesktop(page, check);
   await verifyPaintProjectDesktop(page, check, { main, waitForFile });
+  await verifyEraserDesktop(page, check, { main });
   const command = async (menu, action) => {
     await page.getByRole('button', { name: menu, exact: true }).click();
     await page.locator(`[data-command="${action}"]`).click();
