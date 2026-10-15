@@ -2,8 +2,8 @@
 
 Stack Junkie Paint (SJ Paint) is a Microsoft Paint-inspired drawing app for Windows and Linux, with brushes, shapes, selections, text and layers. Windows is the primary desktop platform; a browser edition is available too.
 
-Version: 0.2.4
-<!-- sj-paint-version: 0.2.4 -->
+Version: 0.2.5
+<!-- sj-paint-version: 0.2.5 -->
 
 SJ Paint is an independent implementation whose baseline goal is to match Microsoft Paint's appearance, features and behavior 1:1. That baseline is unfinished. Project-specific features come after the baseline is completed and verified. It is not a Microsoft product. The [parity ledger](PARITY.md) records implemented features, missing behavior and verification limits.
 
@@ -13,16 +13,16 @@ SJ Paint is an independent implementation whose baseline goal is to match Micros
 
 ### Windows
 
-Download the [v0.2.4 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.4/sj-paint-0.2.4-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
+Download the [v0.2.5 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.5/sj-paint-0.2.5-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
 
 The Windows executable is currently unsigned; it has no Authenticode signature.
 
 ### Linux
 
-Download the [v0.2.4 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.4/sj-paint-0.2.4-linux-x64.tar.gz), then run:
+Download the [v0.2.5 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.5/sj-paint-0.2.5-linux-x64.tar.gz), then run:
 
 ```sh
-tar -xzf sj-paint-0.2.4-linux-x64.tar.gz
+tar -xzf sj-paint-0.2.5-linux-x64.tar.gz
 ./sj-paint/run-paint.sh
 ```
 
@@ -34,7 +34,7 @@ To install a copy for your user and add SJ Paint to the Linux application menu:
 
 The installer copies the app to `~/.local/opt/sj-paint`, creates `~/.local/share/applications/io.stackjunkie.sjpaint.desktop`, and installs icons under `~/.local/share/icons/hicolor/`. It does not require a system-wide installation.
 
-Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.4). Use a normal desktop user.
+Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.5). Use a normal desktop user.
 
 Linux needs Electron's GTK, NSS, X11 and ALSA system libraries. Ubuntu 22.04 package names include `libgtk-3-0`, `libnss3`, `libatk-bridge2.0-0`, `libxdamage1` and `libasound2`; names vary by distribution. Normal startup keeps Chromium sandboxing enabled and does not add `--no-sandbox`.
 
@@ -98,13 +98,15 @@ The output is under `release/`, including the portable archive and its `.sha256`
 | TIFF | No | Yes | Single-page, uncompressed 8-bit RGBA with unassociated alpha and 96 DPI tags. |
 | `.sjpaint` | Yes | Yes | SJ Paint's layered project format. |
 | `.linuxpaint` | Yes | As `.sjpaint` | Legacy projects from Paint for Linux. |
-| Microsoft `.paint` | No | No | Interoperability is not implemented. |
+| Microsoft `.paint` | Tested variant | Tested variant | Full-canvas visible BGRA layers, pixel alpha and separate background. Unsupported variants are rejected. |
 
 Image import uses Chromium's decoders. GIF export uses 216 RGB cube colors, 39 grayscale colors and one transparent entry. Its bounded literal LZW encoder favors predictable memory over compression ratio.
 
 Images and projects stay on the local computer. The desktop renderer is sandboxed, uses context isolation and accesses files through a narrow preload API and native dialogs. It does not expose Node.js or arbitrary paths to the page. External navigation and new windows are blocked. Desktop saves write and sync an exclusively created sibling file before replacing the destination, preserving the previous file if writing fails. The browser edition initiates downloads; the browser controls their destination and completion.
 
 Projects store canvas dimensions, background, active layer and ordered layers with PNG pixels in `.sjpaint` JSON. Legacy `.linuxpaint` files can be opened and saved in the new format. A `null` background means transparent. File operations accept up to 64 MiB of encoded data. Images may be up to 16384 pixels per side and 32 million total pixels. Documents support up to 64 layers within a shared 128 MiB pixel budget for layers and floating selections. Undo history has a separate 128 MiB budget. These budgets exclude browser, renderer, temporary encoding and other process overhead.
+
+Open `.paint` files through Open, Open project or drag and drop. Choose Paint project in Save As; Ctrl+S keeps that format. Use `.sjpaint` for hidden layers or layer opacity, which the supported `.paint` variant cannot preserve. Exif metadata is not retained, and unknown properties, cropped or offset layers and other variants are rejected. Native Paint 11.2605.81.0 opened and resaved an SJ Paint codec sample with two separate layers and unchanged decoded pixels. This verifies that sample, not every `.paint` file.
 
 Clipboard access requires browser support and permission. Printing depends on the browser or operating system print service.
 

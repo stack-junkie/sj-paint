@@ -3,6 +3,7 @@ import { verifyInteractions } from './verify-interactions.mjs';
 import { verifyPendingShapesDesktop } from './verify-pending-shapes-desktop.mjs';
 import { verifySelectionDesktop } from './verify-selection-desktop.mjs';
 import { verifySelectionRotationDesktop } from './verify-selection-rotation-desktop.mjs';
+import { verifyPaintProjectDesktop } from './verify-paint-project-desktop.mjs';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
@@ -159,6 +160,7 @@ try {
   await verifyPendingShapesDesktop(page, check);
   await verifySelectionDesktop(page, check);
   await verifySelectionRotationDesktop(page, check);
+  await verifyPaintProjectDesktop(page, check, { main, waitForFile });
   const command = async (menu, action) => {
     await page.getByRole('button', { name: menu, exact: true }).click();
     await page.locator(`[data-command="${action}"]`).click();

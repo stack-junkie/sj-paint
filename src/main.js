@@ -7,7 +7,7 @@ import { drawShape } from './shapes.js';
 import { createPendingShape, paintPendingShape, hitPendingShape, transformPendingShape } from './pending-shape.js';
 import { createStroke, BRUSHES } from './brushes.js';
 import { icon, SHAPES } from './icons.js';
-import { openImageFile, saveImageFile, openProjectFile, saveProjectFile, readImageFile, readProjectFile, copyCanvas, pasteImage, printCanvas } from './files.js';
+import { openImageFile, saveImageFile, openProjectFile, saveProjectFile, savePaintFile, isProjectFile, readImageFile, readProjectFile, copyCanvas, pasteImage, printCanvas } from './files.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -189,11 +189,12 @@ function finishPending(){
   if(polygon.length){paintPolygon(doc.activeLayer.canvas.getContext('2d'));polygon=[];drag=null;doc.commit();}changed();
 }
 function startText(p){
+  doc.begin('Text');
   const t=document.createElement('textarea');t.className='text-editor';t.setAttribute('aria-label','Text on canvas');t.spellcheck=false;t.style.left=`${p[0]*state.zoom}px`;t.style.top=`${p[1]*state.zoom}px`;t.style.width=`${Math.min(400,doc.width-p[0])*state.zoom}px`;t.style.minHeight=`${100*state.zoom}px`;stage.append(t);textEditor={el:t,x:p[0],y:p[1]};styleText();t.focus();
 }
 function styleText(){if(!textEditor)return;Object.assign(textEditor.el.style,{fontFamily:state.font,fontSize:`${state.fontSize*state.zoom}px`,fontWeight:state.bold?'bold':'normal',fontStyle:state.italic?'italic':'normal',textDecoration:state.underline?'underline':'none',color:state.primary,background:state.textBackground?state.secondary:'transparent',textAlign:state.align,lineHeight:'1.2'});}
 function commitText(){
-  if(!textEditor)return;const {el,x,y}=textEditor,text=el.value,w=el.clientWidth/state.zoom;el.remove();textEditor=null;if(!text.trim())return;
+  if(!textEditor)return;const {el,x,y}=textEditor,text=el.value,w=el.clientWidth/state.zoom;el.remove();textEditor=null;if(!text.trim()){doc.cancel();return;}
   doc.begin('Text');const c=doc.activeLayer.canvas.getContext('2d');c.save();c.font=`${state.italic?'italic ':''}${state.bold?'bold ':''}${state.fontSize}px "${state.font}"`;c.textBaseline='top';c.fillStyle=state.primary;c.textAlign=state.align;
   const lines=[];for(const para of text.split('\n')){let line='';for(const word of para.split(' ')){const next=line?line+' '+word:word;if(line&&c.measureText(next).width>w){lines.push(line);line=word;}else line=next;}lines.push(line);}
   if(state.textBackground){c.fillStyle=state.secondary;c.fillRect(x,y,w,lines.length*state.fontSize*1.2);c.fillStyle=state.primary;}
@@ -218,7 +219,43 @@ async function dialog(title,body,submit='OK'){
 function settleForOutput(){commitText();finishPending();doc.commitSelection();}
 async function canDiscard(){settleForOutput();if(!doc.dirty)return true;if(window.paintDesktop?.confirmDiscard)return window.paintDesktop.confirmDiscard();return !!await dialog('Unsaved changes','<p>Discard the changes to this image?</p>','Discard');}
 async function loadImage(result){if(!result)return;await doc.load({format:PROJECT.format,version:PROJECT.schemaVersion,width:result.canvas.width,height:result.canvas.height,background:null,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;state.format=/\.jpe?g$/i.test(result.name)?'jpeg':'png';fit();}
-async function saveAs(){settleForOutput();const values=await dialog('Save image',`<label>File name<input name="name" value="${esc(state.name)}" required></label><label>File type<select name="format"><option value="png">PNG image (.png)</option><option value="jpeg">JPEG image (.jpg)</option><option value="bmp">Bitmap image (.bmp)</option><option value="webp">WebP image (.webp)</option><option value="gif">GIF image (.gif)</option><option value="tiff">TIFF image (.tiff)</option></select></label><p class="hint">Save a project to keep layers editable.</p>`,'Save');if(values){const revision=doc.revision;const ok=await saveImageFile(doc.composite(),values.format,values.name);if(ok){state.name=values.name;state.format=values.format;if(doc.layers.length===1&&doc.activeLayer.visible&&doc.activeLayer.opacity===1&&!state.project)doc.markSaved(revision);else toast('Image exported. Save a project to preserve editable layers.');changed();}}}
+let fileOperation = false;
+async function withFileOperation(operation) {
+  if (fileOperation) { toast('Finish the current file operation first.'); return; }
+  fileOperation = true;
+  try { return await operation(); } finally { fileOperation = false; }
+}
+async function openDocument(picker) {
+  if (!await canDiscard()) return;
+  const target = doc.captureEditTarget(), result = await picker();
+  if (!result) return;
+  if (!doc.matchesEditTarget(target)) { toast('Open canceled because the drawing changed.'); return; }
+  if (!result.data) return loadImage(result);
+  if (result.format === 'paint') doc.loadRaster(result.data);
+  else await doc.load(result.data);
+  state.name = result.name.replace(/\.[^.]+$/, '');
+  state.project = true; state.format = result.format;
+  fit();
+}
+async function saveDocument(format, name) {
+  settleForOutput();
+  const target = doc.captureEditTarget(), revision = doc.revision;
+  const project = format === 'paint' || format === PROJECT.extension;
+  const canMarkSaved = project || (doc.layers.length === 1 && doc.activeLayer.visible && doc.activeLayer.opacity === 1 && !state.project);
+  const ok = format === 'paint' ? await savePaintFile(doc, name) : format === PROJECT.extension ?
+    await saveProjectFile(doc.serialize(), name) : await saveImageFile(doc.composite(), format, name);
+  if (!ok || doc.captureEditTarget().generation !== target.generation) return;
+  state.name = name; state.format = format;
+  state.project = project;
+  if (canMarkSaved) doc.markSaved(revision);
+  else toast('Image exported. Save a project to preserve editable layers.');
+  changed();
+}
+async function saveAs() {
+  settleForOutput();
+  const values = await dialog('Save image', `<label>File name<input name="name" value="${esc(state.name)}" required></label><label>File type<select name="format"><option value="png">PNG image (.png)</option><option value="jpeg">JPEG image (.jpg)</option><option value="bmp">Bitmap image (.bmp)</option><option value="webp">WebP image (.webp)</option><option value="gif">GIF image (.gif)</option><option value="tiff">TIFF image (.tiff)</option><option value="paint">Paint project (.paint)</option></select></label><p class="hint">Paint projects preserve visible layers at full opacity. Use Save as project (.sjpaint) to preserve hidden layers or layer opacity.</p>`, 'Save');
+  if (values) await saveDocument(values.format, values.name);
+}
 async function colorDialog(which='primary'){
   const values=await dialog('Edit colors',`<div class="color-editor"><input type="color" name="color" value="${state[which]}" aria-label="Color spectrum"><label>Hex<input id="hex" value="${state[which]}" pattern="#[0-9a-fA-F]{6}" maxlength="7"></label></div><p class="hint">Choose a color, or enter its hexadecimal value.</p>`);
   if(values){state[which]=values.color;customColors=[values.color,...customColors.filter(c=>c!==values.color)].slice(0,10);localStorage.setItem('paint-colors',JSON.stringify(customColors));updateToolState();styleText();updatePendingStyle();}
@@ -232,10 +269,10 @@ async function resizeDialog(){
 }
 const actions={
   new:async()=>{if(await canDiscard()){doc.newDocument(1152,648);state.name='Untitled';state.project=false;state.format='png';fit();}},
-  open:async()=>{if(await canDiscard())await loadImage(await openImageFile());},
-  'open-project':async()=>{if(await canDiscard()){const r=await openProjectFile();if(r){await doc.load(r.data);state.name=r.name.replace(/\.[^.]+$/,'');state.project=true;fit();}}},
-  save:async()=>{if(state.project)return actions['save-project']();settleForOutput();if(state.name==='Untitled')return saveAs();const revision=doc.revision;if(await saveImageFile(doc.composite(),state.format,state.name)){if(doc.layers.length===1&&doc.activeLayer.visible&&doc.activeLayer.opacity===1&&!state.project)doc.markSaved(revision);else toast('Image exported. Save a project to preserve editable layers.');changed();}},
-  'save-as':saveAs,'save-project':async()=>{settleForOutput();const revision=doc.revision;if(await saveProjectFile(doc.serialize(),state.name)){state.project=true;doc.markSaved(revision);changed();}},
+  open:()=>withFileOperation(()=>openDocument(()=>openImageFile({allowProjects:true}))),
+  'open-project':()=>withFileOperation(()=>openDocument(openProjectFile)),
+  save:()=>withFileOperation(()=>state.project ? saveDocument(state.format==='paint'?'paint':PROJECT.extension,state.name) : state.name==='Untitled' ? saveAs() : saveDocument(state.format,state.name)),
+  'save-as':()=>withFileOperation(saveAs),'save-project':()=>withFileOperation(()=>saveDocument(PROJECT.extension,state.name)),
   print:()=>{settleForOutput();return printCanvas(doc.composite());},
   undo:()=>{if(canvasResize.cancel()||cancelPointerInteraction())return;commitText();doc.undo();},redo:()=>{if(canvasResize.cancel()||cancelPointerInteraction())return;doc.redo();},
   copy:async()=>{commitText();await copyCanvas(doc.selectionCanvas()||doc.composite({onlyActive:true}));toast('Copied image.');},
@@ -260,7 +297,7 @@ const actions={
   collapse:()=>{document.body.classList.toggle('collapsed');$('.collapse-tools').textContent=document.body.classList.contains('collapsed')?'⌄':'⌃';},
   bold:()=>{state.bold=!state.bold;styleText();$('[data-action="bold"]').classList.toggle('active',state.bold);},italic:()=>{state.italic=!state.italic;styleText();$('[data-action="italic"]').classList.toggle('active',state.italic);},underline:()=>{state.underline=!state.underline;styleText();$('[data-action="underline"]').classList.toggle('active',state.underline);},'commit-text':commitText,
   properties:async()=>{const v=await dialog('Image properties',`<p>${esc(state.name)}<br>${doc.layers.length} layer${doc.layers.length===1?'':'s'}</p><div class="two-columns"><label>Width (pixels)<input name="width" type="number" min="1" max="16384" value="${doc.width}" required></label><label>Height (pixels)<input name="height" type="number" min="1" max="16384" value="${doc.height}" required></label></div><p class="hint">Changes canvas dimensions without scaling the image.</p>`);if(v){doc.resize(+v.width,+v.height,{scale:false,target:'document'});fit();}},
-  settings:async()=>{const v=await dialog('Settings',`<label>App theme<select name="theme"><option value="dark" ${state.theme==='dark'?'selected':''}>Dark</option><option value="light" ${state.theme==='light'?'selected':''}>Light</option></select></label><p>${PROJECT.productName} (${PROJECT.shortName})<br>Version ${VERSION}</p><p class="hint">An independent editor for Windows and Linux, built toward Microsoft Paint parity before adding its own features. Projects use .${PROJECT.extension}; older .linuxpaint projects remain readable. Microsoft .paint files and cloud AI services are not connected.</p>`);if(v){state.theme=v.theme;document.documentElement.dataset.theme=v.theme;localStorage.setItem('paint-theme',v.theme);}},
+  settings:async()=>{const v=await dialog('Settings',`<label>App theme<select name="theme"><option value="dark" ${state.theme==='dark'?'selected':''}>Dark</option><option value="light" ${state.theme==='light'?'selected':''}>Light</option></select></label><p>${PROJECT.productName} (${PROJECT.shortName})<br>Version ${VERSION}</p><p class="hint">An independent editor for Windows and Linux, built toward Microsoft Paint parity before adding its own features. Projects use .${PROJECT.extension}; older .linuxpaint projects remain readable. Paint .paint projects support full-canvas visible layers; unsupported variants are rejected. Cloud AI services are not connected.</p>`);if(v){state.theme=v.theme;document.documentElement.dataset.theme=v.theme;localStorage.setItem('paint-theme',v.theme);}},
 };
 const menus={
   file:[['New','new','Ctrl+N'],['Open','open','Ctrl+O'],['Open project','open-project'],null,['Save','save','Ctrl+S'],['Save as','save-as','Ctrl+Shift+S'],['Save as project','save-project'],null,['Print','print','Ctrl+P'],['Image properties','properties','Ctrl+E']],
@@ -300,7 +337,7 @@ document.addEventListener('keydown',safe(async e=>{
     buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();return;
   }
   const edit=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
-  if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){textEditor.el.remove();textEditor=null;}doc.deselect();changed();return;}
+  if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){textEditor.el.remove();textEditor=null;doc.cancel();}doc.deselect();changed();return;}
   if(edit)return;const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;let action;
   if(mod){action=({n:'new',o:'open',s:e.shiftKey?'save-as':'save',z:e.shiftKey?'redo':'undo',y:'redo',c:e.shiftKey?'copy-all':'copy',x:'cut',v:'paste',a:'select-all',p:'print',e:'properties',w:'resize','+':'zoom-in','=':'zoom-in','-':'zoom-out',b:e.shiftKey?'background':undefined,h:e.shiftKey?'toggle-background':undefined,i:e.shiftKey?'invert-selection':'invert-colors',f1:'collapse'})[key];}
   else if(key==='f11')action='fullscreen';else if(key==='delete')action='delete';else if(key==='enter'){commitText();if(!pendingShape)finishPending();e.preventDefault();return;}
@@ -309,7 +346,7 @@ document.addEventListener('keydown',safe(async e=>{
 }));
 window.addEventListener('beforeunload',e=>{if(doc.dirty||textEditor?.el.value.trim()||curve||polygon.length||stroke||shapePreview||pendingShape){e.preventDefault();e.returnValue='';}});
 viewport.addEventListener('dragover',e=>{e.preventDefault();viewport.classList.add('drop-target');});viewport.addEventListener('dragleave',()=>viewport.classList.remove('drop-target'));
-viewport.addEventListener('drop',safe(async e=>{e.preventDefault();viewport.classList.remove('drop-target');const f=e.dataTransfer.files[0];if(!f||!await canDiscard())return;if(PROJECT.readableExtensions.includes(f.name.split('.').at(-1).toLowerCase())){const project=await readProjectFile(f);await doc.load(project.data);state.name=project.name.replace(/\.[^.]+$/,'');state.project=true;fit();}else await loadImage(await readImageFile(f));}));
+viewport.addEventListener('drop',safe(async e=>{e.preventDefault();viewport.classList.remove('drop-target');const f=e.dataTransfer.files[0];if(f)await withFileOperation(()=>openDocument(()=>isProjectFile(f.name)?readProjectFile(f):readImageFile(f)));}));
 const canvasResize=bindCanvasResize({doc,stage,viewport,zoom:()=>state.zoom,canStart:()=>activePointerId===null,prepare:()=>{commitText();finishPending();overlay.focus({preventScroll:true});},changed,reportError:error=>toast(error.message)});
 render();requestAnimationFrame(fit);
 // Expose the document only in development for focused browser workflow checks.

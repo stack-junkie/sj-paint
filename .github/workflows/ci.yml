@@ -26,6 +26,7 @@ jobs:
       - run: npm ci
       - run: npm run version:check
       - run: npm run test:files
+      - run: npm run test:paint-format
       - run: npm run build
       - name: Headless drawing workflows
         shell: bash

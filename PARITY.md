@@ -40,7 +40,7 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 | Area | Current behavior |
 | --- | --- |
 | Microsoft services and AI | No Microsoft account, sharing or cloud integration. Cocreator, Image Creator, generative fill/erase, object selection and AI background removal are not implemented. |
-| Project formats | `.sjpaint` stores SJ Paint's editable layers. Legacy `.linuxpaint` projects can be opened. Microsoft `.paint` files are not supported. |
+| Project formats | `.sjpaint` preserves all local layer state and legacy `.linuxpaint` remains readable. `.paint` support covers the observed full-canvas BGRA8/raw-DEFLATE layers and overlay background. Hidden-layer or layer-opacity export is rejected; unknown properties, cropped/offset layers and other variants remain unsupported. Exif is accepted but discarded. |
 | Drawing behavior | Brush rasterization, textures, selection and transform edge cases, text metrics and all command shortcuts are not proven identical to the reference. |
 | Visual fidelity | Icons are newly drawn and rendering is independently implemented. Fonts depend on the host platform. Pixel-perfect layout and control behavior have not been established. |
 | Advanced editing | Ordinary shapes remain editable with a free-rotation handle until committed. Committed text and shapes become pixels. Post-commit vector/text re-editing is not implemented. Curve/polygon editing still uses its earlier construction workflow. |
@@ -51,6 +51,12 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 Implemented controls and passing checks do not close these gaps. Baseline acceptance still requires reference-based verification of appearance and behavior, including features that are missing or currently uncertain. Project-specific feature development follows the completed baseline.
 
 ## Verification history
+
+### Native .paint reference evidence
+
+Two disposable files saved by Paint 11.2605.81.0 establish the supported variant: one layer (2545 bytes, SHA-256 `011068fb966e10b80a30b822bcaddf9966c82360143bdb215417d86806168e4e`) and two layers (4691 bytes, SHA-256 `ca6f3de4933a8f27c63001e33af5ba8648e279bf402f290e26e3d0fca67bb666`). Both use an 813 × 431 canvas. The codec decoded both, then wrote a 4581-byte two-layer file. Actual Paint opened it with both editable layers and resaved a byte-identical copy of the original two-layer file. This is native interoperability evidence for those samples; layer names in them were empty.
+
+A separate transparent sample with a partially transparent rectangle opened correctly in Paint. Its native PNG export changed center RGB from (180,80,40) to (179,79,39), retaining alpha 128. Canvas-based import tests therefore declare a one-unit partial-alpha RGB tolerance; opaque pixels and alpha are checked exactly. Layer background bytes are preserved directly, without canvas rounding. Saving the reference with one layer hidden produced a byte-identical file, so hidden-layer persistence is not established and is not claimed.
 
 ### Version 0.2.4 selection transforms
 

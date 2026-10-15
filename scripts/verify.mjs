@@ -10,6 +10,8 @@ import { verifySelectionInteractions } from './verify-selection-interactions.mjs
 import { verifySelectionSession } from './verify-selection-session.mjs';
 import { verifySelectionRotation } from './verify-selection-rotation.mjs';
 import { verifySelectionTransform } from './verify-selection-transform.mjs';
+import { verifyPaintProject } from './verify-paint-project.mjs';
+import { verifyRasterImport } from './verify-raster-import.mjs';
 import { createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -35,6 +37,8 @@ try{
  await verifySelectionRotation(page,check);
  await verifySelectionInteractions(page,check);
  await verifyClipboardOwnership(page,check);
+ await verifyPaintProject(page,check);
+ await verifyRasterImport(page,check);
  await page.screenshot({path:path.join(output,'paint-dark.png')});
  const r=await page.locator('#overlay').boundingBox();
  await page.mouse.move(r.x+80,r.y+80);await page.mouse.down();await page.mouse.move(r.x+240,r.y+140,{steps:20});await page.mouse.up();
@@ -109,7 +113,7 @@ try{
  const downloadPromise=page.waitForEvent('download');await page.evaluate(()=>paintApp.actions['save-project']());const download=await downloadPromise;await download.saveAs(path.join(output,'ui-save.sjpaint'));
  check('project save downloads editable project',JSON.parse(await fs.readFile(path.join(output,'ui-save.sjpaint'),'utf8')).format==='sj-paint',null);
  await page.screenshot({path:path.join(output,'paint-editing.png')});
- await page.evaluate(()=>{const d=paintApp.doc;d.newDocument(60,40);paintApp.state.project=false;paintApp.state.name='hidden-layer';d.begin();d.activeLayer.canvas.getContext('2d').fillRect(0,0,20,20);d.commit();d.setLayer(d.activeLayerId,{visible:false});});
+ await page.evaluate(()=>{const d=paintApp.doc;d.newDocument(60,40);paintApp.state.project=false;paintApp.state.format='png';paintApp.state.name='hidden-layer';d.begin();d.activeLayer.canvas.getContext('2d').fillRect(0,0,20,20);d.commit();d.setLayer(d.activeLayerId,{visible:false});});
  const hiddenDownload=page.waitForEvent('download');await page.evaluate(()=>paintApp.actions.save());await hiddenDownload;
  check('raster export preserves hidden-artwork dirty warning',await page.evaluate(()=>paintApp.doc.dirty),null);
  await page.evaluate(()=>paintApp.doc.newDocument(200,160));await page.getByRole('button',{name:'Curve',exact:true}).click();const curveRect=await page.locator('#overlay').boundingBox();await page.mouse.move(curveRect.x+20,curveRect.y+20);await page.mouse.down();await page.mouse.move(curveRect.x+100,curveRect.y+80);await page.mouse.up();

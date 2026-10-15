@@ -1,5 +1,6 @@
 import { PAINT_LIMITS, assertDocumentBudget } from './engine.js';
 import PROJECT from './project-format.json' with { type: 'json' };
+import { readPaint, writePaint } from './paint-format.js';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const MAX_SIDE = PAINT_LIMITS.maxDimension;
@@ -17,7 +18,7 @@ function filename(name, extension) {
   let stem = String(name || 'Untitled').replace(/^.*[/\\]/, '').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
     .replace(/[. ]+$/g, '');
   const suffix = stem.slice(stem.lastIndexOf('.') + 1).toLowerCase();
-  if (stem.includes('.') && ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff', ...PROJECT.readableExtensions].includes(suffix)) stem = stem.slice(0, stem.lastIndexOf('.'));
+  if (stem.includes('.') && ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff', 'paint', ...PROJECT.readableExtensions].includes(suffix)) stem = stem.slice(0, stem.lastIndexOf('.'));
   stem = stem.replace(/[. ]+$/g, '') || 'Untitled';
   if (/^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(stem)) stem = `_${stem}`;
   return `${stem}.${extension}`;
@@ -81,13 +82,20 @@ export async function readImageFile(file) {
   return decode(file, file.name || 'Clipboard.png');
 }
 
-export async function openImageFile() {
+export function isProjectFile(name) {
+  return ['paint', ...PROJECT.readableExtensions].includes(String(name).split('.').at(-1).toLowerCase());
+}
+
+export async function openImageFile({ allowProjects = false } = {}) {
   if (window.paintDesktop) {
-    const result = await window.paintDesktop.openImage();
-    return result ? decode(new Blob([result.bytes]), result.name) : null;
+    const result = await window.paintDesktop.openImage({ allowProjects });
+    if (!result) return null;
+    const file = new File([result.bytes], result.name);
+    return allowProjects && isProjectFile(file.name) ? readProjectFile(file) : readImageFile(file);
   }
-  const file = await chooseFile('image/png,image/jpeg,image/webp,image/bmp,image/gif,.bmp');
-  return file ? readImageFile(file) : null;
+  const projects = allowProjects ? `,.paint,${PROJECT.readableExtensions.map(extension => `.${extension}`).join(',')}` : '';
+  const file = await chooseFile(`image/png,image/jpeg,image/webp,image/bmp,image/gif,.bmp${projects}`);
+  return file ? allowProjects && isProjectFile(file.name) ? readProjectFile(file) : readImageFile(file) : null;
 }
 
 function canvasBlob(canvas, type, quality = 0.92) {
@@ -316,31 +324,56 @@ function validateProject(data) {
 }
 
 export async function openProjectFile() {
-  let text;
-  let name;
   if (window.paintDesktop) {
     const result = await window.paintDesktop.openProject();
     if (!result) return null;
-    ({ text, name } = result);
-  } else {
-    const file = await chooseFile(`${PROJECT.readableExtensions.map(extension => `.${extension}`).join(',')},application/json`);
-    if (!file) return null;
-    return readProjectFile(file);
+    return readProjectFile(new File([result.bytes], result.name));
   }
-  return parseProject(text, name);
+  const file = await chooseFile(`.paint,${PROJECT.readableExtensions.map(extension => `.${extension}`).join(',')},application/json`);
+  return file ? readProjectFile(file) : null;
 }
 
 function parseProject(text, name) {
   if (new Blob([text]).size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('The project does not contain valid JSON.'); }
-  return { data: validateProject(data), name };
+  return { data: validateProject(data), name, format: PROJECT.extension };
 }
 
 export async function readProjectFile(file) {
   if (!file || typeof file.text !== 'function' || !Number.isFinite(file.size) || file.size < 0) throw new Error('Choose a project file.');
   if (file.size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
+  if (/\.paint$/i.test(file.name)) {
+    const decoded = await readPaint(new Uint8Array(await file.arrayBuffer()));
+    const layers = decoded.layers.map((layer, index) => ({ ...layer, id: `paint-${index}` }));
+    const background = `#${decoded.background.map(value => value.toString(16).padStart(2, '0')).join('')}`;
+    return { name: file.name, format: 'paint', data: { ...decoded, background, layers, activeLayerId: layers.at(-1).id } };
+  }
   return parseProject(await file.text(), file.name);
+}
+
+export async function savePaintFile(doc, name = 'Untitled') {
+  // Capture before awaiting compression or a dialog so the saved revision and
+  // pixels describe the same drawing even if the user continues editing.
+  let background = [0, 0, 0, 0];
+  if (/^#[\da-f]{6}([\da-f]{2})?$/i.test(doc.background)) {
+    background = doc.background.slice(1).match(/../g).map(value => parseInt(value, 16));
+    if (background.length === 3) background.push(255);
+  } else if (doc.background !== null) {
+    const swatch = document.createElement('canvas');
+    swatch.width = swatch.height = 1;
+    const ctx = swatch.getContext('2d');
+    ctx.fillStyle = doc.background; ctx.fillRect(0, 0, 1, 1);
+    background = [...ctx.getImageData(0, 0, 1, 1).data];
+  }
+  const data = { width: doc.width, height: doc.height,
+    background,
+    layers: doc.layers.map(layer => ({ name: layer.name, visible: layer.visible, opacity: layer.opacity,
+      rgba: new Uint8Array(layer.canvas.getContext('2d').getImageData(0, 0, doc.width, doc.height).data.buffer) })) };
+  const bytes = await writePaint(data);
+  const suggestedName = filename(name, 'paint');
+  return window.paintDesktop ? window.paintDesktop.savePaint({ bytes, suggestedName }) :
+    download(new Blob([bytes], { type: 'application/octet-stream' }), suggestedName);
 }
 
 export async function saveProjectFile(data, name = 'Untitled') {

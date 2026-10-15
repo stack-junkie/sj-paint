@@ -117,6 +117,18 @@ function sameSavedContent(a, b) {
   });
 }
 
+function validateLoadedLayers(data) {
+  if (!Array.isArray(data.layers) || !data.layers.length || data.layers.length > MAX_LAYERS) throw new Error('A project must contain between 1 and 64 layers.');
+  if (data.background !== null && (typeof data.background !== 'string' || !CSS.supports('color', data.background))) throw new Error('Invalid project background.');
+  const ids = new Set();
+  for (const layer of data.layers) {
+    if (!layer || typeof layer.id !== 'string' || !layer.id || ids.has(layer.id) || typeof layer.name !== 'string' ||
+      typeof layer.visible !== 'boolean' || !Number.isFinite(layer.opacity) || layer.opacity < 0 || layer.opacity > 1) throw new Error('Invalid project layer.');
+    ids.add(layer.id);
+  }
+  if (!ids.has(data.activeLayerId)) throw new Error('The project active layer is missing.');
+}
+
 function checkPngDimensions(url, width, height) {
   let header;
   try { header = atob(url.slice('data:image/png;base64,'.length, 'data:image/png;base64,'.length + 44)); }
@@ -924,40 +936,62 @@ export class PaintDocument extends EventTarget {
         return { id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity, png: canvas.toDataURL('image/png') };
       }) };
   }
+  _publishLoaded({ width, height, background, layers, activeLayerId }) {
+    this.width = width; this.height = height; this.background = background;
+    this.layers = layers; this.activeLayerId = activeLayerId; this.selection = null;
+    this._transaction = null; this._selectionSession = null; this._settlement = null;
+    this._undo = []; this._redo = []; this._compositeScratch = null;
+    this._editEpoch++;
+    this._revision = this._savedRevision = this._documentStartRevision = this._nextRevision++;
+    this._changed();
+  }
+  loadRaster(data) {
+    if (!data || !Number.isInteger(data.width) || !Number.isInteger(data.height)) throw new Error('Raster dimensions must be integers.');
+    const { width, height, background, activeLayerId } = data;
+    validateLoadedLayers(data);
+    assertDocumentBudget(width, height, data.layers.length);
+    const expectedBytes = width * height * 4;
+    // Validate every source buffer before allocating canvases or replacing the current document.
+    for (const layer of data.layers) {
+      if (!(layer.rgba instanceof Uint8Array) || layer.rgba.byteLength !== expectedBytes) throw new Error('Raster layer pixel length does not match the document.');
+    }
+    const layers = data.layers.map(layer => {
+      const canvas = createCanvas(width, height), ctx = context(canvas);
+      const pixels = ctx.createImageData(width, height);
+      pixels.data.set(layer.rgba);
+      ctx.putImageData(pixels, 0, 0);
+      return { id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity, canvas };
+    });
+    this._publishLoaded({ width, height, background, layers, activeLayerId });
+  }
   async load(data) {
+    const target = this.captureEditTarget();
+    const ensureCurrent = () => {
+      if (!this.matchesEditTarget(target)) throw new Error('Open canceled because the drawing changed while the project was decoding.');
+    };
     if (!data || !PROJECT.readableFormats.includes(data.format) || data.version !== PROJECT.schemaVersion) throw new Error('Unsupported SJ Paint project format.');
     const [width, height] = dimensions(data.width, data.height);
-    if (!Array.isArray(data.layers) || !data.layers.length || data.layers.length > MAX_LAYERS) throw new Error('A project must contain between 1 and 64 layers.');
+    validateLoadedLayers(data);
     assertDocumentBudget(width, height, data.layers.length);
-    if (data.background !== null && (typeof data.background !== 'string' || !CSS.supports('color', data.background))) throw new Error('Invalid project background.');
-    const ids = new Set();
     const layers = [];
     let encodedBytes = 0;
     // Check every encoded header before allocating any layer canvas or decoding images.
     for (const layer of data.layers) {
-      if (typeof layer?.png !== 'string' || !layer.png.startsWith('data:image/png;base64,')) throw new Error('Invalid project layer PNG.');
+      if (typeof layer.png !== 'string' || !layer.png.startsWith('data:image/png;base64,')) throw new Error('Invalid project layer PNG.');
       encodedBytes += layer.png.length;
       if (encodedBytes > PAINT_LIMITS.maxEncodedProjectBytes) throw new RangeError('Encoded project layers exceed the 64 MiB input limit.');
       checkPngDimensions(layer.png, width, height);
     }
     // Decode sequentially, and publish the new document only after every layer is valid.
     for (const layer of data.layers) {
-      if (!layer || typeof layer.id !== 'string' || !layer.id || ids.has(layer.id) || typeof layer.name !== 'string' ||
-          typeof layer.visible !== 'boolean' || !Number.isFinite(layer.opacity) || layer.opacity < 0 || layer.opacity > 1 ||
-          typeof layer.png !== 'string' || !layer.png.startsWith('data:image/png;base64,')) throw new Error('Invalid project layer.');
-      ids.add(layer.id);
       const image = await imageFromURL(layer.png);
+      ensureCurrent();
       if (image.naturalWidth !== width || image.naturalHeight !== height) throw new Error('Project layer dimensions do not match the document.');
       const canvas = createCanvas(width, height);
       context(canvas).drawImage(image, 0, 0);
       layers.push({ id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity, canvas });
     }
-    if (!ids.has(data.activeLayerId)) throw new Error('The project active layer is missing.');
-    this.width = width; this.height = height; this.background = data.background;
-    this.layers = layers; this.activeLayerId = data.activeLayerId; this.selection = null;
-    this._transaction = null; this._selectionSession = null; this._undo = []; this._redo = []; this._compositeScratch = null;
-    this._editEpoch++;
-    this._revision = this._savedRevision = this._documentStartRevision = this._nextRevision++;
-    this._changed();
+    ensureCurrent();
+    this._publishLoaded({ width, height, background: data.background, layers, activeLayerId: data.activeLayerId });
   }
 }

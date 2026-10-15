@@ -40,7 +40,7 @@ function suggestedName(value, extension) {
   let stem = value.replace(/^.*[/\\]/, '').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
     .replace(/[. ]+$/g, '');
   const suffix = stem.slice(stem.lastIndexOf('.') + 1).toLowerCase();
-  if (stem.includes('.') && ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff', ...PROJECT.readableExtensions].includes(suffix)) stem = stem.slice(0, stem.lastIndexOf('.'));
+  if (stem.includes('.') && ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff', 'paint', ...PROJECT.readableExtensions].includes(suffix)) stem = stem.slice(0, stem.lastIndexOf('.'));
   stem = stem.replace(/[. ]+$/g, '') || 'Untitled';
   if (/^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(stem)) stem = `_${stem}`;
   return `${stem}.${extension}`;
@@ -64,10 +64,13 @@ async function readBounded(filePath) {
 }
 
 function registerHandlers() {
-  handle('open-image', () => withDialog(async () => {
+  handle('open-image', (request) => withDialog(async () => {
+    if (request !== undefined && (!request || typeof request.allowProjects !== 'boolean')) throw new Error('Invalid open request.');
+    const extensions = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'];
+    if (request?.allowProjects) extensions.push('paint', ...PROJECT.readableExtensions);
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Open image', properties: ['openFile'],
-      filters: [{ name: 'Images', extensions: ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'] }],
+      filters: [{ name: request?.allowProjects ? 'Images and layered projects' : 'Images', extensions }],
     });
     if (result.canceled || !result.filePaths[0]) return null;
     return { bytes: new Uint8Array(await readBounded(result.filePaths[0])), name: path.basename(result.filePaths[0]) };
@@ -90,10 +93,10 @@ function registerHandlers() {
   handle('open-project', () => withDialog(async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Open layered project', properties: ['openFile'],
-      filters: [{ name: `${PROJECT.productName} project`, extensions: PROJECT.readableExtensions }],
+      filters: [{ name: 'Layered projects', extensions: ['paint', ...PROJECT.readableExtensions] }],
     });
     if (result.canceled || !result.filePaths[0]) return null;
-    return { text: (await readBounded(result.filePaths[0])).toString('utf8'), name: path.basename(result.filePaths[0]) };
+    return { bytes: new Uint8Array(await readBounded(result.filePaths[0])), name: path.basename(result.filePaths[0]) };
   }));
   handle('save-project', (request) => withDialog(async () => {
     if (!request || typeof request.text !== 'string' || Buffer.byteLength(request.text) > MAX_BYTES) {
@@ -115,6 +118,18 @@ function registerHandlers() {
     if (typeof title !== 'string' || title.length > 500 || /[\u0000-\u001f]/.test(title)) throw new Error('Invalid title.');
     mainWindow.setTitle(title);
   });
+  handle('save-paint', (request) => withDialog(async () => {
+    if (!request || !(request.bytes instanceof Uint8Array) || !request.bytes.length || request.bytes.length > MAX_BYTES) {
+      throw new Error('Invalid .paint bytes. Maximum project size is 64 MiB.');
+    }
+    const result = await dialog.showSaveDialog(mainWindow, {
+      title: 'Save Paint project', defaultPath: suggestedName(request.suggestedName, 'paint'),
+      filters: [{ name: 'Paint project', extensions: ['paint'] }],
+    });
+    if (result.canceled || !result.filePath) return false;
+    await writeFileAtomically(result.filePath, Buffer.from(request.bytes));
+    return true;
+  }));
   handle('print', () => withDialog(() => new Promise((resolve, reject) => {
     mainWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
       if (success) resolve(true);
