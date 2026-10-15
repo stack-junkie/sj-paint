@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.8] - Unreleased
+
+- Preserve pending text, shapes, curves, polygons and selections when panning ends or is canceled, including interrupted pointer capture and window blur.
+- Composite held shapes, curve controls and polygon previews within their active layer so opacity and foreground occlusion match accepted pixels.
+- Apply the same hidden-layer drawing rule to Fill, Text and Polygon as the other drawing tools.
+
 ## [0.2.7] - 2026-10-15
 
 - Import supported classic TIFF images through Open, drag and drop and Paste from file, including native Paint LZW/predictor samples and transparent pixels.

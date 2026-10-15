@@ -2,6 +2,8 @@ import { verifyEraserDesktop } from './verify-eraser-desktop.mjs';
 import { verifyKeyboardDesktop } from './verify-keyboard-desktop.mjs';
 import { verifyTextDesktop } from './verify-text-desktop.mjs';
 import { verifyTiffDesktop } from './verify-tiff-desktop.mjs';
+import { verifyDrawingAdmissionDesktop } from './verify-drawing-admission-desktop.mjs';
+import { verifyHeldLayerPreviewDesktop } from './verify-held-layer-preview.mjs';
 import { chromium } from 'playwright-core';
 import { verifyInteractions } from './verify-interactions.mjs';
 import { verifyPendingShapesDesktop } from './verify-pending-shapes-desktop.mjs';
@@ -169,6 +171,8 @@ try {
   await verifyTiffDesktop(page, check, { main, waitForFile });
   await verifyKeyboardDesktop(page, check);
   await verifyTextDesktop(page, check);
+  await verifyDrawingAdmissionDesktop(page, check);
+  await verifyHeldLayerPreviewDesktop(page, check);
   const command = async (menu, action) => {
     await page.getByRole('button', { name: menu, exact: true }).click();
     await page.locator(`[data-command="${action}"]`).click();

@@ -59,7 +59,8 @@ function changed(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render();});}
 doc.addEventListener('change',changed);doc.addEventListener('preview',changed);
 function render(){
   if(canvas.width!==doc.width||canvas.height!==doc.height){canvas.width=overlay.width=doc.width;canvas.height=overlay.height=doc.height;}
-  doc.renderTo(ctx,{layerPreview:pendingShape?{layerId:doc.activeLayerId,paint:c=>paintPendingShape(c,pendingShape)}:null});
+  const hasDraft=shapePreview||pendingShape||curve||polygon.length;
+  doc.renderTo(ctx,{layerPreview:hasDraft?{layerId:doc.activeLayerId,paint:paintDrawingDraft}:null});
   stage.style.width=`${doc.width*state.zoom}px`;stage.style.height=`${doc.height*state.zoom}px`;
   for(const c of [canvas,overlay]){c.style.width=`${doc.width*state.zoom}px`;c.style.height=`${doc.height*state.zoom}px`;}
   stage.classList.toggle('pixelated',state.zoom>=3);
@@ -80,10 +81,7 @@ function renderOverlay(){
   oc.clearRect(0,0,overlay.width,overlay.height);
   if(state.grid&&state.zoom>=4){oc.save();oc.strokeStyle='rgba(127,127,127,.35)';oc.lineWidth=1/state.zoom;oc.beginPath();for(let x=0;x<=doc.width;x++) {oc.moveTo(x,0);oc.lineTo(x,doc.height);}for(let y=0;y<=doc.height;y++){oc.moveTo(0,y);oc.lineTo(doc.width,y);}oc.stroke();oc.restore();}
   if(state.rulers){oc.save();oc.font=`${10/state.zoom}px sans-serif`;oc.fillStyle='#777';oc.strokeStyle='#777';oc.lineWidth=1/state.zoom;for(let i=0;i<doc.width;i+=100){oc.fillText(String(i),i+2/state.zoom,12/state.zoom);oc.fillRect(i,0,1/state.zoom,5/state.zoom);}for(let i=100;i<doc.height;i+=100)oc.fillText(String(i),2/state.zoom,i);oc.restore();}
-  if(shapePreview)drawShape(oc,state.tool,...shapePreview,shapeOptions());
   if(pendingShape)paintPendingShape(oc,pendingShape,{handles:true,pixels:false,zoom:state.zoom});
-  if(curve)paintCurve(oc);
-  if(polygon.length)paintPolygon(oc,true);
   const rect=drag?.kind==='select'?box(drag.start,drag.current):null;
   if(drag?.kind==='lasso'){oc.save();oc.strokeStyle='#444';oc.lineWidth=1/state.zoom;oc.setLineDash([4/state.zoom,4/state.zoom]);oc.beginPath();drag.points.forEach((p,i)=>i?oc.lineTo(...p):oc.moveTo(...p));oc.stroke();oc.restore();}
   if(rect){oc.save();oc.lineWidth=1/state.zoom;oc.strokeStyle='#fff';oc.strokeRect(rect.x,rect.y,rect.width,rect.height);oc.strokeStyle='#333';oc.setLineDash([4/state.zoom,4/state.zoom]);oc.strokeRect(rect.x,rect.y,rect.width,rect.height);oc.restore();}
@@ -131,6 +129,7 @@ function box(a,b){return {x:Math.floor(Math.min(a[0],b[0])),y:Math.floor(Math.mi
 function pressure(e){return e.pointerType==='pen'?e.pressure:.5;}
 function releasePointer(){const pointerId=activePointerId;activePointerId=null;if(pointerId!==null&&overlay.hasPointerCapture(pointerId))overlay.releasePointerCapture(pointerId);}
 function cancelPointerInteraction() {
+  if(drag?.kind==='pan'){drag=drag.suspendedDrag;releasePointer();changed();return true;}
   const pending=activePointerId!==null||drag||stroke||shapePreview||pendingShape||curve||polygon.length;
   if(!pending)return false;
   stroke?.end();stroke=null;drag=null;shapePreview=null;pendingShape=null;curve=null;polygon=[];
@@ -151,9 +150,10 @@ const beginPointer=safe(e=>{
   const pendingHit=pendingShape&&!pan?hitPendingShape(pendingShape,p,state.zoom):null;
   if(pendingShape&&!pan&&!pendingHit)finishPending();
   activePointerId=e.pointerId;closeMenu();overlay.focus({preventScroll:true});overlay.setPointerCapture(e.pointerId);
-  if(e.button===1||e.altKey){drag={kind:'pan',start:[e.clientX,e.clientY],scroll:[viewport.scrollLeft,viewport.scrollTop]};return;}
+  if(pan){drag={kind:'pan',start:[e.clientX,e.clientY],scroll:[viewport.scrollLeft,viewport.scrollTop],suspendedDrag:drag};return;}
   if(pendingHit){drag={kind:'pending-shape',original:pendingShape,hit:pendingHit,start:p};return;}
   if(textEditor){commitText();return;}
+  if(!doc.activeLayer.visible&&!['select','lasso','zoom','picker'].includes(state.tool)){toast('Show the active layer before drawing.');return;}
   if(curve){curve.controls.push(p);if(curve.controls.length===2)finishPending();else changed();return;}
   if(state.tool==='polygon'){if(!polygon.length){doc.deselect();doc.begin('Polygon');}polygon.push(p);drag={kind:'polygon',hover:p};changed();return;}
   if(state.tool==='text'){doc.deselect();startText(p);return;}
@@ -165,7 +165,6 @@ const beginPointer=safe(e=>{
     if(doc.selection){const hit=e.currentTarget===selectionRotation?{kind:'rotate'}:doc.hitSelection(p,{zoom:state.zoom});if(hit){if(doc.beginSelectionTransform(hit,p))drag={kind:'selection-transform',hit};return;}doc.deselect();}
     drag={kind:state.tool==='lasso'?'lasso':'select',start:p,current:p,points:[p]};changed();return;
   }
-  if(!doc.activeLayer.visible){toast('Show the active layer before drawing.');return;}
   doc.deselect();doc.begin(label(state.tool));
   if(SHAPES.includes(state.tool)){drag={kind:'shape',start:p,current:p,shift:e.shiftKey};shapePreview=[...p,...p];}
   else{const context=doc.activeLayer.canvas.getContext('2d');stroke=state.tool==='eraser'?createEraserStroke(context,{size:state.size,mode:secondary?'replace':'erase',primary:state.primary,secondary:state.secondary}):createStroke(context,state.tool,{color:secondary?state.secondary:state.primary,secondaryColor:state.secondary,size:state.size,opacity:state.opacity});stroke.move(...p,pressure(e));drag={kind:'stroke'};}
@@ -176,9 +175,9 @@ selectionRotation.addEventListener('pointerdown',beginPointer);
 overlay.addEventListener('pointermove',safe(e=>{
   if(activePointerId!==null&&e.pointerId!==activePointerId)return;
   const p=point(e);hoverClient=[e.clientX,e.clientY];renderEraserCursor();$('#coordinates').textContent=`${Math.round(p[0])}, ${Math.round(p[1])}px`;
+  if(drag?.kind==='pan'){viewport.scrollLeft=drag.scroll[0]+drag.start[0]-e.clientX;viewport.scrollTop=drag.scroll[1]+drag.start[1]-e.clientY;return;}
   if(curve){curve.hover=p;changed();return;}
   if(!drag){const hit=pendingShape?hitPendingShape(pendingShape,p,state.zoom):doc.hitSelection(p,{zoom:state.zoom});if(pendingShape||doc.selection)overlay.style.cursor=hit?.kind==='move'?'move':hit?.kind==='rotate'?'grab':hit?'nwse-resize':'crosshair';return;}
-  if(drag.kind==='pan'){viewport.scrollLeft=drag.scroll[0]+drag.start[0]-e.clientX;viewport.scrollTop=drag.scroll[1]+drag.start[1]-e.clientY;return;}
   if(drag.kind==='stroke'){const samples=e.getCoalescedEvents?.();for(const q of samples?.length?samples:[e])stroke.move(...point(q),pressure(q));}
   else if(drag.kind==='pending-shape')pendingShape=transformPendingShape(drag.original,drag.hit,drag.start,p,{constrain:e.shiftKey});
   else if(drag.kind==='selection-transform')doc.updateSelectionTransform(p);
@@ -191,6 +190,7 @@ overlay.addEventListener('pointermove',safe(e=>{
 overlay.addEventListener('pointerup',safe(e=>{
   if(e.pointerId!==activePointerId)return;activePointerId=null;
   if(!drag)return;const d=drag;
+  if(d.kind==='pan'){drag=d.suspendedDrag;changed();return;}
   if(d.kind==='polygon')return;
   if(d.kind==='stroke'){if(state.tool==='eraser')stroke.move(...point(e));stroke.end();stroke=null;doc.commit();}
   if(d.kind==='shape'){if(d.start[0]===d.current[0]&&d.start[1]===d.current[1])doc.cancel();else if(state.tool==='curve'){curve={start:d.start,end:d.current,controls:[]};}else{pendingShape=createPendingShape(state.tool,d.start,d.current,shapeOptions());}shapePreview=null;}
@@ -202,6 +202,12 @@ overlay.addEventListener('pointerup',safe(e=>{
 for(const type of ['pointercancel','lostpointercapture'])overlay.addEventListener(type,e=>{if(e.pointerId===activePointerId)cancelPointerInteraction();});
 window.addEventListener('blur',()=>{if(activePointerId!==null)cancelPointerInteraction();});
 overlay.addEventListener('dblclick',()=>{if(state.tool==='polygon')finishPending();});
+function paintDrawingDraft(c){
+  if(shapePreview)drawShape(c,state.tool,...shapePreview,shapeOptions());
+  if(pendingShape)paintPendingShape(c,pendingShape);
+  if(curve)paintCurve(c);
+  if(polygon.length)paintPolygon(c,true);
+}
 function paintCurve(c){
   const controls=[...curve.controls];if(controls.length<2&&curve.hover)controls.push(curve.hover);
   drawShape(c,controls.length?'curve':'line',...curve.start,...curve.end,{...shapeOptions(),constrain:false,controlPoints:controls.map(([x,y])=>({x,y}))});
@@ -381,7 +387,7 @@ document.addEventListener('keydown',safe(async e=>{
     buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();return;
   }
   const edit=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
-  if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){textEditor.el.remove();textEditor=null;doc.cancel();}doc.deselect();changed();return;}
+  if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}if(drag?.kind==='pan'){cancelPointerInteraction();e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){textEditor.el.remove();textEditor=null;doc.cancel();}doc.deselect();changed();return;}
   if(edit)return;const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;let action;
   if(mod){action=({n:'new',o:'open',s:e.shiftKey?'save-as':'save',z:e.shiftKey?'redo':'undo',y:'redo',c:e.shiftKey?'copy-all':'copy',x:'cut',v:'paste',a:'select-all',p:'print',e:'properties',w:'resize','+':'zoom-in','=':'zoom-in','-':'zoom-out',b:e.shiftKey?'background':undefined,h:e.shiftKey?'toggle-background':undefined,i:e.shiftKey?'invert-selection':'invert-colors',f1:'collapse'})[key];}
   else if(key==='f11')action='fullscreen';else if(key==='delete')action='delete';else if(key==='enter'){if(e.target.closest('button,a[href]'))return;commitText();if(!pendingShape)finishPending();e.preventDefault();return;}

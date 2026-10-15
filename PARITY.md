@@ -55,6 +55,12 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.8 pending drawing ownership and compositing
+
+The browser suite passed 503 checks. The added cases compare actual display canvas and overlay pixels while a pointer is held, after release and after acceptance. Rectangles, curves and polygons apply active-layer opacity once and remain behind foreground layers. Existing layer pixels and history stay unchanged until acceptance; cancellation removes the preview. The shared compositor reuses its existing scratch canvas. Large-document latency and peak process-family memory have not been measured.
+
+Pan tests preserve pending text, ordinary shapes, curves, polygons and selections through Escape, pointer cancellation, capture loss, blur and normal release. Continued editing remains one undoable operation. Fill, Text and Polygon now share the existing hidden-layer admission policy. These source-derived correctness fixes do not establish unobserved Microsoft Paint behavior. Further reference comparison is blocked by the disposable native Paint window remaining unresponsive; the user's separate document has been preserved.
+
 ### Version 0.2.7 TIFF, text and keyboard controls
 
 The browser suite passed 443 checks, hidden Windows passed 124, isolated Linux passed 120, and 16 TIFF codec groups passed locally. Four atomic-save tests passed.

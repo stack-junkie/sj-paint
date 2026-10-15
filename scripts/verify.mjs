@@ -15,6 +15,8 @@ import { verifyTiffImport } from './verify-tiff-import.mjs';
 import { verifyKeyboardControls } from './verify-keyboard-controls.mjs';
 import { verifyTextLayout } from './verify-text-layout.mjs';
 import { verifyTextInteractions } from './verify-text-interactions.mjs';
+import { verifyDrawingAdmission } from './verify-drawing-admission.mjs';
+import { verifyHeldLayerPreview } from './verify-held-layer-preview.mjs';
 import { verifyEraser } from './verify-eraser.mjs';
 import { verifyEraserInteractions } from './verify-eraser-interactions.mjs';
 import { verifyRasterImport } from './verify-raster-import.mjs';
@@ -48,6 +50,8 @@ try{
  await verifyKeyboardControls(page,check);
  await verifyTextLayout(page,check);
  await verifyTextInteractions(page,check);
+ await verifyDrawingAdmission(page,check);
+ await verifyHeldLayerPreview(page,check);
  await verifyEraser(page,check);
  await verifyEraserInteractions(page,check);
  await verifyRasterImport(page,check);
