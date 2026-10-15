@@ -11,8 +11,12 @@ permissions:
 
 jobs:
   verify:
-    runs-on: ubuntu-22.04
-    timeout-minutes: 15
+    strategy:
+      fail-fast: false
+      matrix:
+        os: [windows-2022, ubuntu-22.04]
+    runs-on: ${{ matrix.os }}
+    timeout-minutes: 20
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0
@@ -24,13 +28,30 @@ jobs:
       - run: npm run test:files
       - run: npm run build
       - name: Headless drawing workflows
+        shell: bash
         run: |
-          export PAINT_CHROME_PATH="$(command -v google-chrome)"
-          test -n "$PAINT_CHROME_PATH"
+          if [ "$RUNNER_OS" = Linux ]; then
+            export PAINT_CHROME_PATH="$(command -v google-chrome)"
+            test -n "$PAINT_CHROME_PATH"
+          fi
           npm test
+      - name: Package Windows app
+        if: runner.os == 'Windows'
+        run: npm run package:windows
+      - name: Verify hidden Windows app
+        if: runner.os == 'Windows'
+        env:
+          SJ_PAINT_TEST_CLIPBOARD: '1'
+        run: npm run test:windows
+      - name: Package Linux app
+        if: runner.os == 'Linux'
+        run: npm run package:linux
+      - name: Verify Linux app-drawer installation
+        if: runner.os == 'Linux'
+        run: python3 scripts/verify-install-linux.py
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
-          name: browser-verification
+          name: verification-${{ runner.os }}
           path: output/
           if-no-files-found: ignore

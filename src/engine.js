@@ -1,3 +1,5 @@
+import PROJECT from './project-format.json' with { type: 'json' };
+
 export const PAINT_LIMITS = Object.freeze({
   maxDimension: 16384, maxPixels: 32 * 1024 * 1024, maxLayers: 64,
   maxDocumentBytes: 128 * 1024 * 1024, historyBytes: 128 * 1024 * 1024,
@@ -697,7 +699,7 @@ export class PaintDocument extends EventTarget {
   }
 
   serialize() {
-    return { format: 'paint-linux', version: 1, width: this.width, height: this.height,
+    return { format: PROJECT.format, version: PROJECT.schemaVersion, width: this.width, height: this.height,
       background: this.background, activeLayerId: this.activeLayerId,
       layers: this.layers.map(layer => {
         let canvas = layer.canvas;
@@ -709,7 +711,7 @@ export class PaintDocument extends EventTarget {
       }) };
   }
   async load(data) {
-    if (!data || data.format !== 'paint-linux' || data.version !== 1) throw new Error('Unsupported Paint project format.');
+    if (!data || !PROJECT.readableFormats.includes(data.format) || data.version !== PROJECT.schemaVersion) throw new Error('Unsupported SJ Paint project format.');
     const [width, height] = dimensions(data.width, data.height);
     if (!Array.isArray(data.layers) || !data.layers.length || data.layers.length > MAX_LAYERS) throw new Error('A project must contain between 1 and 64 layers.');
     assertDocumentBudget(width, height, data.layers.length);

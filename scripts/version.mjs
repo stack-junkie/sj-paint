@@ -58,8 +58,8 @@ function check(read) {
     ['package-lock.json root', lockData.version], ['package-lock.json packages root', lockData.packages?.['']?.version],
   ];
   for (const [path, value] of values) if (value !== version) throw new Error(`${path} has ${JSON.stringify(value)}; expected ${version}.`);
-  const markers = [...data['README.md'].matchAll(/<!-- paint-linux-version: ([^\r\n]+) -->/g)];
-  if (markers.length !== 1 || markers[0][1] !== version) throw new Error(`README.md must contain one <!-- paint-linux-version: ${version} --> marker.`);
+  const markers = [...data['README.md'].matchAll(/<!-- sj-paint-version: ([^\r\n]+) -->/g)];
+  if (markers.length !== 1 || markers[0][1] !== version) throw new Error(`README.md must contain one <!-- sj-paint-version: ${version} --> marker.`);
   const visible = [...data['README.md'].matchAll(/^Version: (\S+)[ \t]*$/gm)];
   if (visible.length !== 1 || visible[0][1] !== version) throw new Error(`README.md must contain one visible Version: ${version} line.`);
   section(data['CHANGELOG.md'], version);
@@ -98,11 +98,12 @@ function bump(version) {
   current.lockData.version = version;
   current.lockData.packages[''].version = version;
   let readme = current.data['README.md']
-    .replace(`<!-- paint-linux-version: ${current.version} -->`, `<!-- paint-linux-version: ${version} -->`)
+    .replace(`<!-- sj-paint-version: ${current.version} -->`, `<!-- sj-paint-version: ${version} -->`)
     .replace(new RegExp(`^Version: ${escape(current.version)}[ \\t]*$`, 'm'), `Version: ${version}`)
-    .replaceAll(`paint-linux-${current.version}-linux-`, `paint-linux-${version}-linux-`)
+    .replaceAll(`sj-paint-${current.version}-`, `sj-paint-${version}-`)
     .replaceAll(`/releases/download/v${current.version}/`, `/releases/download/v${version}/`)
-    .replaceAll(`/releases/tag/v${current.version}`, `/releases/tag/v${version}`);
+    .replaceAll(`/releases/tag/v${current.version}`, `/releases/tag/v${version}`)
+    .replaceAll(`[v${current.version} `, `[v${version} `);
   const changelog = current.data['CHANGELOG.md'];
   if (new RegExp(`^## \\[${escape(version)}\\]`, 'm').test(changelog)) throw new Error(`CHANGELOG.md already contains [${version}].`);
   const firstHeading = changelog.search(/^## /m);

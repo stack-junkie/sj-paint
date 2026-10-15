@@ -5,13 +5,13 @@ body:
   - type: markdown
     attributes:
       value: |
-        Check PARITY.md for known differences. An incomplete diagnosis is welcome.
+        Check PARITY.md for current features and known limits. An incomplete diagnosis is welcome.
         Report vulnerabilities through the Security tab, without public exploit details.
   - type: input
     id: version
     attributes:
       label: App version or commit
-      placeholder: "0.1.0"
+      placeholder: "0.2.0"
     validations:
       required: true
   - type: dropdown
@@ -19,16 +19,17 @@ body:
     attributes:
       label: Edition
       options:
+        - Windows desktop app
         - Linux desktop app
         - Browser edition
-        - Both
+        - More than one edition
     validations:
       required: true
   - type: input
     id: environment
     attributes:
       label: Environment
-      description: Linux distribution and architecture, or operating system and browser version.
+      description: Windows version or Linux distribution and architecture, plus browser version when applicable.
     validations:
       required: true
   - type: textarea

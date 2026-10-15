@@ -32,7 +32,7 @@ try{
  check('layer UI adds layer',await page.evaluate(()=>paintApp.doc.layers.length===2),null);
  await page.getByRole('button',{name:'Text',exact:true}).click();await page.evaluate(()=>paintApp.doc.markSaved());
  const rr=await page.locator('#overlay').boundingBox();
- await page.mouse.click(rr.x+70,rr.y+200);await page.getByRole('textbox',{name:'Text on canvas'}).fill('Paint for Linux');
+ await page.mouse.click(rr.x+70,rr.y+200);await page.getByRole('textbox',{name:'Text on canvas'}).fill('Stack Junkie Paint');
  check('pending text protects against close',await page.evaluate(()=>!window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
  await page.getByRole('button',{name:'Apply text',exact:true}).click();
  check('text commits',await page.evaluate(()=>!document.querySelector('.text-editor')&&paintApp.doc.dirty),null);
@@ -83,9 +83,9 @@ try{
  });
  check('all brushes alter real canvas pixels',rasterTools.brushes.every(x=>x.changed),rasterTools.brushes);
  for(const key of ['flipped','rotated','scaled'])check(key,rasterTools[key],null);
- const saved=await page.evaluate(()=>paintApp.doc.serialize());await fs.writeFile(path.join(output,'verification.linuxpaint'),JSON.stringify(saved));
- const downloadPromise=page.waitForEvent('download');await page.evaluate(()=>paintApp.actions['save-project']());const download=await downloadPromise;await download.saveAs(path.join(output,'ui-save.linuxpaint'));
- check('project save downloads editable project',JSON.parse(await fs.readFile(path.join(output,'ui-save.linuxpaint'),'utf8')).format==='paint-linux',null);
+ const saved=await page.evaluate(()=>paintApp.doc.serialize());await fs.writeFile(path.join(output,'verification.sjpaint'),JSON.stringify(saved));
+ const downloadPromise=page.waitForEvent('download');await page.evaluate(()=>paintApp.actions['save-project']());const download=await downloadPromise;await download.saveAs(path.join(output,'ui-save.sjpaint'));
+ check('project save downloads editable project',JSON.parse(await fs.readFile(path.join(output,'ui-save.sjpaint'),'utf8')).format==='sj-paint',null);
  await page.screenshot({path:path.join(output,'paint-editing.png')});
  await page.evaluate(()=>{const d=paintApp.doc;d.newDocument(60,40);paintApp.state.project=false;paintApp.state.name='hidden-layer';d.begin();d.activeLayer.canvas.getContext('2d').fillRect(0,0,20,20);d.commit();d.setLayer(d.activeLayerId,{visible:false});});
  const hiddenDownload=page.waitForEvent('download');await page.evaluate(()=>paintApp.actions.save());await hiddenDownload;
@@ -94,4 +94,4 @@ try{
  check('pending curve protects clean document against close',await page.evaluate(()=>!paintApp.doc.dirty&&!window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
  check('no JavaScript errors',errors.length===0,errors);
 }catch(e){checks.push({name:'failure',ok:false,detail:e.stack});await page.screenshot({path:path.join(output,'paint-failure.png')});process.exitCode=1;}
-finally{await fs.writeFile(path.join(output,'verification.json'),JSON.stringify({timestamp:new Date().toISOString(),host:'Windows headless Chrome',checks,errors},null,2));console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok),errors}));await browser.close();await server.close();}
+finally{await fs.writeFile(path.join(output,'verification.json'),JSON.stringify({timestamp:new Date().toISOString(),host:process.platform+' headless Chrome',checks,errors},null,2));console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok),errors}));await browser.close();await server.close();}

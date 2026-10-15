@@ -3,10 +3,14 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { writeFileAtomically } = require('./atomic-write.cjs');
+const PROJECT = require('../src/project-format.json');
+
+app.setName(PROJECT.productName);
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const entry = path.resolve(__dirname, '../dist/index.html');
 const entryUrl = pathToFileURL(entry).href;
+const hidden = process.argv.includes('--hidden');
 let mainWindow;
 let dialogBusy = false;
 
@@ -33,8 +37,12 @@ async function withDialog(callback) {
 
 function suggestedName(value, extension) {
   if (typeof value !== 'string' || value.length > 250) throw new Error('Invalid filename.');
-  const stem = path.basename(value).replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
-    .replace(/\.(png|jpe?g|webp|bmp|gif|tiff?|linuxpaint)$/i, '').replace(/[. ]+$/g, '') || 'Untitled';
+  let stem = value.replace(/^.*[/\\]/, '').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .replace(/[. ]+$/g, '');
+  const suffix = stem.slice(stem.lastIndexOf('.') + 1).toLowerCase();
+  if (stem.includes('.') && ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff', ...PROJECT.readableExtensions].includes(suffix)) stem = stem.slice(0, stem.lastIndexOf('.'));
+  stem = stem.replace(/[. ]+$/g, '') || 'Untitled';
+  if (/^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(stem)) stem = `_${stem}`;
   return `${stem}.${extension}`;
 }
 
@@ -82,7 +90,7 @@ function registerHandlers() {
   handle('open-project', () => withDialog(async () => {
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Open layered project', properties: ['openFile'],
-      filters: [{ name: 'Paint for Linux project', extensions: ['linuxpaint'] }],
+      filters: [{ name: `${PROJECT.productName} project`, extensions: PROJECT.readableExtensions }],
     });
     if (result.canceled || !result.filePaths[0]) return null;
     return { text: (await readBounded(result.filePaths[0])).toString('utf8'), name: path.basename(result.filePaths[0]) };
@@ -92,15 +100,15 @@ function registerHandlers() {
       throw new Error('Invalid project data. Maximum project size is 64 MiB.');
     }
     const data = JSON.parse(request.text);
-    if (data?.format !== 'paint-linux' || data.version !== 1 || !Array.isArray(data.layers)) {
+    if (!PROJECT.readableFormats.includes(data?.format) || data.version !== PROJECT.schemaVersion || !Array.isArray(data.layers)) {
       throw new Error('Unsupported project format.');
     }
     const result = await dialog.showSaveDialog(mainWindow, {
-      title: 'Save layered project', defaultPath: suggestedName(request.suggestedName, 'linuxpaint'),
-      filters: [{ name: 'Paint for Linux project', extensions: ['linuxpaint'] }],
+      title: 'Save layered project', defaultPath: suggestedName(request.suggestedName, PROJECT.extension),
+      filters: [{ name: `${PROJECT.productName} project`, extensions: [PROJECT.extension] }],
     });
     if (result.canceled || !result.filePath) return false;
-    await writeFileAtomically(result.filePath, request.text);
+    await writeFileAtomically(result.filePath, JSON.stringify({ ...data, format: PROJECT.format, version: PROJECT.schemaVersion }));
     return true;
   }));
   handle('set-title', (title) => {
@@ -126,9 +134,9 @@ function registerHandlers() {
 
 function createWindow() {
   mainWindow = new BrowserWindow({
-    width: 1440, height: 940, minWidth: 800, minHeight: 600, title: 'Paint for Linux',
+    width: 1440, height: 940, minWidth: 800, minHeight: 600, title: PROJECT.productName, show: !hidden,
     backgroundColor: '#f3f3f3', autoHideMenuBar: true,
-    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true },
+    webPreferences: { preload: path.join(__dirname, 'preload.cjs'), contextIsolation: true, nodeIntegration: false, sandbox: true, backgroundThrottling: !hidden },
   });
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());

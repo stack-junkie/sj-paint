@@ -1,9 +1,11 @@
 import './style.css';
+import PROJECT from './project-format.json' with { type: 'json' };
+import { VERSION } from './version.js';
 import { PaintDocument } from './engine.js';
 import { drawShape } from './shapes.js';
 import { createStroke, BRUSHES } from './brushes.js';
 import { icon, SHAPES } from './icons.js';
-import { openImageFile, saveImageFile, openProjectFile, saveProjectFile, readImageFile, copyCanvas, pasteImage, printCanvas } from './files.js';
+import { openImageFile, saveImageFile, openProjectFile, saveProjectFile, readImageFile, readProjectFile, copyCanvas, pasteImage, printCanvas } from './files.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
@@ -17,7 +19,7 @@ const btn=(id,title,img=id,extra='')=>`<button type="button" data-action="${id}"
 const toolBtn=(id,title,img=id)=>`<button type="button" data-tool="${id}" title="${title}" aria-label="${title}">${icon(img)}</button>`;
 
 $('#app').innerHTML=`
-  <header class="titlebar"><span class="appmark">${icon('palette',16)}</span><span id="title">Untitled - Paint for Linux</span><span class="title-spacer"></span><span class="platform-label">Paint for Linux</span></header>
+  <header class="titlebar"><span class="appmark">${icon('palette',16)}</span><span id="title">Untitled - ${PROJECT.productName}</span><span class="title-spacer"></span><span class="platform-label">${PROJECT.shortName}</span></header>
   <nav class="menubar" aria-label="Main menu"><button data-menu="file">File</button><button data-menu="edit">Edit</button><button data-menu="view">View</button><span class="divider"></span>${btn('save','Save (Ctrl+S)','save')}${btn('undo','Undo (Ctrl+Z)')}${btn('redo','Redo (Ctrl+Y)')}<span class="grow"></span>${btn('settings','Settings')}</nav>
   <section class="toolbar" aria-label="Drawing tools">
     <div class="toolgroup selection-group"><div class="group-content"><div class="split"><button data-tool="select" class="large" title="Rectangular selection" aria-label="Rectangular selection">${icon('select',26)}</button><button data-menu="selection" class="split-arrow" title="Selection options" aria-label="Selection options">⌄</button></div></div><span class="group-label">Selection</span></div>
@@ -47,7 +49,7 @@ function render(){
   for(const c of [canvas,overlay]){c.style.width=`${doc.width*state.zoom}px`;c.style.height=`${doc.height*state.zoom}px`;}
   stage.classList.toggle('pixelated',state.zoom>=3);
   renderOverlay();
-  const dirty=doc.dirty?' •':'';const title=`${state.name}${dirty} - Paint for Linux`;
+  const dirty=doc.dirty?' •':'';const title=`${state.name}${dirty} - ${PROJECT.productName}`;
   $('#title').textContent=title;document.title=title;window.paintDesktop?.setTitle(title);
   $('#dimensions').textContent=`${doc.width} × ${doc.height}px`;
   $('#document-state').textContent=doc.dirty?'Unsaved changes':'';
@@ -181,7 +183,7 @@ async function dialog(title,body,submit='OK'){
   return new Promise(resolve=>{d.querySelector('form').onsubmit=e=>{e.preventDefault();d.close('ok');};d.addEventListener('close',()=>resolve(d.returnValue==='ok'?Object.fromEntries(new FormData(d.querySelector('form'))):null),{once:true});});
 }
 async function canDiscard(){commitText();finishPending();if(!doc.dirty)return true;if(window.paintDesktop?.confirmDiscard)return window.paintDesktop.confirmDiscard();return !!await dialog('Unsaved changes','<p>Discard the changes to this image?</p>','Discard');}
-async function loadImage(result){if(!result)return;await doc.load({format:'paint-linux',version:1,width:result.canvas.width,height:result.canvas.height,background:null,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;state.format=/\.jpe?g$/i.test(result.name)?'jpeg':'png';fit();}
+async function loadImage(result){if(!result)return;await doc.load({format:PROJECT.format,version:PROJECT.schemaVersion,width:result.canvas.width,height:result.canvas.height,background:null,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;state.format=/\.jpe?g$/i.test(result.name)?'jpeg':'png';fit();}
 async function saveAs(){commitText();finishPending();const values=await dialog('Save image',`<label>File name<input name="name" value="${esc(state.name)}" required></label><label>File type<select name="format"><option value="png">PNG image (.png)</option><option value="jpeg">JPEG image (.jpg)</option><option value="bmp">Bitmap image (.bmp)</option><option value="webp">WebP image (.webp)</option><option value="gif">GIF image (.gif)</option><option value="tiff">TIFF image (.tiff)</option></select></label><p class="hint">Save a project to keep layers editable.</p>`,'Save');if(values){const revision=doc.revision;const ok=await saveImageFile(doc.composite(),values.format,values.name);if(ok){state.name=values.name;state.format=values.format;if(doc.layers.length===1&&doc.activeLayer.visible&&doc.activeLayer.opacity===1&&!state.project)doc.markSaved(revision);else toast('Image exported. Save a project to preserve editable layers.');changed();}}}
 async function colorDialog(which='primary'){
   const values=await dialog('Edit colors',`<div class="color-editor"><input type="color" name="color" value="${state[which]}" aria-label="Color spectrum"><label>Hex<input id="hex" value="${state[which]}" pattern="#[0-9a-fA-F]{6}" maxlength="7"></label></div><p class="hint">Choose a color, or enter its hexadecimal value.</p>`);
@@ -224,7 +226,7 @@ const actions={
   collapse:()=>{document.body.classList.toggle('collapsed');$('.collapse-tools').textContent=document.body.classList.contains('collapsed')?'⌄':'⌃';},
   bold:()=>{state.bold=!state.bold;styleText();$('[data-action="bold"]').classList.toggle('active',state.bold);},italic:()=>{state.italic=!state.italic;styleText();$('[data-action="italic"]').classList.toggle('active',state.italic);},underline:()=>{state.underline=!state.underline;styleText();$('[data-action="underline"]').classList.toggle('active',state.underline);},'commit-text':commitText,
   properties:async()=>{const v=await dialog('Image properties',`<p>${esc(state.name)}<br>${doc.layers.length} layer${doc.layers.length===1?'':'s'}</p><div class="two-columns"><label>Width (pixels)<input name="width" type="number" min="1" max="16384" value="${doc.width}" required></label><label>Height (pixels)<input name="height" type="number" min="1" max="16384" value="${doc.height}" required></label></div><p class="hint">Changes canvas dimensions without scaling the image.</p>`);if(v){doc.resize(+v.width,+v.height,{scale:false,target:'document'});fit();}},
-  settings:async()=>{const v=await dialog('Settings',`<label>App theme<select name="theme"><option value="dark" ${state.theme==='dark'?'selected':''}>Dark</option><option value="light" ${state.theme==='light'?'selected':''}>Light</option></select></label><p>Paint for Linux</p><p class="hint">Independent drawing editor. Microsoft Paint AI services and .paint project files are not connected. Projects use .linuxpaint.</p>`);if(v){state.theme=v.theme;document.documentElement.dataset.theme=v.theme;localStorage.setItem('paint-theme',v.theme);}},
+  settings:async()=>{const v=await dialog('Settings',`<label>App theme<select name="theme"><option value="dark" ${state.theme==='dark'?'selected':''}>Dark</option><option value="light" ${state.theme==='light'?'selected':''}>Light</option></select></label><p>${PROJECT.productName} (${PROJECT.shortName})<br>Version ${VERSION}</p><p class="hint">An independent editor for Windows and Linux, built toward Microsoft Paint parity before adding its own features. Projects use .${PROJECT.extension}; older .linuxpaint projects remain readable. Microsoft .paint files and cloud AI services are not connected.</p>`);if(v){state.theme=v.theme;document.documentElement.dataset.theme=v.theme;localStorage.setItem('paint-theme',v.theme);}},
 };
 const menus={
   file:[['New','new','Ctrl+N'],['Open','open','Ctrl+O'],['Open project','open-project'],null,['Save','save','Ctrl+S'],['Save as','save-as','Ctrl+Shift+S'],['Save as project','save-project'],null,['Print','print','Ctrl+P'],['Image properties','properties','Ctrl+E']],
@@ -267,7 +269,7 @@ document.addEventListener('keydown',safe(async e=>{
 }));
 window.addEventListener('beforeunload',e=>{if(doc.dirty||textEditor?.el.value.trim()||curve||polygon.length||stroke||shapePreview){e.preventDefault();e.returnValue='';}});
 viewport.addEventListener('dragover',e=>{e.preventDefault();viewport.classList.add('drop-target');});viewport.addEventListener('dragleave',()=>viewport.classList.remove('drop-target'));
-viewport.addEventListener('drop',safe(async e=>{e.preventDefault();viewport.classList.remove('drop-target');const f=e.dataTransfer.files[0];if(!f||!await canDiscard())return;if(f.name.endsWith('.linuxpaint')){await doc.load(JSON.parse(await f.text()));state.name=f.name.replace(/\.[^.]+$/,'');state.project=true;fit();}else await loadImage(await readImageFile(f));}));
+viewport.addEventListener('drop',safe(async e=>{e.preventDefault();viewport.classList.remove('drop-target');const f=e.dataTransfer.files[0];if(!f||!await canDiscard())return;if(PROJECT.readableExtensions.includes(f.name.split('.').at(-1).toLowerCase())){const project=await readProjectFile(f);await doc.load(project.data);state.name=project.name.replace(/\.[^.]+$/,'');state.project=true;fit();}else await loadImage(await readImageFile(f));}));
 let resizeDrag=null;$('.resize-handle').addEventListener('pointerdown',e=>{commitText();doc.deselect();resizeDrag={x:e.clientX,y:e.clientY,w:doc.width,h:doc.height};e.target.setPointerCapture(e.pointerId);});$('.resize-handle').addEventListener('pointerup',safe(e=>{if(!resizeDrag)return;const r=resizeDrag;resizeDrag=null;doc.resize(Math.max(1,Math.min(8192,Math.round(r.w+(e.clientX-r.x)/state.zoom))),Math.max(1,Math.min(8192,Math.round(r.h+(e.clientY-r.y)/state.zoom))),{scale:false});}));
 render();requestAnimationFrame(fit);
 // Expose the document only in development for focused browser workflow checks.

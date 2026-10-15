@@ -20,7 +20,7 @@ try {
   }
   if (existing.status === 1) {
     const config = resolve(root, execFileSync('git', ['rev-parse', '--git-path', 'config'], { cwd: root, encoding: 'utf8' }).trim());
-    try { copyFileSync(config, `${config}.paint-linux-hooks.bak`, constants.COPYFILE_EXCL); }
+    try { copyFileSync(config, `${config}.sj-paint-hooks.bak`, constants.COPYFILE_EXCL); }
     catch (error) { if (error.code !== 'EEXIST') throw error; }
   }
   execFileSync('git', ['config', '--local', 'core.hooksPath', '.githooks'], { cwd: root, stdio: 'inherit' });

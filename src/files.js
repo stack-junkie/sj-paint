@@ -1,4 +1,5 @@
 import { PAINT_LIMITS, assertDocumentBudget } from './engine.js';
+import PROJECT from './project-format.json' with { type: 'json' };
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const MAX_SIDE = PAINT_LIMITS.maxDimension;
@@ -13,8 +14,13 @@ function dimensions(width, height) {
 }
 
 function filename(name, extension) {
-  const stem = String(name || 'Untitled').replace(/^.*[/\\]/, '').replace(/\.(png|jpe?g|webp|bmp|gif|tiff?|linuxpaint)$/i, '');
-  return `${stem || 'Untitled'}.${extension}`;
+  let stem = String(name || 'Untitled').replace(/^.*[/\\]/, '').replace(/[<>:"/\\|?*\u0000-\u001f]/g, '_')
+    .replace(/[. ]+$/g, '');
+  const suffix = stem.slice(stem.lastIndexOf('.') + 1).toLowerCase();
+  if (stem.includes('.') && ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff', ...PROJECT.readableExtensions].includes(suffix)) stem = stem.slice(0, stem.lastIndexOf('.'));
+  stem = stem.replace(/[. ]+$/g, '') || 'Untitled';
+  if (/^(con|prn|aux|nul|com[1-9¹²³]|lpt[1-9¹²³])(?:\.|$)/i.test(stem)) stem = `_${stem}`;
+  return `${stem}.${extension}`;
 }
 
 function chooseFile(accept) {
@@ -278,7 +284,7 @@ export async function saveImageFile(canvas, format = 'png', name = 'Untitled') {
 }
 
 function validateProject(data) {
-  if (!data || data.format !== 'paint-linux' || data.version !== 1) throw new Error('This is not a supported Paint for Linux project.');
+  if (!data || !PROJECT.readableFormats.includes(data.format) || data.version !== PROJECT.schemaVersion) throw new Error('This is not a supported SJ Paint project.');
   dimensions(data.width, data.height);
   if ((data.background !== null && typeof data.background !== 'string') ||
       !Array.isArray(data.layers) || data.layers.length < 1 || data.layers.length > PAINT_LIMITS.maxLayers) {
@@ -317,24 +323,32 @@ export async function openProjectFile() {
     if (!result) return null;
     ({ text, name } = result);
   } else {
-    const file = await chooseFile('.linuxpaint,application/json');
+    const file = await chooseFile(`${PROJECT.readableExtensions.map(extension => `.${extension}`).join(',')},application/json`);
     if (!file) return null;
-    if (file.size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
-    text = await file.text();
-    name = file.name;
+    return readProjectFile(file);
   }
+  return parseProject(text, name);
+}
+
+function parseProject(text, name) {
   if (new Blob([text]).size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('The project does not contain valid JSON.'); }
   return { data: validateProject(data), name };
 }
 
+export async function readProjectFile(file) {
+  if (!file || typeof file.text !== 'function' || !Number.isFinite(file.size) || file.size < 0) throw new Error('Choose a project file.');
+  if (file.size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
+  return parseProject(await file.text(), file.name);
+}
+
 export async function saveProjectFile(data, name = 'Untitled') {
   validateProject(data);
-  const text = JSON.stringify(data);
+  const text = JSON.stringify({ ...data, format: PROJECT.format, version: PROJECT.schemaVersion });
   const blob = new Blob([text], { type: 'application/json' });
   if (blob.size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
-  const suggestedName = filename(name, 'linuxpaint');
+  const suggestedName = filename(name, PROJECT.extension);
   return window.paintDesktop ? window.paintDesktop.saveProject({ text, suggestedName }) : download(blob, suggestedName);
 }
 

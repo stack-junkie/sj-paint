@@ -1,8 +1,8 @@
 # Attribution
 
-Paint for Linux is an independent drawing editor inspired by the layout and behavior of modern Microsoft Paint. Microsoft Paint and Windows are Microsoft product names. This project is not affiliated with, endorsed by or sponsored by Microsoft.
+Stack Junkie Paint (SJ Paint) is an independent drawing editor inspired by modern Microsoft Paint. Its goal of matching the Microsoft Paint baseline remains unfinished; project-specific extensions follow that baseline. Microsoft Paint and Windows are Microsoft product names. This project is not affiliated with, endorsed by or sponsored by Microsoft.
 
-The implementation uses independently written editing and rendering code and newly drawn icons. Microsoft executables, icon assets and model weights are not included. The reference and limits of the comparison are documented in [PARITY.md](PARITY.md).
+The implementation uses independently written editing and rendering code and newly drawn icons. Microsoft executables, icon assets and model weights are not included. The initial reference, supported features and verification history are documented in [PARITY.md](PARITY.md).
 
 [REA](https://github.com/morluto/rea) was used for static inspection of the reference application's executable resources. That inspection helped establish resource inventory; it does not establish behavioral equivalence.
 

@@ -1,10 +1,10 @@
-name: Feature or compatibility request
+name: Feature or parity request
 description: Propose an improvement or describe a missing workflow.
 title: "feat: "
 body:
   - type: markdown
     attributes:
-      value: Check PARITY.md for current scope and known differences. Early ideas are welcome.
+      value: The Microsoft Paint baseline is unfinished. Check PARITY.md for known gaps. Project-specific extensions follow the baseline; early ideas are welcome.
   - type: textarea
     id: need
     attributes:
@@ -23,4 +23,4 @@ body:
     id: reference
     attributes:
       label: Reference or additional context
-      description: For a Paint compatibility request, include the Microsoft Paint version and a reproducible example if available.
+      description: For a parity request, include the Microsoft Paint version and a reproducible example when available. Identify project-specific ideas separately.

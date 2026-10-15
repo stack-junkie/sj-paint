@@ -1,0 +1,9 @@
+{
+  "productName": "Stack Junkie Paint",
+  "shortName": "SJ Paint",
+  "format": "sj-paint",
+  "schemaVersion": 1,
+  "extension": "sjpaint",
+  "readableFormats": ["sj-paint", "paint-linux"],
+  "readableExtensions": ["sjpaint", "linuxpaint"]
+}
