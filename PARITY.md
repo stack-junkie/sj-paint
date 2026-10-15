@@ -34,7 +34,7 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 - Rectangular and free-form selections, inverse selection, color-key transparency for new selections, color inversion, move/resize/crop, copy/cut/paste, image rotation, flips, resize/skew and canvas dimensions.
 - Layer add/delete/duplicate/reorder/rename, opacity, visibility, merge and transparent background.
 - Undo/redo with saved-state identity, editable `.sjpaint` projects, legacy `.linuxpaint` project import, native file dialogs, image export and print integration.
-- PNG, JPEG, WebP, BMP, GIF and TIFF export. PNG/JPEG/WebP/BMP/GIF import uses Chromium decoding. GIF is a single frame; TIFF import is absent.
+- PNG, JPEG, WebP, BMP, GIF and TIFF export. PNG/JPEG/WebP/BMP/GIF import uses Chromium decoding. GIF is a single frame; classic TIFF import supports RGB/RGBA8 strips with uncompressed, PackBits, LZW and Deflate data.
 
 ## Baseline gaps and unresolved behavior
 
@@ -45,13 +45,21 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 | Drawing behavior | Brush rasterization, textures, selection and transform edge cases, text metrics and all command shortcuts are not proven identical to the reference. |
 | Visual fidelity | Icons are newly drawn and rendering is independently implemented. Fonts depend on the host platform. Pixel-perfect layout and control behavior have not been established. |
 | Advanced editing | Ordinary shapes remain editable with a free-rotation handle until committed. Committed text and shapes become pixels. Post-commit vector/text re-editing is not implemented. Curve/polygon editing still uses its earlier construction workflow. |
-| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export is uncompressed RGBA; TIFF import is absent. Full metadata preservation and color-managed workflows are not established. |
+| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export is uncompressed RGBA. TIFF import covers classic RGB/RGBA8 strips and orientations 1 through 8; multipage, tiled, planar, palette/grayscale, higher bit depth and color-profile variants are rejected. Full metadata preservation and color-managed workflows are not established. |
 | Platform integration | The Linux installer passed GIO menu registration, eligibility and fixture-launch checks. Actual menu presentation in each desktop shell remains unverified. Physical printing, native chooser interaction, Wayland, complete accessibility support and ARM compatibility also remain unverified. |
 | Resource limits | The editor enforces its own document, history and encoded-file bounds. Their equivalence to Microsoft Paint limits is unknown. |
 
 Implemented controls and passing checks do not close these gaps. Baseline acceptance still requires reference-based verification of appearance and behavior, including features that are missing or currently uncertain. Project-specific feature development follows the completed baseline.
 
 ## Verification history
+
+### Version 0.2.7 TIFF, text and keyboard controls
+
+Two owned Paint TIFF saves establish native LZW/predictor-2 RGBA8 compatibility: an opaque 128 by 128 color grid (1334 bytes, SHA-256 `e9dea64dc8bc57c6d134256a3b63cb7f1bb97133be874d3c7b10f6a8008999d5`) and a partially transparent 200 by 100 sample (956 bytes, SHA-256 `cdaddd4653fe257673a040780b40232945724326cb09546d953ea1426cb4ed45`). Decoded bytes match the corresponding native .paint and PNG pixels exactly. Synthetic codec cases also exercise both byte orders, strip codecs, predictor, orientation, alpha and malformed inputs. Imported metadata is not retained.
+
+Text checks cover long-word wrapping, leading spaces, alignment and browser-measured baselines. Native observation confirmed a live text draft with leading spaces and wrapped long words, and Edit colors opening above the draft controls. The reference window stopped responding during Cancel, so its cancel outcome is unknown. SJ Paint checks establish draft/transaction preservation through that dialog and focused-button Redo. Exact native text-box transforms, opaque background extent, typography and all editing shortcuts remain unresolved.
+
+Keyboard checks cover Enter activation, menu dismissal, focus restoration and surviving layer controls through visibility changes and reorder Undo. These are verified SJ Paint robustness fixes; they do not establish complete native keyboard or assistive-technology parity.
 
 ### Version 0.2.6 eraser reference coverage
 

@@ -66,7 +66,7 @@ async function readBounded(filePath) {
 function registerHandlers() {
   handle('open-image', (request) => withDialog(async () => {
     if (request !== undefined && (!request || typeof request.allowProjects !== 'boolean')) throw new Error('Invalid open request.');
-    const extensions = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif'];
+    const extensions = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff'];
     if (request?.allowProjects) extensions.push('paint', ...PROJECT.readableExtensions);
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Open image', properties: ['openFile'],

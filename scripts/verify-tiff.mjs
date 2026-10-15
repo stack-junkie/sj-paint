@@ -1,0 +1,244 @@
+import test from 'node:test';
+import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
+import { createHash } from 'node:crypto';
+import { deflateSync, inflateSync } from 'node:zlib';
+import { readTiff } from '../src/tiff.js';
+import { exportTiff } from '../src/files.js';
+import { readPaint } from '../src/paint-format.js';
+
+const pixels = Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 0, 0, 0, 255, 128, 1, 2, 3, 4, 5, 6, 7, 8, 255, 255, 255, 255]);
+const digest = bytes => createHash('sha256').update(bytes).digest('hex');
+const join = parts => { const bytes = new Uint8Array(parts.reduce((sum, part) => sum + part.length, 0)); let p = 0; for (const part of parts) { bytes.set(part, p); p += part.length; } return bytes; };
+
+function packCodes(codes) {
+  const bytes = []; let accumulator = 0, bits = 0;
+  for (const [code, width] of codes) {
+    accumulator = (accumulator << width) | code; bits += width;
+    while (bits >= 8) { bits -= 8; bytes.push((accumulator >>> bits) & 255); }
+    accumulator &= (1 << bits) - 1;
+  }
+  if (bits) bytes.push(accumulator << (8 - bits));
+  return Uint8Array.from(bytes);
+}
+
+// Literal-only TIFF LZW streams exercise all code widths without a test encoder
+// implementing dictionary matching. EOI follows the width for the next code.
+function literalLzw(bytes) {
+  const codes = [[256, 9]];
+  const width = count => count < 254 ? 9 : count < 766 ? 10 : count < 1790 ? 11 : 12;
+  for (let index = 0; index < bytes.length; index++) codes.push([bytes[index], width(index)]);
+  codes.push([257, width(bytes.length)]); return packCodes(codes);
+}
+function literalPackBits(bytes) {
+  const parts = [Uint8Array.of(128)];
+  for (let start = 0; start < bytes.length; start += 128) {
+    const chunk = bytes.subarray(start, start + 128); parts.push(Uint8Array.of(chunk.length - 1), chunk);
+  }
+  return join(parts);
+}
+
+function fixture({ width = 3, height = 2, samples = 4, raw = pixels, little = true, compression = 1,
+  predictor = 1, orientation = 1, rowsPerStrip = height, alpha = 2, overrides = [], stripData } = {}) {
+  const strips = [];
+  for (let row = 0; row < height; row += rowsPerStrip) {
+    const rows = Math.min(rowsPerStrip, height - row), data = raw.slice(row * width * samples, (row + rows) * width * samples);
+    if (predictor === 2) for (let y = 0; y < rows; y++) {
+      const start = y * width * samples;
+      for (let pos = start + width * samples - 1; pos >= start + samples; pos--) data[pos] = (data[pos] - data[pos - samples]) & 255;
+    }
+    strips.push(stripData ? stripData(data, strips.length) : compression === 5 ? literalLzw(data) :
+      compression === 32773 ? literalPackBits(data) : [8, 32946].includes(compression) ? new Uint8Array(deflateSync(data)) : data);
+  }
+  const tags = new Map([
+    [256, [4, [width]]], [257, [4, [height]]], [258, [3, Array(samples).fill(8)]], [259, [3, [compression]]],
+    [262, [3, [2]]], [273, [4, Array(strips.length).fill(0)]], [274, [3, [orientation]]], [277, [3, [samples]]],
+    [278, [4, [rowsPerStrip]]], [279, [4, strips.map(strip => strip.length)]], [284, [3, [1]]], [317, [3, [predictor]]],
+  ]);
+  if (samples === 4) tags.set(338, [3, [alpha]]);
+  for (const [tag, value] of overrides) { if (value === null) tags.delete(tag); else tags.set(tag, value); }
+  const fields = [...tags].sort((a, b) => a[0] - b[0]);
+  const tableEnd = 8 + 2 + fields.length * 12 + 4;
+  const metadataBytes = fields.reduce((sum, [, [type, values]]) => sum + (values.length * (type === 3 ? 2 : 4) > 4 ? values.length * (type === 3 ? 2 : 4) : 0), 0);
+  let stripOffset = tableEnd + metadataBytes;
+  if (!overrides.some(([tag]) => tag === 273)) for (let index = 0; index < strips.length; index++) { tags.get(273)[1][index] = stripOffset; stripOffset += strips[index].length; }
+  const result = new Uint8Array(tableEnd + metadataBytes + strips.reduce((sum, strip) => sum + strip.length, 0));
+  const view = new DataView(result.buffer), u16 = (offset, value) => view.setUint16(offset, value, little), u32 = (offset, value) => view.setUint32(offset, value, little);
+  result.set(little ? [73, 73] : [77, 77]); u16(2, 42); u32(4, 8); u16(8, fields.length);
+  let metadata = tableEnd;
+  fields.forEach(([tag, [type, values]], index) => {
+    const offset = 10 + index * 12, step = type === 3 ? 2 : 4, length = values.length * step;
+    u16(offset, tag); u16(offset + 2, type); u32(offset + 4, values.length);
+    const target = length > 4 ? metadata : offset + 8;
+    if (length > 4) { u32(offset + 8, metadata); metadata += length; }
+    values.forEach((value, n) => type === 3 ? u16(target + n * step, value) : u32(target + n * step, value));
+  });
+  let target = tableEnd + metadataBytes;
+  for (const strip of strips) { result.set(strip, target); target += strip.length; }
+  return result;
+}
+
+const boundedZlib = (bytes, expected) => {
+  const { buffer, engine } = inflateSync(bytes, { maxOutputLength: expected, info: true });
+  assert.equal(engine.bytesWritten, bytes.length, 'trailing bytes after zlib stream'); return new Uint8Array(buffer);
+};
+function fieldOffset(bytes, tag) {
+  const little = bytes[0] === 73, view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), ifd = view.getUint32(4, little);
+  for (let index = 0; index < view.getUint16(ifd, little); index++) {
+    const offset = ifd + 2 + index * 12; if (view.getUint16(offset, little) === tag) return offset;
+  }
+  throw new Error(`missing test tag ${tag}`);
+}
+function change(bytes, tag, relative, value, size = 4) {
+  const result = bytes.slice(), view = new DataView(result.buffer), little = result[0] === 73;
+  if (size === 4) view.setUint32(fieldOffset(result, tag) + relative, value, little);
+  else view.setUint16(fieldOffset(result, tag) + relative, value, little);
+  return result;
+}
+
+test('both byte orders and all supported compression schemes preserve RGBA and predictor rows', async () => {
+  for (const little of [true, false]) for (const compression of [1, 5, 8, 32946, 32773]) for (const predictor of [1, 2]) {
+    const decoded = await readTiff(fixture({ little, compression, predictor, rowsPerStrip: 1 }));
+    assert.deepEqual(decoded, { width: 3, height: 2, rgba: pixels });
+  }
+});
+
+test('existing SJ TIFF exporter round-trips exact unassociated-alpha bytes', async () => {
+  const canvas = { width: 3, height: 2, getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray(pixels) }) }) };
+  const blob = exportTiff(canvas);
+  assert.deepEqual(await readTiff(await blob.arrayBuffer()), { width: 3, height: 2, rgba: pixels });
+});
+
+test('RGB expands alpha and all eight orientations map asymmetric pixels correctly', async () => {
+  const raw = Uint8Array.from([1, 0, 0, 2, 0, 0, 3, 0, 0, 4, 0, 0, 5, 0, 0, 6, 0, 0]);
+  const grids = [[1, 2, 3, 4, 5, 6], [3, 2, 1, 6, 5, 4], [6, 5, 4, 3, 2, 1], [4, 5, 6, 1, 2, 3],
+    [1, 4, 2, 5, 3, 6], [4, 1, 5, 2, 6, 3], [6, 3, 5, 2, 4, 1], [3, 6, 2, 5, 1, 4]];
+  for (let orientation = 1; orientation <= 8; orientation++) {
+    const decoded = await readTiff(fixture({ samples: 3, raw, orientation }));
+    assert.equal(decoded.width, orientation >= 5 ? 2 : 3); assert.equal(decoded.height, orientation >= 5 ? 3 : 2);
+    assert.deepEqual([...decoded.rgba].filter((_, i) => i % 4 === 0), grids[orientation - 1]);
+    assert.ok([...decoded.rgba].filter((_, i) => i % 4 === 3).every(value => value === 255));
+  }
+});
+
+test('associated alpha is unpremultiplied while zero alpha is well-defined', async () => {
+  const decoded = await readTiff(fixture({ width: 2, height: 1, raw: Uint8Array.of(64, 32, 0, 128, 0, 0, 0, 0), alpha: 1 }));
+  assert.deepEqual([...decoded.rgba], [128, 64, 0, 128, 0, 0, 0, 0]);
+});
+
+test('LZW early width transitions through 12 bits and full dictionary remain bounded', async () => {
+  const raw = Uint8Array.from({ length: 5000 }, (_, index) => (index * 37) & 255);
+  const decoded = await readTiff(fixture({ width: 1250, height: 1, raw, compression: 5 }));
+  assert.deepEqual(decoded.rgba, raw);
+});
+
+test('LZW handles dictionary self-reference and reset, PackBits handles runs and no-ops', async () => {
+  const raw = new Uint8Array(12).fill(65);
+  const lzwStrip = packCodes([[256, 9], [65, 9], [258, 9], [259, 9], [256, 9], [65, 9], [258, 9], [259, 9], [257, 9]]);
+  assert.deepEqual((await readTiff(fixture({ width: 3, height: 1, raw, compression: 5, stripData: () => lzwStrip }))).rgba, raw);
+  const runs = Uint8Array.of(128, 245, 65, 128);
+  assert.deepEqual((await readTiff(fixture({ width: 3, height: 1, raw, compression: 32773, stripData: () => runs }))).rgba, raw);
+});
+
+test('multi-chunk Deflate is checked by native and independent bounded codecs', async () => {
+  const raw = Uint8Array.from({ length: 128 * 256 * 4 }, (_, index) => index * 53 & 255);
+  const encoded = fixture({ width: 128, height: 256, raw, compression: 8, predictor: 2 });
+  assert.deepEqual((await readTiff(encoded)).rgba, raw);
+  assert.deepEqual((await readTiff(encoded, { inflate: boundedZlib })).rgba, raw);
+});
+
+test('every truncated prefix fails', async () => {
+  const bytes = fixture();
+  for (let end = 0; end < bytes.length; end++) await assert.rejects(readTiff(bytes.subarray(0, end)));
+});
+
+test('unsupported TIFF variants and interpretations fail explicitly', async () => {
+  const cases = [
+    [[258, [3, [16, 16, 16, 16]]]], [[259, [3, [7]]]], [[262, [3, [3]]]], [[274, [3, [9]]]],
+    [[284, [3, [2]]]], [[266, [3, [2]]]], [[317, [3, [3]]]], [[338, [3, [0]]]],
+    [[339, [3, [3, 3, 3, 3]]]], [[34675, [4, [1]]]], [[322, [4, [16]]]], [[330, [4, [8]]]],
+    [[254, [4, [1]]]], [[297, [3, [0, 2]]]], [[258, null]], [[338, null]], [[278, [4, [0]]]],
+  ];
+  for (const overrides of cases) await assert.rejects(readTiff(fixture({ overrides })), /Unsupported or invalid TIFF/);
+  const big = fixture(); new DataView(big.buffer).setUint16(2, 43, true); await assert.rejects(readTiff(big), /BigTIFF/);
+  const pages = fixture(), view = new DataView(pages.buffer); view.setUint32(10 + view.getUint16(8, true) * 12, 8, true);
+  await assert.rejects(readTiff(pages), /multiple pages/);
+});
+
+test('malformed tag counts, types, strip ranges, overlap and duplicate tags fail before inflation', async () => {
+  const bytes = fixture({ compression: 8, rowsPerStrip: 1 }); let calls = 0;
+  const cases = [change(bytes, 258, 4, 0xffffffff), change(bytes, 258, 8, 0xffffffff), change(bytes, 258, 2, 99, 2),
+    change(bytes, 259, 0, 258, 2), change(bytes, 273, 4, 1), change(bytes, 273, 8, 0xffffffff), change(bytes, 279, 4, 0)];
+  const overlapping = bytes.slice(), view = new DataView(overlapping.buffer), offsetTable = view.getUint32(fieldOffset(overlapping, 273) + 8, true);
+  view.setUint32(offsetTable + 4, view.getUint32(offsetTable, true), true); cases.push(overlapping);
+  for (const invalid of cases) await assert.rejects(readTiff(invalid, { inflate: () => { calls++; throw new Error('unexpected inflate'); } }));
+  assert.equal(calls, 0);
+});
+
+test('dimension limits are enforced before allocating or inflating pixels', async () => {
+  const bytes = fixture({ compression: 8 }); let calls = 0;
+  for (const invalid of [change(bytes, 256, 8, 0), change(bytes, 256, 8, 16385), change(change(bytes, 256, 8, 16384), 257, 8, 16384)]) {
+    await assert.rejects(readTiff(invalid, { inflate: () => { calls++; throw new Error('unexpected inflate'); } }), /dimensions/);
+  }
+  assert.equal(calls, 0);
+});
+
+test('strip codecs reject truncated, short and excessive expansion', async () => {
+  const options = { width: 1, height: 1, raw: Uint8Array.of(1, 2, 3, 4) };
+  for (const encoded of [
+    fixture({ ...options, compression: 32773, stripData: () => Uint8Array.of(3, 1) }),
+    fixture({ ...options, compression: 32773, stripData: () => Uint8Array.of(252, 1) }),
+    fixture({ ...options, compression: 32773, stripData: () => Uint8Array.of(255) }),
+    fixture({ ...options, compression: 32773, stripData: () => Uint8Array.of(0, 1) }),
+    fixture({ ...options, compression: 5, stripData: () => packCodes([[256, 9], [65, 9], [258, 9], [259, 9], [257, 9]]) }),
+    fixture({ ...options, compression: 5, stripData: () => packCodes([[256, 9], [258, 9], [257, 9]]) }),
+    fixture({ ...options, compression: 5, stripData: () => packCodes([[256, 9], [1, 9]]) }),
+    fixture({ ...options, compression: 5, stripData: () => packCodes([[256, 9], [1, 9], [257, 9]]) }),
+    fixture({ ...options, compression: 8, stripData: () => new Uint8Array(deflateSync(new Uint8Array(1024 * 1024))) }),
+    fixture({ ...options, compression: 8, stripData: () => new Uint8Array(deflateSync(Uint8Array.of(1, 2, 3))) }),
+  ]) await assert.rejects(readTiff(encoded));
+});
+
+test('bounded Node Deflate adapter rejects trailing compressed data', async () => {
+  const encoded = fixture({ compression: 8, stripData: bytes => join([new Uint8Array(deflateSync(bytes)), Uint8Array.of(1, 2, 3)]) });
+  await assert.rejects(readTiff(encoded, { inflate: boundedZlib }), /trailing bytes/);
+});
+
+test('input views preserve byte offset and decoding does not mutate source', async () => {
+  const encoded = fixture({ predictor: 2 }), padded = new Uint8Array(encoded.length + 12); padded.set(encoded, 7);
+  const before = padded.slice(); assert.deepEqual((await readTiff(padded.subarray(7, 7 + encoded.length))).rgba, pixels);
+  assert.deepEqual(padded, before);
+});
+
+test('owned native Paint LZW+predictor TIFF matches its independently saved .paint pixels', async t => {
+  let bytes;
+  try { bytes = await readFile(new URL('../output/reference-native-colors.tif', import.meta.url)); }
+  catch (error) { if (error.code === 'ENOENT') { t.skip('owned native fixture is not present'); return; } throw error; }
+  assert.equal(digest(bytes), 'e9dea64dc8bc57c6d134256a3b63cb7f1bb97133be874d3c7b10f6a8008999d5');
+  const decoded = await readTiff(bytes);
+  assert.equal(decoded.width, 128); assert.equal(decoded.height, 128);
+  assert.equal(digest(decoded.rgba), '8bd1c0687e45a45225da08f8ae5ff861aeb58142150adb8626001dcf5b655f30');
+  let paint;
+  try { paint = await readFile(new URL('../output/reference-eraser-tolerance-fine-result.paint', import.meta.url)); }
+  catch (error) { if (error.code === 'ENOENT') return; throw error; }
+  const source = await readPaint(paint); assert.equal(source.layers.length, 1); assert.deepEqual(decoded.rgba, source.layers[0].rgba);
+});
+
+test('owned native alpha TIFF matches Paint PNG export pixels, including native RGB rounding', async t => {
+  let bytes;
+  try { bytes = await readFile(new URL('../output/reference-native-alpha.tif', import.meta.url)); }
+  catch (error) { if (error.code === 'ENOENT') { t.skip('owned native alpha fixture is not present'); return; } throw error; }
+  assert.equal(digest(bytes), 'cdaddd4653fe257673a040780b40232945724326cb09546d953ea1426cb4ed45');
+  const decoded = await readTiff(bytes);
+  assert.equal(decoded.width, 200); assert.equal(decoded.height, 100);
+  // Independently established with Pillow from reference-alpha-export.png.
+  // Native TIFF and PNG agree byte-for-byte; both differ from the original
+  // .paint RGBA [180,80,40,128] by one RGB unit after Paint's rendering step.
+  assert.equal(digest(decoded.rgba), '4a98f30e7eb6f3c5d328f1b80d4ed2f6a2f9e52ad18d0e4845825b5337bcf536');
+  assert.deepEqual([...decoded.rgba.subarray((50 * 200 + 100) * 4, (50 * 200 + 100) * 4 + 4)], [179, 79, 39, 128]);
+  assert.deepEqual([...decoded.rgba.subarray(0, 4)], [0, 0, 0, 0]);
+  try {
+    const png = await readFile(new URL('../output/reference-alpha-export.png', import.meta.url));
+    assert.equal(digest(png), 'd1dff4385862ca4efcc3dc7b179cf70b1afd1b0b7e1f41fd67536547736e2ef1');
+  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+});

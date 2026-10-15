@@ -1,6 +1,7 @@
 import { PAINT_LIMITS, assertDocumentBudget } from './engine.js';
 import PROJECT from './project-format.json' with { type: 'json' };
 import { readPaint, writePaint } from './paint-format.js';
+import { readTiff } from './tiff.js';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const MAX_SIDE = PAINT_LIMITS.maxDimension;
@@ -65,9 +66,20 @@ function download(blob, name) {
 
 async function decode(blob, name) {
   if (!blob.size || blob.size > MAX_BYTES) throw new Error('Choose an image smaller than 64 MiB.');
+  const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const tiffHeader = (header[0] === 73 && header[1] === 73 && [42, 43].includes(header[2]) && header[3] === 0) ||
+    (header[0] === 77 && header[1] === 77 && header[2] === 0 && [42, 43].includes(header[3]));
+  if (tiffHeader || /\.tiff?$/i.test(name) || /^image\/(?:x-)?tiff?(?:;|$)/i.test(blob.type)) {
+    // Validate TIFF dimensions, strip expansion and supported interpretations
+    // before allocating a browser canvas. Magic takes precedence over names.
+    const { width, height, rgba } = await readTiff(new Uint8Array(await blob.arrayBuffer()));
+    const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
+    canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.byteLength), width, height), 0, 0);
+    return { canvas, name, format: 'tiff' };
+  }
   let bitmap;
   try { bitmap = await createImageBitmap(blob); }
-  catch { throw new Error('This image could not be decoded. Try PNG, JPEG, WebP or BMP.'); }
+  catch { throw new Error('This image could not be decoded. Try PNG, JPEG, WebP, BMP or supported TIFF.'); }
   try {
     dimensions(bitmap.width, bitmap.height);
     const canvas = document.createElement('canvas');
@@ -94,7 +106,7 @@ export async function openImageFile({ allowProjects = false } = {}) {
     return allowProjects && isProjectFile(file.name) ? readProjectFile(file) : readImageFile(file);
   }
   const projects = allowProjects ? `,.paint,${PROJECT.readableExtensions.map(extension => `.${extension}`).join(',')}` : '';
-  const file = await chooseFile(`image/png,image/jpeg,image/webp,image/bmp,image/gif,.bmp${projects}`);
+  const file = await chooseFile(`image/png,image/jpeg,image/webp,image/bmp,image/gif,image/tiff,.bmp,.tif,.tiff${projects}`);
   return file ? allowProjects && isProjectFile(file.name) ? readProjectFile(file) : readImageFile(file) : null;
 }
 

@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.7] - Unreleased
+
+- Import supported classic TIFF images through Open, drag and drop and Paste from file, including native Paint LZW/predictor samples and transparent pixels.
+- Preserve text wrapping, long words and leading spaces when applying a draft, and keep its editing transaction intact through Redo and the color dialog.
+- Let Enter activate focused controls, retain layer focus through updates and reordering, and dismiss menus without canceling artwork or stealing another control's keys.
+
 ## [0.2.6] - 2026-10-15
 
 - Match observed square erasing, continuous diagonal coverage and right-button Color 1 to Color 2 replacement while preserving alpha.

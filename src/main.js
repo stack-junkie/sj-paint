@@ -7,6 +7,7 @@ import { drawShape } from './shapes.js';
 import { createPendingShape, paintPendingShape, hitPendingShape, transformPendingShape } from './pending-shape.js';
 import { createStroke, BRUSHES } from './brushes.js';
 import { createEraserStroke, eraserFootprint } from './eraser.js';
+import { layoutTextEditor } from './text-layout.js';
 import { icon, SHAPES } from './icons.js';
 import { openImageFile, saveImageFile, openProjectFile, saveProjectFile, savePaintFile, isProjectFile, readImageFile, readProjectFile, copyCanvas, pasteImage, printCanvas } from './files.js';
 
@@ -97,8 +98,20 @@ function renderOverlay(){
 function shapeOptions(){return {stroke:state.primary,fill:state.secondary,lineWidth:state.size,opacity:state.opacity,outline:state.outline,fillStyle:state.fillStyle,constrain:drag?.shift||false};}
 function updatePendingStyle(){if(pendingShape)pendingShape={...pendingShape,options:{...shapeOptions(),constrain:false}};changed();}
 function renderLayers(){
-  const list=$('#layer-list');list.innerHTML=[...doc.layers].reverse().map(l=>`<div class="layer ${l.id===doc.activeLayerId?'active':''}" data-layer="${esc(l.id)}"><button class="layer-eye" data-visible="${esc(l.id)}" title="${l.visible?'Hide':'Show'} layer">${icon(l.visible?'eye':'hidden',17)}</button><canvas width="66" height="45" data-thumb="${esc(l.id)}"></canvas><span>${esc(l.name)}</span></div>`).join('');
-  for(const l of doc.layers){const c=list.querySelector(`[data-thumb="${CSS.escape(l.id)}"]`),cx=c.getContext('2d');const s=Math.min(c.width/doc.width,c.height/doc.height);cx.drawImage(l.canvas,(c.width-doc.width*s)/2,(c.height-doc.height*s)/2,doc.width*s,doc.height*s);}
+  const list=$('#layer-list'), wanted=new Set(doc.layers.map(layer=>layer.id)),focused=list.contains(document.activeElement)?document.activeElement:null;
+  for(const row of [...list.children])if(!wanted.has(row.dataset.layer))row.remove();
+  for(const [index,l] of [...doc.layers].reverse().entries()){
+    let row=[...list.children].find(row=>row.dataset.layer===l.id);
+    if(!row){row=document.createElement('div');row.className='layer';row.dataset.layer=l.id;row.innerHTML='<button type="button" class="layer-eye"></button><button type="button" class="layer-select"><canvas width="66" height="45" aria-hidden="true"></canvas><span></span></button>';}
+    if(list.children[index]!==row)list.insertBefore(row,list.children[index]||null);
+    row.classList.toggle('active',l.id===doc.activeLayerId);
+    const eye=row.querySelector('.layer-eye'), select=row.querySelector('.layer-select'), c=select.querySelector('canvas');
+    eye.dataset.visible=l.id;eye.title=`${l.visible?'Hide':'Show'} layer`;eye.setAttribute('aria-label',`${eye.title} ${l.name}`);eye.setAttribute('aria-pressed',String(l.visible));
+    if(eye.dataset.visibleState!==String(l.visible)){eye.innerHTML=icon(l.visible?'eye':'hidden',17);eye.dataset.visibleState=String(l.visible);}
+    select.dataset.layerSelect=l.id;select.setAttribute('aria-label',`Select layer ${l.name}`);select.setAttribute('aria-pressed',String(l.id===doc.activeLayerId));select.querySelector('span').textContent=l.name;
+    c.dataset.thumb=l.id;const cx=c.getContext('2d'), scale=Math.min(c.width/doc.width,c.height/doc.height);cx.clearRect(0,0,c.width,c.height);cx.drawImage(l.canvas,(c.width-doc.width*scale)/2,(c.height-doc.height*scale)/2,doc.width*scale,doc.height*scale);
+  }
+  if(focused?.isConnected&&document.activeElement!==focused)focused.focus({preventScroll:true});
   $('#layer-opacity').value=Math.round((doc.activeLayer?.opacity??1)*100);$('#background-swatch').style.background=doc.background||'repeating-conic-gradient(#bbb 0 25%,white 0 50%) 0 / 8px 8px';
 }
 function updateToolState(){
@@ -210,11 +223,21 @@ function startText(p){
 }
 function styleText(){if(!textEditor)return;Object.assign(textEditor.el.style,{fontFamily:state.font,fontSize:`${state.fontSize*state.zoom}px`,fontWeight:state.bold?'bold':'normal',fontStyle:state.italic?'italic':'normal',textDecoration:state.underline?'underline':'none',color:state.primary,background:state.textBackground?state.secondary:'transparent',textAlign:state.align,lineHeight:'1.2'});}
 function commitText(){
-  if(!textEditor)return;const {el,x,y}=textEditor,text=el.value,w=el.clientWidth/state.zoom;el.remove();textEditor=null;if(!text.trim()){doc.cancel();return;}
-  doc.begin('Text');const c=doc.activeLayer.canvas.getContext('2d');c.save();c.font=`${state.italic?'italic ':''}${state.bold?'bold ':''}${state.fontSize}px "${state.font}"`;c.textBaseline='top';c.fillStyle=state.primary;c.textAlign=state.align;
-  const lines=[];for(const para of text.split('\n')){let line='';for(const word of para.split(' ')){const next=line?line+' '+word:word;if(line&&c.measureText(next).width>w){lines.push(line);line=word;}else line=next;}lines.push(line);}
-  if(state.textBackground){c.fillStyle=state.secondary;c.fillRect(x,y,w,lines.length*state.fontSize*1.2);c.fillStyle=state.primary;}
-  const tx=x+(state.align==='center'?w/2:state.align==='right'?w:0);lines.forEach((line,i)=>{const ty=y+i*state.fontSize*1.2;c.fillText(line,tx,ty);if(state.underline){const length=c.measureText(line).width;c.fillRect(tx-(state.align==='center'?length/2:state.align==='right'?length:0),ty+state.fontSize,length,Math.max(1,state.fontSize/16));}});c.restore();doc.commit();changed();
+  if(!textEditor)return;const {el,x,y}=textEditor;
+  if(!el.value.trim()){el.remove();textEditor=null;doc.cancel();return;}
+  // Measure the attached editor before removing it. Its browser layout owns
+  // wrapping, spacing and alignment in both the preview and the saved pixels.
+  const layout=layoutTextEditor(el,{scale:state.zoom}),c=doc.activeLayer.canvas.getContext('2d');
+  c.save();try{
+    c.font=layout.font;c.direction=layout.direction;c.letterSpacing=layout.letterSpacing;c.wordSpacing=layout.wordSpacing;c.textBaseline='alphabetic';c.textAlign='left';
+    if(state.textBackground){c.fillStyle=state.secondary;c.fillRect(x+layout.contentX,y+layout.contentY,layout.width,layout.height);}
+    c.fillStyle=state.primary;
+    for(const line of layout.lines)for(const run of line.runs){
+      c.fillText(run.text,x+run.x,y+run.baseline);
+      if(state.underline)c.fillRect(x+run.x,y+run.baseline+Math.max(1,state.fontSize/12),run.width,Math.max(1,state.fontSize/16));
+    }
+  }finally{c.restore();}
+  el.remove();textEditor=null;doc.commit();changed();
 }
 function setZoom(value){canvasResize.cancel();if(activePointerId!==null)cancelPointerInteraction();commitText();state.zoom=Math.max(.125,Math.min(8,Number(value)));$('#zoom-slider').value=Math.log2(state.zoom);const select=$('#zoom-presets');let option=[...select.options].find(o=>+o.value===state.zoom);if(!option){option=new Option(`${Math.round(state.zoom*100)}%`,String(state.zoom));select.add(option);}select.value=option.value;changed();}
 function fit(){setZoom(Math.min(1,(viewport.clientWidth-80)/doc.width,(viewport.clientHeight-60)/doc.height));}
@@ -235,7 +258,7 @@ async function dialog(title,body,submit='OK'){
 }
 function settleForOutput(){commitText();finishPending();doc.commitSelection();}
 async function canDiscard(){settleForOutput();if(!doc.dirty)return true;if(window.paintDesktop?.confirmDiscard)return window.paintDesktop.confirmDiscard();return !!await dialog('Unsaved changes','<p>Discard the changes to this image?</p>','Discard');}
-async function loadImage(result){if(!result)return;await doc.load({format:PROJECT.format,version:PROJECT.schemaVersion,width:result.canvas.width,height:result.canvas.height,background:null,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;state.format=/\.jpe?g$/i.test(result.name)?'jpeg':'png';fit();}
+async function loadImage(result){if(!result)return;await doc.load({format:PROJECT.format,version:PROJECT.schemaVersion,width:result.canvas.width,height:result.canvas.height,background:null,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;const format=result.format||result.name.split('.').at(-1).toLowerCase();state.format=['tif','tiff'].includes(format)?'tiff':['jpg','jpeg'].includes(format)?'jpeg':['png','webp','bmp','gif'].includes(format)?format:'png';fit();}
 let fileOperation = false;
 async function withFileOperation(operation) {
   if (fileOperation) { toast('Finish the current file operation first.'); return; }
@@ -291,7 +314,7 @@ const actions={
   save:()=>withFileOperation(()=>state.project ? saveDocument(state.format==='paint'?'paint':PROJECT.extension,state.name) : state.name==='Untitled' ? saveAs() : saveDocument(state.format,state.name)),
   'save-as':()=>withFileOperation(saveAs),'save-project':()=>withFileOperation(()=>saveDocument(PROJECT.extension,state.name)),
   print:()=>{settleForOutput();return printCanvas(doc.composite());},
-  undo:()=>{if(canvasResize.cancel()||cancelPointerInteraction())return;commitText();doc.undo();},redo:()=>{if(canvasResize.cancel()||cancelPointerInteraction())return;doc.redo();},
+  undo:()=>{if(canvasResize.cancel()||cancelPointerInteraction())return;commitText();doc.undo();},redo:()=>{if(textEditor||canvasResize.cancel()||cancelPointerInteraction())return;doc.redo();},
   copy:async()=>{commitText();await copyCanvas(doc.selectionCanvas()||doc.composite({onlyActive:true}));toast('Copied image.');},
   'copy-all':async()=>{await copyCanvas(doc.composite());toast('Copied visible layers.');},
   cut:async()=>{commitText();finishPending();const target=doc.captureEditTarget();await copyCanvas(doc.selectionCanvas()||doc.composite({onlyActive:true}));if(!doc.matchesEditTarget(target)){toast('Image copied. The drawing changed, so nothing was cut.');return;}if(doc.selection)doc.deleteSelection();else doc.clear();toast('Cut image.');},
@@ -331,11 +354,14 @@ async function executeAction(name,event){
   return actions[name]?.(event);
 }
 function showMenu(name,anchor){
-  commitText();const m=$('#menu');if(!m.hidden&&menuAnchor===anchor){closeMenu();return;}menuAnchor=anchor;
-  const entries=name==='brushes'?BRUSHES.map(b=>[b.label,'tool:'+b.id]):menus[name];m.innerHTML=entries.map(item=>item?`<button data-command="${item[1]}"><span>${esc(item[0])}</span><kbd>${item[2]||''}</kbd></button>`:'<hr>').join('');const r=anchor.getBoundingClientRect();m.hidden=false;m.style.left=Math.min(r.left,innerWidth-m.offsetWidth-10)+'px';m.style.top=r.bottom+4+'px';m.querySelector('button')?.focus({preventScroll:true});
+  commitText();const m=$('#menu');if(!m.hidden&&menuAnchor===anchor){closeMenu();return;}if(menuAnchor)menuAnchor.setAttribute('aria-expanded','false');menuAnchor=anchor;anchor.setAttribute('aria-expanded','true');
+  const entries=name==='brushes'?BRUSHES.map(b=>[b.label,'tool:'+b.id]):menus[name];m.innerHTML=entries.map(item=>item?`<button type="button" role="menuitem" data-command="${item[1]}"><span>${esc(item[0])}</span><kbd>${item[2]||''}</kbd></button>`:'<hr>').join('');const r=anchor.getBoundingClientRect();m.hidden=false;m.style.left=Math.min(r.left,innerWidth-m.offsetWidth-10)+'px';m.style.top=r.bottom+4+'px';m.querySelector('button')?.focus({preventScroll:true});
 }
-function closeMenu(){$('#menu').hidden=true;menuAnchor=null;}
+function closeMenu(){const menu=$('#menu'),anchor=menuAnchor,restore=menu.contains(document.activeElement);menu.hidden=true;menuAnchor=null;if(anchor){anchor.setAttribute('aria-expanded','false');if(restore&&anchor.isConnected)anchor.focus({preventScroll:true});}}
+$('#menu').setAttribute('role','menu');
+for(const opener of document.querySelectorAll('[data-menu],[data-action="rotate-menu"],[data-action="flip-menu"]')){opener.setAttribute('aria-haspopup','menu');opener.setAttribute('aria-controls','menu');opener.setAttribute('aria-expanded','false');}
 document.addEventListener('pointerdown',e=>{if(!e.target.closest('#menu,[data-menu],[data-action="rotate-menu"],[data-action="flip-menu"]'))closeMenu();});
+document.addEventListener('focusin',e=>{if(!$('#menu').hidden&&!$('#menu').contains(e.target)&&e.target!==menuAnchor)closeMenu();});
 document.addEventListener('click',safe(async e=>{
   const t=e.target.closest('button,[data-layer]');if(!t)return;
   if(t.dataset.tool){chooseTool(t.dataset.tool);return;}
@@ -343,13 +369,14 @@ document.addEventListener('click',safe(async e=>{
   if(t.dataset.command){const cmd=t.dataset.command;closeMenu();if(cmd.startsWith('tool:'))chooseTool(cmd.slice(5));else await executeAction(cmd,e);return;}
   if(t.dataset.color){state.primary=t.dataset.color;updateToolState();styleText();updatePendingStyle();return;}
   if(t.dataset.visible){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===t.dataset.visible);doc.setLayer(l.id,{visible:!l.visible});return;}
-  if(t.dataset.layer){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.selectLayer(t.dataset.layer);return;}
-  if(t.dataset.action){const a=t.dataset.action;if(a!=='commit-text'&&!['bold','italic','underline'].includes(a))commitText();await executeAction(a,{...e,currentTarget:t,target:t});}
+  if(t.dataset.layerSelect||t.dataset.layer){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.selectLayer(t.dataset.layerSelect||t.dataset.layer);return;}
+  if(t.dataset.action){const a=t.dataset.action;if(!['commit-text','bold','italic','underline','colors','primary','secondary','redo'].includes(a))commitText();await executeAction(a,{...e,currentTarget:t,target:t});}
 }));
 document.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-color]');if(t){e.preventDefault();state.secondary=t.dataset.color;updateToolState();styleText();updatePendingStyle();}});
 document.addEventListener('keydown',safe(async e=>{
   if($('#dialog').open)return;
-  if(!$('#menu').hidden&&['ArrowDown','ArrowUp','Home','End'].includes(e.key)){
+  if(e.key==='Escape'&&!$('#menu').hidden){e.preventDefault();closeMenu();return;}
+  if(!$('#menu').hidden&&$('#menu').contains(e.target)&&['ArrowDown','ArrowUp','Home','End'].includes(e.key)){
     e.preventDefault();const buttons=[...$('#menu').querySelectorAll('button')];const index=buttons.indexOf(document.activeElement);
     buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();return;
   }
@@ -357,7 +384,7 @@ document.addEventListener('keydown',safe(async e=>{
   if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){textEditor.el.remove();textEditor=null;doc.cancel();}doc.deselect();changed();return;}
   if(edit)return;const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;let action;
   if(mod){action=({n:'new',o:'open',s:e.shiftKey?'save-as':'save',z:e.shiftKey?'redo':'undo',y:'redo',c:e.shiftKey?'copy-all':'copy',x:'cut',v:'paste',a:'select-all',p:'print',e:'properties',w:'resize','+':'zoom-in','=':'zoom-in','-':'zoom-out',b:e.shiftKey?'background':undefined,h:e.shiftKey?'toggle-background':undefined,i:e.shiftKey?'invert-selection':'invert-colors',f1:'collapse'})[key];}
-  else if(key==='f11')action='fullscreen';else if(key==='delete')action='delete';else if(key==='enter'){commitText();if(!pendingShape)finishPending();e.preventDefault();return;}
+  else if(key==='f11')action='fullscreen';else if(key==='delete')action='delete';else if(key==='enter'){if(e.target.closest('button,a[href]'))return;commitText();if(!pendingShape)finishPending();e.preventDefault();return;}
   else if(doc.selection&&['arrowup','arrowdown','arrowleft','arrowright'].includes(key)){e.preventDefault();const step=e.shiftKey?10:1;doc.translateSelection(key==='arrowright'?step:key==='arrowleft'?-step:0,key==='arrowdown'?step:key==='arrowup'?-step:0);return;}
   if(action){e.preventDefault();await executeAction(action);}
 }));

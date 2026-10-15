@@ -2,8 +2,8 @@
 
 Stack Junkie Paint (SJ Paint) is a Microsoft Paint-inspired drawing app for Windows and Linux, with brushes, shapes, selections, text and layers. Windows is the primary desktop platform; a browser edition is available too.
 
-Version: 0.2.6
-<!-- sj-paint-version: 0.2.6 -->
+Version: 0.2.7
+<!-- sj-paint-version: 0.2.7 -->
 
 SJ Paint is an independent implementation whose baseline goal is to match Microsoft Paint's appearance, features and behavior 1:1. That baseline is unfinished. Project-specific features come after the baseline is completed and verified. It is not a Microsoft product. The [parity ledger](PARITY.md) records implemented features, missing behavior and verification limits.
 
@@ -13,16 +13,16 @@ SJ Paint is an independent implementation whose baseline goal is to match Micros
 
 ### Windows
 
-Download the [v0.2.6 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.6/sj-paint-0.2.6-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
+Download the [v0.2.7 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.7/sj-paint-0.2.7-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
 
 The Windows executable is currently unsigned; it has no Authenticode signature.
 
 ### Linux
 
-Download the [v0.2.6 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.6/sj-paint-0.2.6-linux-x64.tar.gz), then run:
+Download the [v0.2.7 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.7/sj-paint-0.2.7-linux-x64.tar.gz), then run:
 
 ```sh
-tar -xzf sj-paint-0.2.6-linux-x64.tar.gz
+tar -xzf sj-paint-0.2.7-linux-x64.tar.gz
 ./sj-paint/run-paint.sh
 ```
 
@@ -34,7 +34,7 @@ To install a copy for your user and add SJ Paint to the Linux application menu:
 
 The installer copies the app to `~/.local/opt/sj-paint`, creates `~/.local/share/applications/io.stackjunkie.sjpaint.desktop`, and installs icons under `~/.local/share/icons/hicolor/`. It does not require a system-wide installation.
 
-Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.6). Use a normal desktop user.
+Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.7). Use a normal desktop user.
 
 Linux needs Electron's GTK, NSS, X11 and ALSA system libraries. Ubuntu 22.04 package names include `libgtk-3-0`, `libnss3`, `libatk-bridge2.0-0`, `libxdamage1` and `libasound2`; names vary by distribution. Normal startup keeps Chromium sandboxing enabled and does not add `--no-sandbox`.
 
@@ -126,7 +126,7 @@ The actual packaged Windows 0.2.0 app passed drawing, undo/redo, file export and
 
 The packaged Linux 0.2.0 app passed 23 checks under Ubuntu 22.04 Xvfb, including its isolated clipboard. The Linux installer passed 47 checks using a harmless executable fixture: GIO parsed and discovered the menu entry, marked it eligible for display and launched it through the installed launcher. Tests also covered special-character paths, retained backups and refusal to overwrite unrelated files. This verifies desktop registration and launcher behavior, not the appearance of every desktop shell.
 
-The 1:1 Microsoft Paint baseline is not complete. Physical printing, native chooser interaction, actual menu presentation in every Linux desktop shell, Wayland, ARM and complete accessibility support remain unverified. Microsoft account and cloud services are absent. AI image generation, generative fill/erase, object selection and AI background removal are not implemented. Committed text and shapes become pixels; TIFF import, full metadata preservation, color-managed workflows, exact rendering and all command edge cases remain gaps or unknowns. Full details and verification history are in [PARITY.md](PARITY.md).
+The 1:1 Microsoft Paint baseline is not complete. Physical printing, native chooser interaction, actual menu presentation in every Linux desktop shell, Wayland, ARM and complete accessibility support remain unverified. Microsoft account and cloud services are absent. AI image generation, generative fill/erase, object selection and AI background removal are not implemented. Committed text and shapes become pixels; unsupported TIFF variants, full metadata preservation, color-managed workflows, exact rendering and all command edge cases remain gaps or unknowns. Full details and verification history are in [PARITY.md](PARITY.md).
 
 For local checks:
 
