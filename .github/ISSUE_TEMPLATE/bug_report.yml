@@ -1,0 +1,52 @@
+name: Bug report
+description: Report a reproducible problem or an unexpected result.
+title: "bug: "
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Check PARITY.md for known differences. An incomplete diagnosis is welcome.
+        Report vulnerabilities through the Security tab, without public exploit details.
+  - type: input
+    id: version
+    attributes:
+      label: App version or commit
+      placeholder: "0.1.0"
+    validations:
+      required: true
+  - type: dropdown
+    id: edition
+    attributes:
+      label: Edition
+      options:
+        - Linux desktop app
+        - Browser edition
+        - Both
+    validations:
+      required: true
+  - type: input
+    id: environment
+    attributes:
+      label: Environment
+      description: Linux distribution and architecture, or operating system and browser version.
+    validations:
+      required: true
+  - type: textarea
+    id: reproduction
+    attributes:
+      label: Steps to reproduce
+      description: Include the smallest sequence that shows the problem.
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: Expected and observed behavior
+      description: Separate what happened from possible explanations.
+    validations:
+      required: true
+  - type: textarea
+    id: evidence
+    attributes:
+      label: Evidence or sample file
+      description: Optional screenshots, error text, test output, or a small image/project that is safe to share.

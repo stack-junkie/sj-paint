@@ -1,0 +1,4 @@
+#!/bin/sh
+set -eu
+npm run version:check
+npm run test:files

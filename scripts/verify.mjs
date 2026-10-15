@@ -1,0 +1,97 @@
+import { chromium } from 'playwright-core';
+import { createServer } from 'vite';
+import fs from 'node:fs/promises';
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+const root=fileURLToPath(new URL('../',import.meta.url));
+const output=path.join(root,'output');await fs.mkdir(output,{recursive:true});
+const server=await createServer({root,server:{host:'127.0.0.1',port:5187,strictPort:true}});await server.listen();
+const browser=await chromium.launch({headless:true,...(process.env.PAINT_CHROME_PATH?{executablePath:process.env.PAINT_CHROME_PATH}:{channel:process.env.PAINT_CHROME_CHANNEL||'chrome'})});
+const page=await browser.newPage({viewport:{width:1364,height:820},deviceScaleFactor:1});
+const errors=[];page.on('pageerror',e=>errors.push(e.message));
+const checks=[];const check=(name,ok,detail)=>{checks.push({name,ok,detail});if(!ok)throw new Error(name+': '+JSON.stringify(detail));};
+try{
+ await page.goto('http://127.0.0.1:5187');await page.waitForFunction(()=>window.paintApp);await page.waitForTimeout(100);
+ check('app loads',errors.length===0,errors);check('pristine document closes without warning',await page.evaluate(()=>window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
+ await page.screenshot({path:path.join(output,'paint-dark.png')});
+ const r=await page.locator('#overlay').boundingBox();
+ await page.mouse.move(r.x+80,r.y+80);await page.mouse.down();await page.mouse.move(r.x+240,r.y+140,{steps:20});await page.mouse.up();
+ const ink=await page.evaluate(()=>{const d=paintApp.doc;const a=d.activeLayer.canvas.getContext('2d').getImageData(0,0,d.width,d.height).data;return a.filter((_,i)=>i%4===3&&a[i]>0).length;});
+ check('brush pointer gesture paints pixels',ink>100,ink);
+ await page.getByRole('button',{name:'Undo (Ctrl+Z)',exact:true}).click();
+ check('undo restores blank layer',await page.evaluate(()=>!paintApp.doc.activeLayer.canvas.getContext('2d').getImageData(0,0,paintApp.doc.width,paintApp.doc.height).data.some((v,i)=>i%4===3&&v)),null);
+ await page.getByRole('button',{name:'Redo (Ctrl+Y)',exact:true}).click();
+ check('redo restores stroke',await page.evaluate(()=>paintApp.doc.canUndo),null);
+ await page.getByRole('button',{name:'Rectangle',exact:true}).click();
+ await page.locator('#shape-fill').selectOption('solid');
+ await page.locator('[data-color="#ed1c24"]').click();
+ await page.locator('[data-color="#fff200"]').click({button:'right'});
+ await page.mouse.move(r.x+300,r.y+120);await page.mouse.down();await page.mouse.move(r.x+470,r.y+250,{steps:8});await page.mouse.up();
+ await page.getByRole('button',{name:'Layers',exact:true}).click();
+ await page.getByRole('button',{name:'Add layer',exact:true}).click();
+ check('layer UI adds layer',await page.evaluate(()=>paintApp.doc.layers.length===2),null);
+ await page.getByRole('button',{name:'Text',exact:true}).click();await page.evaluate(()=>paintApp.doc.markSaved());
+ const rr=await page.locator('#overlay').boundingBox();
+ await page.mouse.click(rr.x+70,rr.y+200);await page.getByRole('textbox',{name:'Text on canvas'}).fill('Paint for Linux');
+ check('pending text protects against close',await page.evaluate(()=>!window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
+ await page.getByRole('button',{name:'Apply text',exact:true}).click();
+ check('text commits',await page.evaluate(()=>!document.querySelector('.text-editor')&&paintApp.doc.dirty),null);
+ const engine=await page.evaluate(async()=>{
+   const {PaintDocument}=await import('/src/engine.js');const {drawShape}=await import('/src/shapes.js');const {SHAPES}=await import('/src/icons.js');
+   const d=new PaintDocument(80,60);d.setBackground(null);d.begin('fixture');const c=d.activeLayer.canvas.getContext('2d');c.fillStyle='#ff0000';c.fillRect(10,10,20,20);d.commit();
+   const pixel=(x,y)=>[...d.composite().getContext('2d').getImageData(x,y,1,1).data];
+   d.selectRect(10,10,20,20);const selected=pixel(15,15);d.begin('move');d.moveSelection(30,20);d.commit();const moved=pixel(35,25),cleared=pixel(15,15);d.deselect();d.undo();d.undo();const restored=pixel(15,15);
+   d.deselect();d.addLayer();d.begin('blue');const cc=d.activeLayer.canvas.getContext('2d');cc.fillStyle='#0000ff';cc.fillRect(0,0,10,10);d.commit();d.setLayer(d.activeLayerId,{opacity:.5});const before=d.composite().toDataURL();d.mergeDown();const merged=d.composite().toDataURL()===before;
+   const saved=d.serialize();const e=new PaintDocument(1,1);await e.load(saved);const roundtrip=e.composite().toDataURL()===d.composite().toDataURL();
+   const f=new PaintDocument(40,40);f.setBackground(null);f.begin('border');const fc=f.activeLayer.canvas.getContext('2d');fc.strokeStyle='#000';fc.lineWidth=2;fc.strokeRect(5,5,30,30);f.commit();f.fill(20,20,'#00ff00',0);const fp=fc.getImageData(20,20,1,1).data;const outside=fc.getImageData(1,1,1,1).data;
+   const shapes=SHAPES.map(type=>{const s=document.createElement('canvas');s.width=s.height=60;drawShape(s.getContext('2d'),type,5,5,55,55,{stroke:'#000',fill:'#f00',lineWidth:2,outline:'solid',fillStyle:'solid'});return [type,s.getContext('2d').getImageData(0,0,60,60).data.some((v,i)=>i%4===3&&v>0)];});
+   return {selected,moved,cleared,restored,merged,roundtrip,fill:[...fp],outside:[...outside],shapes};
+ });
+ check('floating selection moves once',engine.selected[0]===255&&engine.moved[0]===255&&engine.cleared[3]===0,engine);
+ check('selection undo restores pixels',engine.restored[0]===255,engine.restored);
+ check('merge preserves rendered layers',engine.merged,null);check('project roundtrip preserves pixels',engine.roundtrip,null);
+ check('fill respects closed contour',engine.fill[1]===255&&engine.outside[3]===0,engine);
+ check('every shape renders',engine.shapes.every(x=>x[1]),engine.shapes);
+ const regression=await page.evaluate(async()=>{
+   const {PaintDocument,assertDocumentBudget}=await import('/src/engine.js');
+   const d=new PaintDocument(60,40);d.setBackground(null);d.begin();d.activeLayer.canvas.getContext('2d').fillStyle='#f008';d.activeLayer.canvas.getContext('2d').fillRect(5,5,20,20);d.commit();d.markSaved();const initial=d.composite().toDataURL();
+   d.selectPolygon([[4,4],[27,5],[18,29]]);d.deselect();const selectionUnchanged=d.composite().toDataURL()===initial&&!d.dirty;
+   d.begin();d.activeLayer.canvas.getContext('2d').fillRect(30,5,10,10);d.commit();d.markSaved();d.undo();const undoDirty=d.dirty;d.redo();const redoClean=!d.dirty;
+   const savedRevision=d.revision;d.begin();d.activeLayer.canvas.getContext('2d').fillRect(45,5,5,5);d.commit();d.markSaved(savedRevision);const asynchronousSaveDirty=d.dirty;
+   let budget=false;try{assertDocumentBudget(4096,4096,3);}catch{budget=true;}
+   const data=d.serialize();const e=new PaintDocument(1,1);await e.load(data);const loaded=!e.dirty&&e.composite().toDataURL()===d.composite().toDataURL();
+   const {drawShape}=await import('/src/shapes.js');const styles=['solid','crayon','marker','oil','natural-pencil','watercolor'];const hashes=styles.map(style=>{const c=document.createElement('canvas');c.width=c.height=80;drawShape(c.getContext('2d'),'rectangle',10,10,70,70,{outline:style,fillStyle:style,fill:'#ed1c24',opacity:.5});return c.toDataURL();});
+   return {selectionUnchanged,undoDirty,redoClean,asynchronousSaveDirty,budget,loaded,distinctTextures:new Set(hashes).size===styles.length};
+ });
+ for(const [name,ok] of Object.entries(regression))check(name,ok,null);
+ const selectionFeatures=await page.evaluate(async()=>{
+   const {PaintDocument}=await import('/src/engine.js');
+   const d=new PaintDocument(40,40);d.setBackground(null);d.begin();const c=d.activeLayer.canvas.getContext('2d');c.fillStyle='#f00';c.fillRect(0,0,40,40);d.commit();d.selectRect(10,10,10,10);d.invertSelection();d.deleteSelection();
+   let p=d.composite().getContext('2d');const invertedRegion=p.getImageData(15,15,1,1).data[0]===255&&p.getImageData(2,2,1,1).data[3]===0;
+   d.invertColors();p=d.composite().getContext('2d');const invertedColors=[...p.getImageData(15,15,1,1).data].join(',')==='0,255,255,255';
+   const t=new PaintDocument(40,40);t.setBackground(null);t.begin();const tc=t.activeLayer.canvas.getContext('2d');tc.fillStyle='#fff';tc.fillRect(0,0,40,40);tc.fillStyle='#f00';tc.fillRect(5,5,8,8);t.commit();t.markSaved();const initial=t.composite().toDataURL();t.setSelectionTransparency(true,'#ffffff');t.selectRect(0,0,20,20);const transparent=t.selection.canvas.getContext('2d').getImageData(0,0,1,1).data[3]===0;t.deselect();const keyLossless=t.composite().toDataURL()===initial&&!t.dirty;
+   t.selectPolygon([[0,0],[19,0],[0,19]]);const before=t.composite().toDataURL();t.invertSelection();t.invertSelection();const doubleInvert=t.composite().toDataURL()===before;
+   const original={...t.selection};t.resizeSelection(30,30,{x:2,y:2,source:original});const resizedMask=t.selection.mask.length===900&&t.selection.canvas.width===30;
+   return {invertedRegion,invertedColors,transparent,keyLossless,doubleInvert,resizedMask};
+ });
+ for(const [name,ok] of Object.entries(selectionFeatures))check(name,ok,null);
+ const rasterTools=await page.evaluate(async()=>{
+   const {createStroke,BRUSHES}=await import('/src/brushes.js');const {PaintDocument}=await import('/src/engine.js');
+   const brushes=BRUSHES.map(({id})=>{const c=document.createElement('canvas');c.width=100;c.height=60;const ctx=c.getContext('2d');if(id==='eraser'){ctx.fillStyle='#000';ctx.fillRect(0,0,100,60);}const before=c.toDataURL();const stroke=createStroke(ctx,id,{color:'#ff0000',size:12,opacity:.7,seed:12});stroke.move(10,20,.5);stroke.move(80,40,.5);stroke.end();return {id,changed:before!==c.toDataURL()};});
+   const d=new PaintDocument(40,30);d.setBackground(null);d.begin();const c=d.activeLayer.canvas.getContext('2d');c.fillStyle='#ff0000';c.fillRect(0,0,10,10);d.commit();d.flip(true);const flipped=d.composite().getContext('2d').getImageData(35,5,1,1).data[0]===255;d.rotate(90);const rotated=d.width===30&&d.height===40&&d.composite().getContext('2d').getImageData(25,35,1,1).data[0]===255;d.resize(60,80,{scale:true});const scaled=d.width===60&&d.height===80&&d.composite().getContext('2d').getImageData(50,70,1,1).data[0]===255;
+   return {brushes,flipped,rotated,scaled};
+ });
+ check('all brushes alter real canvas pixels',rasterTools.brushes.every(x=>x.changed),rasterTools.brushes);
+ for(const key of ['flipped','rotated','scaled'])check(key,rasterTools[key],null);
+ const saved=await page.evaluate(()=>paintApp.doc.serialize());await fs.writeFile(path.join(output,'verification.linuxpaint'),JSON.stringify(saved));
+ const downloadPromise=page.waitForEvent('download');await page.evaluate(()=>paintApp.actions['save-project']());const download=await downloadPromise;await download.saveAs(path.join(output,'ui-save.linuxpaint'));
+ check('project save downloads editable project',JSON.parse(await fs.readFile(path.join(output,'ui-save.linuxpaint'),'utf8')).format==='paint-linux',null);
+ await page.screenshot({path:path.join(output,'paint-editing.png')});
+ await page.evaluate(()=>{const d=paintApp.doc;d.newDocument(60,40);paintApp.state.project=false;paintApp.state.name='hidden-layer';d.begin();d.activeLayer.canvas.getContext('2d').fillRect(0,0,20,20);d.commit();d.setLayer(d.activeLayerId,{visible:false});});
+ const hiddenDownload=page.waitForEvent('download');await page.evaluate(()=>paintApp.actions.save());await hiddenDownload;
+ check('raster export preserves hidden-artwork dirty warning',await page.evaluate(()=>paintApp.doc.dirty),null);
+ await page.evaluate(()=>paintApp.doc.newDocument(200,160));await page.getByRole('button',{name:'Curve',exact:true}).click();const curveRect=await page.locator('#overlay').boundingBox();await page.mouse.move(curveRect.x+20,curveRect.y+20);await page.mouse.down();await page.mouse.move(curveRect.x+100,curveRect.y+80);await page.mouse.up();
+ check('pending curve protects clean document against close',await page.evaluate(()=>!paintApp.doc.dirty&&!window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
+ check('no JavaScript errors',errors.length===0,errors);
+}catch(e){checks.push({name:'failure',ok:false,detail:e.stack});await page.screenshot({path:path.join(output,'paint-failure.png')});process.exitCode=1;}
+finally{await fs.writeFile(path.join(output,'verification.json'),JSON.stringify({timestamp:new Date().toISOString(),host:'Windows headless Chrome',checks,errors},null,2));console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok),errors}));await browser.close();await server.close();}

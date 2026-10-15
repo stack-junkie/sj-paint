@@ -1,0 +1,60 @@
+{
+  "name": "paint-linux",
+  "version": "0.1.0",
+  "private": true,
+  "type": "module",
+  "description": "A Linux drawing editor based on observed Microsoft Paint behavior",
+  "main": "electron/main.cjs",
+  "scripts": {
+    "dev": "vite --host 127.0.0.1",
+    "build": "vite build",
+    "preview": "vite preview --host 127.0.0.1",
+    "desktop": "electron .",
+    "package:linux": "npm run build && electron-builder --linux dir",
+    "test": "node scripts/verify.mjs",
+    "test:linux": "node scripts/verify-linux.mjs",
+    "test:files": "node --test electron/atomic-write.test.cjs",
+    "version:check": "node scripts/version.mjs check",
+    "version:bump": "node scripts/version.mjs bump",
+    "hooks:install": "node scripts/install-hooks.mjs",
+    "archive:linux": "sh scripts/archive-linux.sh"
+  },
+  "devDependencies": {
+    "electron": "^38.0.0",
+    "electron-builder": "^26.0.12",
+    "playwright-core": "1.56.1",
+    "vite": "^7.1.0"
+  },
+  "build": {
+    "appId": "local.paintlinux.editor",
+    "productName": "Paint for Linux",
+    "files": [
+      "dist/**/*",
+      "electron/**/*",
+      "package.json",
+      "!electron/**/*.test.cjs"
+    ],
+    "directories": {
+      "output": "release"
+    },
+    "linux": {
+      "target": [
+        "dir"
+      ],
+      "category": "Graphics"
+    }
+  },
+  "license": "MIT",
+  "author": "Stack Junkie",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/stack-junkie/paint-linux.git"
+  },
+  "bugs": {
+    "url": "https://github.com/stack-junkie/paint-linux/issues"
+  },
+  "homepage": "https://github.com/stack-junkie/paint-linux#readme",
+  "engines": {
+    "node": ">=22.12.0"
+  }
+}

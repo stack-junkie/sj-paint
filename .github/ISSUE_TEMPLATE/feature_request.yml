@@ -1,0 +1,26 @@
+name: Feature or compatibility request
+description: Propose an improvement or describe a missing workflow.
+title: "feat: "
+body:
+  - type: markdown
+    attributes:
+      value: Check PARITY.md for current scope and known differences. Early ideas are welcome.
+  - type: textarea
+    id: need
+    attributes:
+      label: What are you trying to do?
+      description: Describe the drawing or editing workflow and what gets in the way.
+    validations:
+      required: true
+  - type: textarea
+    id: behavior
+    attributes:
+      label: Proposed behavior
+      description: Explain the result you want. Alternatives are welcome.
+    validations:
+      required: true
+  - type: textarea
+    id: reference
+    attributes:
+      label: Reference or additional context
+      description: For a Paint compatibility request, include the Microsoft Paint version and a reproducible example if available.
