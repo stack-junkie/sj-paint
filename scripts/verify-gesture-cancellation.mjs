@@ -59,13 +59,14 @@ export async function verifyGestureCancellation(page, check) {
     const d = paintApp.doc;
     d.begin('Selection fixture');
     d.activeLayer.canvas.getContext('2d').fillRect(15, 15, 30, 30);
-    d.commit(); d.selectRect(10, 10, 50, 50); d.markSaved();
+    d.commit(); d.markSaved();
   });
   const selected = await snapshot();
+  await page.evaluate(() => paintApp.doc.selectRect(10, 10, 50, 50));
   await drag(35, 35, 90, 70, false);
   check('selection drag actually moves the selected artwork', await page.evaluate(() => paintApp.doc.selection.x !== 10));
   await interrupt('Escape');
-  check('Escape restores selection position, pixels, and history', unchanged(selected, await snapshot()) && await cleanPending());
+  check('Escape restores the pre-selection pixels and history', unchanged(selected, await snapshot()) && await cleanPending());
 
   for (const selectedTool of ['curve', 'polygon']) {
     for (const cancellation of ['Escape', 'pointercancel', 'lostpointercapture']) {

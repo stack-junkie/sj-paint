@@ -63,12 +63,12 @@ export async function verifyCanvasEngine(page, check) {
     const stamped = [pixel(selected.activeLayer.canvas, 5, 3), pixel(selected.activeLayer.canvas, 4, 3)];
     record('canvas boundary resize stamps floating pixels without resizing the selection', !selected.selection &&
       selected.width === 8 && selected.height === 6 && equals(stamped, [[0, 0, 255, 255], [0, 0, 0, 0]]) &&
-      selected._undo.length === selectedUndo + 1, stamped);
+      selected._undo.length === selectedUndo + 2, stamped);
     selected.undo();
-    // Undo adds a redo entry, so compare document and selection separately from stack lengths.
+    // Resizing settles the selection first. Undo restores that accepted raster without handles.
     const selectionRestored = JSON.parse(state(selected)), expectedSelection = JSON.parse(selectedBefore);
-    record('canvas resize undo restores floating selection ownership and raster',
-      equals(selectionRestored.project, expectedSelection.project) && equals(selectionRestored.selection, expectedSelection.selection) &&
+    record('canvas resize undo restores the accepted selection raster without handles',
+      equals(selectionRestored.project, expectedSelection.project) && !selectionRestored.selection &&
       selectionRestored.revision === expectedSelection.revision && selectionRestored.dirty === expectedSelection.dirty);
     selected.redo();
     record('canvas resize redo stamps selection exactly once', !selected.selection &&

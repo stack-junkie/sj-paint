@@ -151,8 +151,9 @@ export class PaintDocument extends EventTarget {
   }
 
   get activeLayer() { return this.layers.find(layer => layer.id === this.activeLayerId); }
-  get canUndo() { return this._undo.length > 0; }
+  get canUndo() { return Boolean(this._selectionSession) || this._undo.length > 0; }
   get canRedo() { return this._redo.length > 0; }
+  get hasSelectionSession() { return Boolean(this._selectionSession); }
   get revision() { return this._revision; }
   get dirty() { return this._revision !== this._savedRevision; }
   set dirty(value) {
@@ -169,6 +170,19 @@ export class PaintDocument extends EventTarget {
     const [w, h] = dimensions(width, height);
     assertDocumentBudget(this.width, this.height, this.layers.length, w * h);
     return [w, h];
+  }
+
+  captureEditTarget() {
+    const selection = this.selection;
+    return Object.freeze({ document: this, generation: this._documentStartRevision, revision: this._revision,
+      epoch: this._editEpoch, layer: this.activeLayer, layerId: this.activeLayerId, canvas: this.activeLayer?.canvas,
+      selection, selectionCanvas: selection?.canvas, mask: selection?.mask,
+      x: selection?.x, y: selection?.y, width: selection?.width, height: selection?.height,
+      selectionLayerId: selection?.layerId, transaction: this._transaction });
+  }
+  matchesEditTarget(target) {
+    const current = this.captureEditTarget();
+    return Boolean(target) && Object.keys(current).every(key => current[key] === target[key]);
   }
 
   _changed() { this.dispatchEvent(new Event('change')); }
@@ -190,18 +204,67 @@ export class PaintDocument extends EventTarget {
     this.layers = state.layers;
     this.selection = state.selection;
   }
+  _retainedSnapshotBytes() {
+    const seen = new Set();
+    const bytes = states => states.reduce((sum, state) => {
+      if (!state || seen.has(state)) return sum;
+      seen.add(state); return sum + stateBytes(state);
+    }, 0);
+    // History retains its own cap. Cancellable snapshots have distinct owners,
+    // each bounded by the document limit, and never evict pre-session history.
+    return {
+      history: bytes([...this._undo, ...this._redo]),
+      selection: bytes([this._selectionSession?.before]),
+      gesture: bytes([this._transaction?.before]),
+      settlement: bytes([this._settlement?.before, ...(this._settlement?.undo ?? []), ...(this._settlement?.redo ?? [])]),
+    };
+  }
   _trimHistory() {
-    let total = [...this._undo, ...this._redo].reduce((sum, state) => sum + stateBytes(state), 0);
+    // An enclosing command may still fail, so keep its original history available.
+    if (this._settlement) return;
+    let total = this._retainedSnapshotBytes().history;
     while (total > HISTORY_LIMIT && this._undo.length) total -= stateBytes(this._undo.shift());
     while (total > HISTORY_LIMIT && this._redo.length) total -= stateBytes(this._redo.shift());
   }
-  _edit(label, callback) {
+  _settleSelection(callback) {
+    const settlement = { before: this._snapshot(), session: this._selectionSession,
+      changed: this._selectionSession.changed, transaction: this._transaction,
+      undo: this._undo.slice(), redo: this._redo.slice() };
+    this._settlement = settlement;
+    try {
+      this.commitSelection();
+      const result = callback();
+      this._settlement = null;
+      this._trimHistory();
+      return result;
+    } catch (error) {
+      this._restore(settlement.before);
+      this._selectionSession = settlement.session;
+      this._selectionSession.changed = settlement.changed;
+      this._transaction = settlement.transaction;
+      this._undo = settlement.undo;
+      this._redo = settlement.redo;
+      this._settlement = null;
+      this._editEpoch++;
+      this._changed();
+      throw error;
+    }
+  }
+  _edit(label, callback, { selection = false, finishSelection = false } = {}) {
+    if (!selection && this._selectionSession) {
+      return this._settleSelection(() => this._edit(label, callback));
+    }
     const ownTransaction = !this._transaction;
     if (ownTransaction) this.begin(label);
     try {
       const value = callback();
+      this._editEpoch++;
       if (ownTransaction) this.commit();
-      else this._changed();
+      else {
+        if (this._selectionSession) this._refreshSelectionRevision(this._transaction.before);
+        this._changed();
+      }
+      if (selection && this._selectionSession && (finishSelection || !this.selection)) this.commitSelection();
       return value;
     } catch (error) {
       if (ownTransaction) this.cancel();
@@ -212,6 +275,16 @@ export class PaintDocument extends EventTarget {
     if (this._transaction) return;
     assertDocumentBudget(this.width, this.height, this.layers.length, this.selection ? this.selection.canvas.width * this.selection.canvas.height : 0);
     this._transaction = { label, before: this._snapshot() };
+    this._editEpoch++;
+  }
+  _refreshSelectionRevision(before) {
+    const session = this._selectionSession;
+    if (!session) return;
+    const current = this._current();
+    session.changed = !sameSavedContent(session.before, current);
+    if (!session.changed) this._revision = session.before.revision;
+    else if (!sameSavedContent(before, current)) this._revision = this._nextRevision++;
+    if (this._transaction) this._transaction.selectionUpdated = true;
   }
   commit() {
     if (!this._transaction) return;
@@ -219,34 +292,84 @@ export class PaintDocument extends EventTarget {
     try {
       assertDocumentBudget(this.width, this.height, this.layers.length, this.selection ? this.selection.canvas.width * this.selection.canvas.height : 0);
     } catch (error) { this.cancel(); throw error; }
-    if (!sameState(before, this._current())) {
+    if (this._selectionSession) {
+      if (!this._transaction.selectionUpdated) this._refreshSelectionRevision(before);
+    }
+    else if (!sameState(before, this._current())) {
       if (!sameSavedContent(before, this._current())) this._revision = this._nextRevision++;
       this._undo.push(before);
       this._redo = [];
       this._trimHistory();
     }
     this._transaction = null;
+    this._editEpoch++;
     this._changed();
   }
   cancel() {
     if (!this._transaction) return;
     this._restore(this._transaction.before);
     this._transaction = null;
+    if (this._selectionSession) this._selectionSession.changed = !sameSavedContent(this._selectionSession.before, this._current());
+    this._editEpoch++;
     this._changed();
+  }
+  _startSelection(label, callback) {
+    if (this._selectionSession) return this._settleSelection(() => this._startSelection(label, callback));
+    this.commitSelection();
+    if (this._transaction) this.commit();
+    this._selectionSession = { before: this._snapshot(), changed: false };
+    try { return this._edit(label, callback, { selection: true }); }
+    catch (error) { this.cancelSelection(); throw error; }
+  }
+  commitSelection() {
+    const session = this._selectionSession;
+    if (!session) {
+      if (this.selection) this._edit('Deselect', () => this._stampSelection());
+      return false;
+    }
+    if (this._transaction) this.commit();
+    this.begin('Commit selection');
+    try { this._stampSelection(); this.commit(); }
+    catch (error) { this.cancel(); throw error; }
+    this._selectionSession = null;
+    if (session.changed) {
+      this._undo.push(session.before);
+      this._redo = [];
+      this._trimHistory();
+    }
+    this._editEpoch++;
+    this._changed();
+    return session.changed;
+  }
+  cancelSelection() {
+    if (!this._selectionSession) return false;
+    if (this._transaction) this.cancel();
+    const { before } = this._selectionSession;
+    this._selectionSession = null;
+    this._restore(before);
+    this._editEpoch++;
+    this._changed();
+    return true;
   }
   undo() {
     if (this._transaction) this.cancel();
+    if (this._selectionSession?.changed) this.commitSelection();
+    else if (this._selectionSession) { this.cancelSelection(); return; }
     if (!this.canUndo) return;
     this._redo.push(this._snapshot());
     this._restore(this._undo.pop());
+    this._editEpoch++;
     this._trimHistory();
     this._changed();
   }
   redo() {
     if (this._transaction) this.cancel();
+    if (this._selectionSession?.changed) this.commitSelection();
+    else if (this._selectionSession) this.cancelSelection();
     if (!this.canRedo) return;
     this._undo.push(this._snapshot());
     this._restore(this._redo.pop());
+    this._editEpoch++;
     this._trimHistory();
     this._changed();
   }
@@ -262,6 +385,8 @@ export class PaintDocument extends EventTarget {
     this._undo = [];
     this._redo = [];
     this._transaction = null;
+    this._selectionSession = null;
+    this._editEpoch = (this._editEpoch ?? 0) + 1;
     this._compositeScratch = null;
     this._nextRevision ??= 1;
     this._revision = this._savedRevision = this._documentStartRevision = this._nextRevision++;
@@ -374,6 +499,7 @@ export class PaintDocument extends EventTarget {
     const [nextWidth, nextHeight] = dimensions(Math.ceil(baseWidth + Math.abs(sx) * baseHeight), Math.ceil(baseHeight + Math.abs(sy) * baseWidth));
     if (this.selection && target !== 'document') this.assertSelectionSize(nextWidth, nextHeight);
     else assertDocumentBudget(nextWidth, nextHeight, this.layers.length);
+    const selectionTarget = Boolean(this.selection && target !== 'document');
     this._edit('Resize', () => {
       const transform = source => {
         const base = createCanvas(baseWidth, baseHeight);
@@ -404,7 +530,7 @@ export class PaintDocument extends EventTarget {
         this.width = nextWidth;
         this.height = nextHeight;
       }
-    });
+    }, { selection: selectionTarget });
   }
   crop() {
     if (!this.selection) return;
@@ -422,7 +548,7 @@ export class PaintDocument extends EventTarget {
       this.selection = null;
       this.width = width;
       this.height = height;
-    });
+    }, { selection: true, finishSelection: true });
   }
   rotate(degrees) {
     if (!Number.isFinite(Number(degrees))) throw new TypeError('Rotation must be a finite angle.');
@@ -444,6 +570,7 @@ export class PaintDocument extends EventTarget {
       ctx.drawImage(source, -source.width / 2, -source.height / 2);
       return canvas;
     };
+    const selectionTarget = Boolean(this.selection);
     this._edit('Rotate', () => {
       if (this.selection) {
         const { width, height } = this.selection;
@@ -463,9 +590,10 @@ export class PaintDocument extends EventTarget {
         this.width = this.layers[0].canvas.width;
         this.height = this.layers[0].canvas.height;
       }
-    });
+    }, { selection: selectionTarget });
   }
   flip(horizontal = true) {
+    const selectionTarget = Boolean(this.selection);
     this._edit('Flip', () => {
       const flipCanvas = source => {
         const canvas = createCanvas(source.width, source.height);
@@ -482,16 +610,17 @@ export class PaintDocument extends EventTarget {
         selection.canvas = flipCanvas(selection.canvas);
       }
       else for (const layer of this.layers) layer.canvas = flipCanvas(layer.canvas);
-    });
+    }, { selection: selectionTarget });
   }
   clear() {
+    if (this.selection) { this.deleteSelection(); return; }
     this._edit('Clear', () => {
-      if (this.selection) this.selection = null;
-      else context(this.activeLayer.canvas).clearRect(0, 0, this.width, this.height);
+      context(this.activeLayer.canvas).clearRect(0, 0, this.width, this.height);
     });
   }
 
   invertColors() {
+    const selectionTarget = Boolean(this.selection);
     this._edit('Invert colors', () => {
       const ctx = context(this.selection?.canvas ?? this.activeLayer.canvas);
       const image = ctx.getImageData(0, 0, ctx.canvas.width, ctx.canvas.height);
@@ -502,7 +631,7 @@ export class PaintDocument extends EventTarget {
         image.data[i + 2] = 255 - image.data[i + 2];
       }
       ctx.putImageData(image, 0, 0);
-    });
+    }, { selection: selectionTarget });
   }
 
   addLayer(name) {
@@ -572,6 +701,7 @@ export class PaintDocument extends EventTarget {
   setLayer(layerId, changes) {
     const layer = this.layers.find(item => item.id === layerId);
     if (!layer) return;
+    if (typeof changes.name !== 'string' && typeof changes.visible !== 'boolean' && !Number.isFinite(changes.opacity)) return;
     this._edit('Layer properties', () => {
       if (typeof changes.name === 'string') layer.name = changes.name;
       if (typeof changes.visible === 'boolean') layer.visible = changes.visible;
@@ -582,6 +712,7 @@ export class PaintDocument extends EventTarget {
     if (!this.layers.some(layer => layer.id === layerId) || this.activeLayerId === layerId) return;
     if (this.selection) this.deselect();
     this.activeLayerId = layerId;
+    this._editEpoch++;
     this._changed();
   }
   setBackground(colorOrNull) {
@@ -593,6 +724,7 @@ export class PaintDocument extends EventTarget {
     colorBytes(color);
     this.selectionTransparent = Boolean(enabled);
     this.selectionKeyColor = color;
+    this._editEpoch++;
     this._changed();
   }
 
@@ -638,7 +770,8 @@ export class PaintDocument extends EventTarget {
     const y2 = Math.max(0, Math.min(this.height, Math.ceil(Math.max(y, y + height))));
     if (x2 <= x1 || y2 <= y1) return;
     this.assertSelectionSize(x2 - x1, y2 - y1);
-    this._edit('Select', () => this._capture(x1, y1, x2 - x1, y2 - y1, null, options));
+    if (options.transparent ?? this.selectionTransparent) colorBytes(options.color ?? this.selectionKeyColor);
+    this._startSelection('Select', () => this._capture(x1, y1, x2 - x1, y2 - y1, null, options));
   }
   selectPolygon(points, options = {}) {
     if (!Array.isArray(points) || points.length < 3) return;
@@ -650,7 +783,8 @@ export class PaintDocument extends EventTarget {
     x2 = Math.min(this.width, Math.ceil(x2)); y2 = Math.min(this.height, Math.ceil(y2));
     if (x2 <= x1 || y2 <= y1) return;
     this.assertSelectionSize(x2 - x1, y2 - y1);
-    this._edit('Free-form select', () => this._capture(x1, y1, x2 - x1, y2 - y1, points, options));
+    if (options.transparent ?? this.selectionTransparent) colorBytes(options.color ?? this.selectionKeyColor);
+    this._startSelection('Free-form select', () => this._capture(x1, y1, x2 - x1, y2 - y1, points, options));
   }
   invertSelection() {
     if (!this.selection) { this.selectAll(); return; }
@@ -666,14 +800,14 @@ export class PaintDocument extends EventTarget {
       }
       if (!count) { this._stampSelection(); return; }
       this._capture(0, 0, this.width, this.height, null, { transparent: false }, mask);
-    });
+    }, { selection: true });
   }
   selectAll() { this.selectRect(0, 0, this.width, this.height); }
-  deselect() { if (this.selection) this._edit('Deselect', () => this._stampSelection()); }
-  deleteSelection() { if (this.selection) this._edit('Delete selection', () => { this.selection = null; }); }
+  deselect() { this.commitSelection(); }
+  deleteSelection() { if (this.selection) this._edit('Delete selection', () => { this.selection = null; }, { selection: true, finishSelection: true }); }
   moveSelection(x, y) {
     if (!this.selection || !Number.isFinite(x) || !Number.isFinite(y)) return;
-    this._edit('Move selection', () => { this.selection.x = Math.round(x); this.selection.y = Math.round(y); });
+    this._edit('Move selection', () => { this.selection.x = Math.round(x); this.selection.y = Math.round(y); }, { selection: true });
   }
   resizeSelection(width, height, { x = this.selection?.x, y = this.selection?.y, source = this.selection } = {}) {
     if (!this.selection || !source || !Number.isFinite(x) || !Number.isFinite(y)) return;
@@ -683,11 +817,12 @@ export class PaintDocument extends EventTarget {
       context(canvas).drawImage(source.canvas, 0, 0, width, height);
       const mask = transformedMask(source, width, height, (px, py) => [px * source.width / width, py * source.height / height]);
       Object.assign(this.selection, { x: Math.round(x), y: Math.round(y), width, height, canvas, mask });
-    });
+    }, { selection: true });
   }
   pasteCanvas(canvas) {
+    if (!canvas || typeof canvas.getContext !== 'function') throw new TypeError('Paste requires a canvas.');
     this.assertSelectionSize(canvas.width, canvas.height);
-    this._edit('Paste', () => {
+    this._startSelection('Paste', () => {
       this._stampSelection();
       this.selection = { x: 0, y: 0, width: canvas.width, height: canvas.height, canvas: copy(canvas),
         mask: new Uint8Array(canvas.width * canvas.height).fill(1), layerId: this.activeLayerId };
@@ -740,7 +875,7 @@ export class PaintDocument extends EventTarget {
         }
       }
       ctx.putImageData(image, 0, 0);
-    });
+    }, { selection: Boolean(selected) });
   }
 
   serialize() {
@@ -786,7 +921,8 @@ export class PaintDocument extends EventTarget {
     if (!ids.has(data.activeLayerId)) throw new Error('The project active layer is missing.');
     this.width = width; this.height = height; this.background = data.background;
     this.layers = layers; this.activeLayerId = data.activeLayerId; this.selection = null;
-    this._transaction = null; this._undo = []; this._redo = []; this._compositeScratch = null;
+    this._transaction = null; this._selectionSession = null; this._undo = []; this._redo = []; this._compositeScratch = null;
+    this._editEpoch++;
     this._revision = this._savedRevision = this._documentStartRevision = this._nextRevision++;
     this._changed();
   }

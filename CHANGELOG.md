@@ -2,6 +2,13 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.3] - Unreleased
+
+- Preserve the complete selection session so Escape restores original pixels after moving or resizing a released selection.
+- Match selection Undo/Redo and Enter retention, and restore the pending session if another document operation fails.
+- Accept one-pixel-wide and one-pixel-high selections while treating a click without movement as deselection.
+- Bind delayed Cut, Paste and Paste from file operations to their original editing target, preserving newer content if the drawing changes while they wait.
+
 ## [0.2.2] - 2026-10-15
 
 - Keep newly drawn ordinary shapes editable after release, with move, resize and rotation controls.

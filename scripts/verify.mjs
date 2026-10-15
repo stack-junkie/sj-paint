@@ -5,6 +5,9 @@ import { verifyGestureCancellation } from './verify-gesture-cancellation.mjs';
 import { verifyPendingShapeGeometry } from './verify-pending-shape-geometry.mjs';
 import { verifyPendingShapes } from './verify-pending-shapes.mjs';
 import { verifyLayerPreview } from './verify-layer-preview.mjs';
+import { verifyClipboardOwnership } from './verify-clipboard-ownership.mjs';
+import { verifySelectionInteractions } from './verify-selection-interactions.mjs';
+import { verifySelectionSession } from './verify-selection-session.mjs';
 import { createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -25,6 +28,9 @@ try{
  await verifyPendingShapeGeometry(page,check);
  await verifyLayerPreview(page,check);
  await verifyPendingShapes(page,check);
+ await verifySelectionSession(page,check);
+ await verifySelectionInteractions(page,check);
+ await verifyClipboardOwnership(page,check);
  await page.screenshot({path:path.join(output,'paint-dark.png')});
  const r=await page.locator('#overlay').boundingBox();
  await page.mouse.move(r.x+80,r.y+80);await page.mouse.down();await page.mouse.move(r.x+240,r.y+140,{steps:20});await page.mouse.up();
@@ -52,7 +58,7 @@ try{
    const {PaintDocument}=await import('/src/engine.js');const {drawShape}=await import('/src/shapes.js');const {SHAPES}=await import('/src/icons.js');
    const d=new PaintDocument(80,60);d.setBackground(null);d.begin('fixture');const c=d.activeLayer.canvas.getContext('2d');c.fillStyle='#ff0000';c.fillRect(10,10,20,20);d.commit();
    const pixel=(x,y)=>[...d.composite().getContext('2d').getImageData(x,y,1,1).data];
-   d.selectRect(10,10,20,20);const selected=pixel(15,15);d.begin('move');d.moveSelection(30,20);d.commit();const moved=pixel(35,25),cleared=pixel(15,15);d.deselect();d.undo();d.undo();const restored=pixel(15,15);
+   d.selectRect(10,10,20,20);const selected=pixel(15,15);d.begin('move');d.moveSelection(30,20);d.commit();const moved=pixel(35,25),cleared=pixel(15,15);d.deselect();d.undo();const restored=pixel(15,15);
    d.deselect();d.addLayer();d.begin('blue');const cc=d.activeLayer.canvas.getContext('2d');cc.fillStyle='#0000ff';cc.fillRect(0,0,10,10);d.commit();d.setLayer(d.activeLayerId,{opacity:.5});const before=d.composite().toDataURL();d.mergeDown();const merged=d.composite().toDataURL()===before;
    const saved=d.serialize();const e=new PaintDocument(1,1);await e.load(saved);const roundtrip=e.composite().toDataURL()===d.composite().toDataURL();
    const f=new PaintDocument(40,40);f.setBackground(null);f.begin('border');const fc=f.activeLayer.canvas.getContext('2d');fc.strokeStyle='#000';fc.lineWidth=2;fc.strokeRect(5,5,30,30);f.commit();f.fill(20,20,'#00ff00',0);const fp=fc.getImageData(20,20,1,1).data;const outside=fc.getImageData(1,1,1,1).data;
