@@ -55,6 +55,8 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ### Version 0.2.6 eraser reference coverage
 
+The browser suite passed 366 checks, the hidden Windows package passed 96, and the isolated Linux package passed 92. Four atomic-save tests passed. The packages exercise erasing, color replacement, cancellation and history through public controls. Browser tests additionally cover cursor alignment at multiple zoom levels and after stationary-pointer scrolling. Windows clipboard remains untouched.
+
 The reference horizontal/diagonal fixture uses an 800 by 400 canvas with a yellow lower layer and red, green, white and black bands above. An 8-pixel erasure clears alpha on the upper layer only. A right-button click replaces red with turquoise and leaves green unchanged. The diagonal produces 3256 newly cleared pixels, exactly matching continuous square coverage at pixel centers. Separate alpha-64, alpha-128 and opaque samples preserve alpha during replacement.
 
 The fine color fixture contains 64 cells around RGB (237,28,36). All cells agree with a squared RGB distance threshold of six, including combined channel differences. This rule is inferred from that measured grid; it has not been sampled across every primary color. Native fixtures remain local test evidence and are not distributed. The browser suite includes optional digest-pinned comparisons when those files are available, plus synthetic cases on every run. Cursor, interruption and history checks establish SJ Paint behavior where equivalent reference observations are still absent.
