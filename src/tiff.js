@@ -246,7 +246,7 @@ async function inflateStrip(input, expected) {
 }
 
 /**
- * Read one classic TIFF image: chunky RGB/RGBA8 or single-channel grayscale/
+ * Read one classic TIFF image: chunky RGB/RGBA8, BlackIsZero gray/alpha8 or grayscale/
  * palette at 1/2/4/8 bits, strips, orientations 1-8,
  * uncompressed/PackBits/TIFF-LZW/zlib-Deflate. Predictor 2 requires 8-bit samples.
  * Optional trusted inflate(bytes, expectedBytes) must cap expansion and reject
@@ -292,25 +292,27 @@ export async function readTiff(input, { inflate } = {}) {
   check(scalar(254, 0) === 0 && scalar(255, 1) === 1, 'reduced images, masks and page subfiles are not supported');
   if (fields.has(297)) check(values(297, 2)[0] === 0 && values(297, 2)[1] === 1, 'multiple TIFF pages are not supported');
   const samples = scalar(277, 1), photometric = scalar(262);
-  check(photometric === 2 ? samples === 3 || samples === 4 : [0, 1, 3].includes(photometric) && samples === 1,
-    'only RGB/RGBA and single-channel grayscale/palette images are supported');
+  const grayAlpha = photometric === 1 && samples === 2;
+  check(photometric === 2 ? samples === 3 || samples === 4 : grayAlpha || [0, 1, 3].includes(photometric) && samples === 1,
+    'only RGB/RGBA, BlackIsZero gray/alpha and single-channel grayscale/palette images are supported');
   const depths = values(258, samples, Array(samples).fill(1)), bits = depths[0];
   check(samples === 1 ? [1, 2, 4, 8].includes(bits) : depths.every(value => value === 8),
-    'only 1/2/4/8-bit grayscale/palette and 8-bit RGB/RGBA channels are supported');
+    'only 1/2/4/8-bit grayscale/palette and 8-bit RGB/RGBA or gray/alpha channels are supported');
   // TIFF pads each packed scanline separately, including the last row of a strip.
   // This layout owns both expansion limits and sample addressing below.
   const rowBytes = Math.ceil(width * samples * bits / 8), levels = 2 ** bits;
   check(values(339, samples, Array(samples).fill(1)).every(value => value === 1), 'only unsigned integer samples are supported');
   check(scalar(266, 1) === 1 && scalar(284, 1) === 1, 'reversed fill order and planar channels are not supported');
-  const alpha = samples === 4 ? scalar(338) : 0;
-  check(samples === 4 ? alpha === 1 || alpha === 2 : !fields.has(338), 'extra channels must declare associated or unassociated alpha');
-  // Normalize single-channel interpretation once, before any strip inflation.
+  const alpha = samples === 4 || grayAlpha ? scalar(338) : 0;
+  check(grayAlpha ? alpha === 2 : samples === 4 ? alpha === 1 || alpha === 2 : !fields.has(338),
+    'extra channels must declare supported alpha (grayscale requires unassociated alpha)');
+  // Normalize grayscale/palette color interpretation once, before strip inflation.
   // ColorMap contains separate 16-bit R/G/B tables. The RGBA8 engine retains
   // their high bytes, matching Pillow's palette conversion, not higher precision.
   let colorTable;
   if (photometric === 3) check(fields.get(320)?.type === 3, 'palette ColorMap must contain SHORT values');
   else check(!fields.has(320), 'ColorMap is only supported for palette images');
-  if (samples === 1) {
+  if (photometric !== 2) {
     const palette = photometric === 3 ? values(320, 3 * levels) : null;
     colorTable = new Uint8Array(levels * 4);
     for (let index = 0; index < levels; index++) {
@@ -363,9 +365,10 @@ export async function readTiff(input, { inflate } = {}) {
       else if (orientation === 8) { ox = y; oy = width - 1 - x; }
       const target = (oy * outputWidth + ox) * 4;
       if (colorTable) {
-        const bit = x * bits, source = row * rowBytes + (bit >>> 3);
+        const bit = x * samples * bits, source = row * rowBytes + (bit >>> 3);
         const color = ((decoded[source] >>> (8 - bits - (bit & 7))) & (levels - 1)) * 4;
         for (let channel = 0; channel < 4; channel++) rgba[target + channel] = colorTable[color + channel];
+        if (grayAlpha) rgba[target + 3] = decoded[source + 1];
         continue;
       }
       const source = row * rowBytes + x * samples;

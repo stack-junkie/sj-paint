@@ -1,0 +1,203 @@
+{
+  "provenance": {
+    "pillow": "12.3.0",
+    "libtiff": "4.7.1",
+    "generatorSha256": "477eaa3c85fc7ee4bd61ae2dc506e2d71b42ca22d93887377cbe1028d8f036f1",
+    "generatorHashEncoding": "UTF-8 with LF newlines",
+    "description": "Original LA pixels, including nonzero gray beneath zero alpha. Pillow independently encodes and decodes BlackIsZero/unassociated-alpha TIFF. No native Paint equivalence claim."
+  },
+  "fixtures": [
+    {
+      "name": "gray-alpha-raw-orientation-1",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 1,
+        "strips": 3
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "e5e82e79784ce8c43a2f46407432e7b47151ee85d7e89a5aff67e7155d11654b",
+      "rgbaSha256": "ace7bab524856a74e87eb52e079a60f358da5703417005fe85f4428ba4d95d78",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwACAAAACAAIAAMBAwABAAAAAQAAAAYBAwABAAAAAQAAABEBBAADAAAAngAAABIBAwABAAAAAQAAABUBAwABAAAAAgAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAFIBAwABAAAAAgAAAAAAAAC2AAAA0gAAAO4AAAAcAAAAHAAAAA4AAAC0ANkB/kAjf0iAbf6S/7cA3AEBQCZ/S4Bw/pX/ugDfAQRAKX9OgHP+mP+9AOIBB0Asf1GAdv6b/8AA5QEKQC9/VIB5/p7/",
+      "rgbaBase64": "tLS0ANnZ2QH+/v5AIyMjf0hISIBtbW3+kpKS/7e3twDc3NwBAQEBQCYmJn9LS0uAcHBw/pWVlf+6uroA39/fAQQEBEApKSl/Tk5OgHNzc/6YmJj/vb29AOLi4gEHBwdALCwsf1FRUYB2dnb+m5ub/8DAwADl5eUBCgoKQC8vL39UVFSAeXl5/p6env8="
+    },
+    {
+      "name": "gray-alpha-packbits-orientation-2",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 32773,
+        "predictor": 1,
+        "orientation": 2,
+        "strips": 3
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "3056c865f5cf56eba07fc0f7dd07063ce29ebe2848654e3700a6611b7c1942e2",
+      "rgbaSha256": "429103ae6d1376a709402359efb6bf15ac350884310be80b2d29934a173f0a07",
+      "encodedBase64": "SUkqAFQAAAANtADZAf5AI39IgG3+kv8NtwDcAQFAJn9LgHD+lf8NugDfAQRAKX9OgHP+mP8NvQDiAQdALH9RgHb+m/8NwADlAQpAL39UgHn+nv8ADAAAAQMAAQAAAAcAAAABAQMAAQAAAAUAAAACAQMAAgAAAAgACAADAQMAAQAAAAWAAAAGAQMAAQAAAAEAAAARAQQAAwAAAPYAAAASAQMAAQAAAAIAAAAVAQMAAQAAAAIAAAAWAQMAAQAAAAIAAAAXAQQAAwAAAOoAAAAcAQMAAQAAAAEAAABSAQMAAQAAAAIAAAAAAAAAHgAAAB4AAAAPAAAACAAAACYAAABEAAAA",
+      "rgbaBase64": "kpKS/21tbf5ISEiAIyMjf/7+/kDZ2dkBtLS0AJWVlf9wcHD+S0tLgCYmJn8BAQFA3NzcAbe3twCYmJj/c3Nz/k5OToApKSl/BAQEQN/f3wG6uroAm5ub/3Z2dv5RUVGALCwsfwcHB0Di4uIBvb29AJ6env95eXn+VFRUgC8vL38KCgpA5eXlAcDAwAA="
+    },
+    {
+      "name": "gray-alpha-tiff_lzw-orientation-3",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 5,
+        "predictor": 2,
+        "orientation": 3,
+        "strips": 3
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "aac61812e015bbd6b2a805f56a9d87bd67d3ccc2a41312fe2f8262ee45a22124",
+      "rgbaSha256": "2e92699a88d2e95ef96290c762b439ec2c4a3491872cd8179fb8e6b029e3e4a3",
+      "encodedBase64": "SUkqAEgAAACALQACUAiUfwaCCU/QRbwOCweDwWFgGAiALoACUAiUfwaCCU/QRewOCweDwWFgGAiAMAACUAiUfwaCCU/QSAgADQAAAQMAAQAAAAcAAAABAQMAAQAAAAUAAAACAQMAAgAAAAgACAADAQMAAQAAAAUAAAAGAQMAAQAAAAEAAAARAQQAAwAAAPAAAAASAQMAAQAAAAMAAAAVAQMAAQAAAAIAAAAWAQMAAQAAAAIAAAAXAQMAAwAAAOoAAAAcAQMAAQAAAAEAAAA9AQMAAQAAAAIAAABSAQMAAQAAAAIAAAAAAAAAGAAYAA8ACAAAACAAAAA4AAAA",
+      "rgbaBase64": "np6e/3l5ef5UVFSALy8vfwoKCkDl5eUBwMDAAJubm/92dnb+UVFRgCwsLH8HBwdA4uLiAb29vQCYmJj/c3Nz/k5OToApKSl/BAQEQN/f3wG6uroAlZWV/3BwcP5LS0uAJiYmfwEBAUDc3NwBt7e3AJKSkv9tbW3+SEhIgCMjI3/+/v5A2dnZAbS0tAA="
+    },
+    {
+      "name": "gray-alpha-tiff_adobe_deflate-orientation-4",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 8,
+        "predictor": 2,
+        "orientation": 4,
+        "strips": 3
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "daa1914c663940f2b659ee25fe13f0f1d939e4d80ef80217c0ff41998695a0dc",
+      "rgbaSha256": "21c3aca3af5ce1d145ebf42c7694d9d8a143795d092d69781aad78741d7a9583",
+      "encodedBase64": "SUkqAFAAAAB4nNvCoMqoaq9qr8qoWqfKuB2FBwBO/gUmeJzbxaDKqGqvaq/KqFqnyrgXhQcAT/oFMnicO8Cgyqhqr2qvyqhap8oIABYbAp4NAAABAwABAAAABwAAAAEBAwABAAAABQAAAAIBAwACAAAACAAIAAMBAwABAAAACAAAAAYBAwABAAAAAQAAABEBBAADAAAA+AAAABIBAwABAAAABAAAABUBAwABAAAAAgAAABYBAwABAAAAAgAAABcBAwADAAAA8gAAABwBAwABAAAAAQAAAD0BAwABAAAAAgAAAFIBAwABAAAAAgAAAAAAAAAZABkAFgAIAAAAIQAAADoAAAA=",
+      "rgbaBase64": "wMDAAOXl5QEKCgpALy8vf1RUVIB5eXn+np6e/729vQDi4uIBBwcHQCwsLH9RUVGAdnZ2/pubm/+6uroA39/fAQQEBEApKSl/Tk5OgHNzc/6YmJj/t7e3ANzc3AEBAQFAJiYmf0tLS4BwcHD+lZWV/7S0tADZ2dkB/v7+QCMjI39ISEiAbW1t/pKSkv8="
+    },
+    {
+      "name": "gray-alpha-raw-orientation-5",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 5,
+        "strips": 3
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "126289e5752d93cea99efaf6702b4ef0ac74c24d2f80dc1a7491a564d23cce08",
+      "rgbaSha256": "6ef7515f16766b5628dcfd092a38d2fa040bf15767f696fb44ed8b8ef44bb28d",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwACAAAACAAIAAMBAwABAAAAAQAAAAYBAwABAAAAAQAAABEBBAADAAAAngAAABIBAwABAAAABQAAABUBAwABAAAAAgAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAFIBAwABAAAAAgAAAAAAAAC2AAAA0gAAAO4AAAAcAAAAHAAAAA4AAAC0ANkB/kAjf0iAbf6S/7cA3AEBQCZ/S4Bw/pX/ugDfAQRAKX9OgHP+mP+9AOIBB0Asf1GAdv6b/8AA5QEKQC9/VIB5/p7/",
+      "rgbaBase64": "tLS0ALe3twC6uroAvb29AMDAwADZ2dkB3NzcAd/f3wHi4uIB5eXlAf7+/kABAQFABAQEQAcHB0AKCgpAIyMjfyYmJn8pKSl/LCwsfy8vL39ISEiAS0tLgE5OToBRUVGAVFRUgG1tbf5wcHD+c3Nz/nZ2dv55eXn+kpKS/5WVlf+YmJj/m5ub/56env8="
+    },
+    {
+      "name": "gray-alpha-packbits-orientation-6",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 32773,
+        "predictor": 1,
+        "orientation": 6,
+        "strips": 3
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "44faffc8d2fba66f433513d94565d89b0f4ce286a0d64413082f4fb71b8ea789",
+      "rgbaSha256": "6a6ca7c7904994dac8acc9148eee6e2da59c63f1d3640f2193b5a92f8adac4c1",
+      "encodedBase64": "SUkqAFQAAAANtADZAf5AI39IgG3+kv8NtwDcAQFAJn9LgHD+lf8NugDfAQRAKX9OgHP+mP8NvQDiAQdALH9RgHb+m/8NwADlAQpAL39UgHn+nv8ADAAAAQMAAQAAAAcAAAABAQMAAQAAAAUAAAACAQMAAgAAAAgACAADAQMAAQAAAAWAAAAGAQMAAQAAAAEAAAARAQQAAwAAAPYAAAASAQMAAQAAAAYAAAAVAQMAAQAAAAIAAAAWAQMAAQAAAAIAAAAXAQQAAwAAAOoAAAAcAQMAAQAAAAEAAABSAQMAAQAAAAIAAAAAAAAAHgAAAB4AAAAPAAAACAAAACYAAABEAAAA",
+      "rgbaBase64": "wMDAAL29vQC6uroAt7e3ALS0tADl5eUB4uLiAd/f3wHc3NwB2dnZAQoKCkAHBwdABAQEQAEBAUD+/v5ALy8vfywsLH8pKSl/JiYmfyMjI39UVFSAUVFRgE5OToBLS0uASEhIgHl5ef52dnb+c3Nz/nBwcP5tbW3+np6e/5ubm/+YmJj/lZWV/5KSkv8="
+    },
+    {
+      "name": "gray-alpha-tiff_lzw-orientation-7",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 5,
+        "predictor": 2,
+        "orientation": 7,
+        "strips": 3
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "ef7369fb22c2eb17cfc724850175b6d4b285c1d3724989f0b078a5f572a29a9b",
+      "rgbaSha256": "7b4f473183eaf0260c560e5ef6ce9e10078bee0f9af18103d4920a9c05c69abc",
+      "encodedBase64": "SUkqAEgAAACALQACUAiUfwaCCU/QRbwOCweDwWFgGAiALoACUAiUfwaCCU/QRewOCweDwWFgGAiAMAACUAiUfwaCCU/QSAgADQAAAQMAAQAAAAcAAAABAQMAAQAAAAUAAAACAQMAAgAAAAgACAADAQMAAQAAAAUAAAAGAQMAAQAAAAEAAAARAQQAAwAAAPAAAAASAQMAAQAAAAcAAAAVAQMAAQAAAAIAAAAWAQMAAQAAAAIAAAAXAQMAAwAAAOoAAAAcAQMAAQAAAAEAAAA9AQMAAQAAAAIAAABSAQMAAQAAAAIAAAAAAAAAGAAYAA8ACAAAACAAAAA4AAAA",
+      "rgbaBase64": "np6e/5ubm/+YmJj/lZWV/5KSkv95eXn+dnZ2/nNzc/5wcHD+bW1t/lRUVIBRUVGATk5OgEtLS4BISEiALy8vfywsLH8pKSl/JiYmfyMjI38KCgpABwcHQAQEBEABAQFA/v7+QOXl5QHi4uIB39/fAdzc3AHZ2dkBwMDAAL29vQC6uroAt7e3ALS0tAA="
+    },
+    {
+      "name": "gray-alpha-tiff_adobe_deflate-orientation-8",
+      "stored": {
+        "photometric": 1,
+        "bits": [
+          8,
+          8
+        ],
+        "samples": 2,
+        "alpha": [
+          2
+        ],
+        "compression": 8,
+        "predictor": 2,
+        "orientation": 8,
+        "strips": 3
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "552983d8c07d7cff468f93e974e657f5834ac4dc51d72ca1479b0c230cd8766a",
+      "rgbaSha256": "601a53c3f6058d4e2da776cfc116911cd27066701e315df4ac2d02f8d7565cd1",
+      "encodedBase64": "SUkqAFAAAAB4nNvCoMqoaq9qr8qoWqfKuB2FBwBO/gUmeJzbxaDKqGqvaq/KqFqnyrgXhQcAT/oFMnicO8Cgyqhqr2qvyqhap8oIABYbAp4NAAABAwABAAAABwAAAAEBAwABAAAABQAAAAIBAwACAAAACAAIAAMBAwABAAAACAAAAAYBAwABAAAAAQAAABEBBAADAAAA+AAAABIBAwABAAAACAAAABUBAwABAAAAAgAAABYBAwABAAAAAgAAABcBAwADAAAA8gAAABwBAwABAAAAAQAAAD0BAwABAAAAAgAAAFIBAwABAAAAAgAAAAAAAAAZABkAFgAIAAAAIQAAADoAAAA=",
+      "rgbaBase64": "kpKS/5WVlf+YmJj/m5ub/56env9tbW3+cHBw/nNzc/52dnb+eXl5/khISIBLS0uATk5OgFFRUYBUVFSAIyMjfyYmJn8pKSl/LCwsfy8vL3/+/v5AAQEBQAQEBEAHBwdACgoKQNnZ2QHc3NwB39/fAeLi4gHl5eUBtLS0ALe3twC6uroAvb29AMDAwAA="
+    }
+  ]
+}

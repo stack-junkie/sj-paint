@@ -6,7 +6,7 @@ import { deflateSync, inflateSync } from 'node:zlib';
 import { readTiff, writeTiff, writeTiffAsync } from '../src/tiff.js';
 import { exportTiff, exportTiffAsync, saveImageFile } from '../src/files.js';
 import { readPaint } from '../src/paint-format.js';
-import { singleChannelTiffFixtures } from './tiff-fixtures.mjs';
+import { independentTiffFixtures, malformedTiffFixtures } from './tiff-fixtures.mjs';
 
 const pixels = Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 0, 0, 0, 255, 128, 1, 2, 3, 4, 5, 6, 7, 8, 255, 255, 255, 255]);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -231,8 +231,8 @@ test('single-channel interpretation rejects malformed or conflicting fields befo
   assert.deepEqual((await readTiff(withoutSamples)).rgba, Uint8Array.from([...raw].flatMap(value => [value, value, value, 255])));
 });
 
-test('independent Pillow grayscale and palette fixtures match exact oriented RGBA', async () => {
-  for (const fixture of await singleChannelTiffFixtures()) {
+test('independent Pillow grayscale, palette and gray-alpha fixtures match exact oriented RGBA', async () => {
+  for (const fixture of await independentTiffFixtures()) {
     const decoded = await readTiff(fixture.bytes);
     assert.equal(decoded.width, fixture.width, fixture.name); assert.equal(decoded.height, fixture.height, fixture.name);
     assert.equal(digest(decoded.rgba), fixture.rgbaSha256, fixture.name);
@@ -506,4 +506,8 @@ test('owned native alpha TIFF matches Paint PNG export pixels, including native 
     const png = await readFile(new URL('../output/reference-alpha-export.png', import.meta.url));
     assert.equal(digest(png), 'd1dff4385862ca4efcc3dc7b179cf70b1afd1b0b7e1f41fd67536547736e2ef1');
   } catch (error) { if (error.code !== 'ENOENT') throw error; }
+});
+
+test('malformed and unsupported gray-alpha imports remain rejected', async () => {
+  for (const fixture of (await malformedTiffFixtures()).filter(f => f.name.startsWith('gray-alpha'))) await assert.rejects(readTiff(fixture.bytes), /TIFF/, fixture.name);
 });

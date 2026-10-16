@@ -3,7 +3,7 @@ import { createHash } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 import { exportTiff } from '../src/files.js';
 import { readTiff } from '../src/tiff.js';
-import { singleChannelTiffFixtures, malformedSingleChannelTiffFixtures } from './tiff-fixtures.mjs';
+import { independentTiffFixtures, malformedTiffFixtures } from './tiff-fixtures.mjs';
 
 export async function tiffImportFixture() {
   const width = 64, height = 48, rgba = new Uint8Array(width * height * 4);
@@ -111,12 +111,12 @@ export async function verifyTiffImport(page, check) {
     check('Paste from file uses TIFF decoding and preserves selection alpha', JSON.stringify(pasted) === JSON.stringify(canonical));
     await page.keyboard.press('Escape'); await page.evaluate(() => paintApp.doc.markSaved());
 
-    const independent = await singleChannelTiffFixtures();
+    const independent = await independentTiffFixtures();
     for (const sample of independent) {
       const name = `independent-${sample.name}.tiff`;
       await choose(name, sample.bytes); await waitLoaded(name);
       check(`Open matches independent ${sample.name} dimensions and RGBA`,
-        JSON.stringify(await pixels()) === JSON.stringify([...sample.rgba]) && await page.locator('#canvas').evaluate((canvas, size) =>
+        JSON.stringify(await pixels()) === JSON.stringify(await canvasTiffPixels(page, sample)) && await page.locator('#canvas').evaluate((canvas, size) =>
           canvas.width === size.width && canvas.height === size.height, { width: sample.width, height: sample.height }));
     }
     const gray = independent.find(sample => sample.name === 'gray-white-lzw');
@@ -155,7 +155,23 @@ export async function verifyTiffImport(page, check) {
     });
     check('Paste from file expands packed palette indices after Deflate and orientation', JSON.stringify(packedPixels) === JSON.stringify([...packedPalette.rgba]));
     await page.keyboard.press('Escape'); await page.evaluate(() => paintApp.doc.markSaved());
-    const malformed = await malformedSingleChannelTiffFixtures();
+    const grayAlpha = independent.find(sample => sample.name === 'gray-alpha-tiff_lzw-orientation-7');
+    const alphaCanonical = await canvasTiffPixels(page, grayAlpha);
+    const alphaTransfer = await page.evaluateHandle(bytes => {
+      const transfer = new DataTransfer(); transfer.items.add(new File([Uint8Array.from(bytes)], 'gray-alpha.bin', { type: 'application/octet-stream' })); return transfer;
+    }, [...grayAlpha.bytes]);
+    try { await page.dispatchEvent('#viewport', 'drop', { dataTransfer: alphaTransfer }); }
+    finally { await alphaTransfer.dispose(); }
+    await waitLoaded('gray-alpha.bin');
+    check('Drop preserves grayscale-alpha TIFF transparency after LZW, prediction and orientation', JSON.stringify(await pixels()) === JSON.stringify(alphaCanonical));
+    const alphaPaste = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Edit', exact: true }).click(); await page.locator('[data-command="paste-from"]').click();
+    await (await alphaPaste).setFiles({ name: 'gray-alpha-paste.tiff', mimeType: 'image/tiff', buffer: grayAlpha.bytes });
+    await page.waitForFunction(() => Boolean(paintApp.doc.selection), null, { polling: 100 });
+    const alphaPixels = await page.evaluate(() => { const c = paintApp.doc.selection.canvas; return [...c.getContext('2d').getImageData(0, 0, c.width, c.height).data]; });
+    check('Paste from file preserves grayscale-alpha TIFF selection pixels', JSON.stringify(alphaPixels) === JSON.stringify(alphaCanonical));
+    await page.keyboard.press('Escape'); await page.evaluate(() => paintApp.doc.markSaved());
+    const malformed = await malformedTiffFixtures();
     for (const sample of malformed) {
       const before = await snapshot();
       const failed = page.waitForEvent('console', { predicate: e => e.type() === 'error' && /TIFF/.test(e.text()) });

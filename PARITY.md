@@ -34,7 +34,7 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 - Rectangular and free-form selections, inverse selection, color-key transparency for new selections, color inversion, move/resize/crop, copy/cut/paste, image rotation, flips, resize/skew and canvas dimensions.
 - Layer add/delete/duplicate/reorder/rename, opacity, visibility, merge and transparent background.
 - Undo/redo with saved-state identity, editable `.sjpaint` projects, legacy `.linuxpaint` project import, native file dialogs, image export and print integration.
-- PNG, JPEG, WebP, BMP, GIF and TIFF export. PNG/JPEG/WebP/BMP/GIF import uses Chromium decoding. GIF is a single frame; classic TIFF import supports RGB/RGBA8, 1/2/4/8-bit grayscale and palette strips with uncompressed, PackBits, LZW and Deflate data.
+- PNG, JPEG, WebP, BMP, GIF and TIFF export. PNG/JPEG/WebP/BMP/GIF import uses Chromium decoding. GIF is a single frame; classic TIFF import supports RGB/RGBA8, 1/2/4/8-bit grayscale and palette strips, plus 8-bit BlackIsZero/unassociated-alpha grayscale, with uncompressed, PackBits, LZW and Deflate data.
 
 ## Baseline gaps and unresolved behavior
 
@@ -47,7 +47,7 @@ Microsoft documents a mixture of device-specific local models and account-backed
 | Drawing behavior | Brush rasterization, textures, selection and transform edge cases, text metrics and all command shortcuts are not proven identical to the reference. |
 | Visual fidelity | Icons are newly drawn and rendering is independently implemented. Fonts depend on the host platform. Pixel-perfect layout and control behavior have not been established. |
 | Advanced editing | Ordinary shapes remain editable with a free-rotation handle until committed. Committed text and shapes become pixels. Post-commit vector/text re-editing is not implemented. Curve/polygon editing still uses its earlier construction workflow. |
-| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export uses LZW/predictor-2 RGBA. TIFF import covers classic RGB/RGBA8, 1/2/4/8-bit grayscale and palette strips and orientations 1 through 8; multipage, tiled, planar, grayscale alpha, higher bit depth and color-profile variants are rejected. Full metadata preservation and color-managed workflows are not established. |
+| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export uses LZW/predictor-2 RGBA. TIFF import covers classic RGB/RGBA8, 1/2/4/8-bit grayscale and palette strips and orientations 1 through 8; multipage, tiled, planar, associated or WhiteIsZero grayscale alpha, higher bit depth and color-profile variants are rejected. Full metadata preservation and color-managed workflows are not established. |
 | Platform integration | The Linux installer passed GIO menu registration, eligibility and fixture-launch checks. Actual menu presentation in each desktop shell remains unverified. Physical printing, native chooser interaction, Wayland, complete accessibility support and ARM compatibility also remain unverified. |
 | Resource limits | The editor enforces its own document, history and encoded-file bounds. Their equivalence to Microsoft Paint limits is unknown. |
 
@@ -71,11 +71,19 @@ The completed EfficientSAM evaluation took 65.226 s elapsed and 104.719 s CPU. F
 
 ## Verification history
 
+### Version 0.2.26 grayscale TIFF transparency
+
+The classic TIFF reader now accepts chunky 8-bit BlackIsZero gray plus one unassociated alpha channel (`PhotometricInterpretation=1`, `SamplesPerPixel=2`, `BitsPerSample=[8,8]`, `ExtraSamples=2`). [TIFF 6.0 sections 2 and 18](https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf) establish extra-component placement, declared depths and independent alpha. Eight original Pillow 12.3.0/libtiff 4.7.1 fixtures cover all orientations, raw/PackBits/LZW/Deflate, horizontal prediction, multiple strips, and alpha 0/1/64/127/128/254/255. Exact decoded RGBA hashes, including nonzero hidden gray, come from the independent decoder. Associated grayscale alpha, WhiteIsZero with alpha, palette alpha, mixed depths and undeclared extra samples remain rejected. The installed independent decoder could not validate the WhiteIsZero alpha combination; no guessed support was added.
+
+Public Open first reproduced the existing unsupported-layout error while preserving the drawing. The shared color lookup, row layout, codecs and coordinate mapping now also handle the declared extra sample. No alternative decoder or native IPC was added. Thirty-two codec groups passed, followed by both retained digest-pinned native TIFF checks once the fixtures were made available in this checkout. Public import checks passed 122 assertions, including alpha Open/Drop/Paste and malformed-file preservation. Canvas comparisons use exact browser premultiplication of independently decoded RGBA, not a broad pixel tolerance. Raw codec comparisons retain every byte. Native Paint acceptance of the newly supported gray-alpha files is unverified; packaged verification is pending.
+
+For the same 2,097,152-pixel image stored without compression, gray-alpha decoding measured 59.5 ms first call and 39.7 to 55.8 ms on three repeats, with 110 ms first-call CPU and 47 to 109 ms repeat CPU. Equivalent RGBA decoding measured 47.7 ms first and 32.8 to 49.2 ms repeated. Separate single-process Node runs peaked at 89.7 MiB (gray-alpha) and 92.6 MiB (RGBA), including inputs and repeated buffers. Input files were 4,194,706 and 8,389,018 bytes respectively. This compares two encodings, not before/after speed improvement. OS caches were not flushed; browser import latency and full app memory were not measured.
+
 ### Version 0.2.25 held modifier routing
 
 Public controls reproduced a curve whose held preview stayed unchanged when Shift was pressed without moving the pointer. Shape pointer updates and Shift events now call one held-geometry update. Repeated modifier state is a no-op. The geometry is still fixed on mouse release, so later Shift release cannot alter accepted endpoints. Pending-shape resizing uses its existing constraint policy through the same owner. No new native modifier policy is inferred.
 
-Thirty-one focused checks cover curve/line/rectangle stationary Shift press, repeat and release, retained released geometry, cancellation, continued construction, commit/Undo/Redo, pending resize and capture loss. Forty-five affected curve-construction and pending-shape checks also passed. Packaged verification is pending.
+Thirty-one focused checks cover curve/line/rectangle stationary Shift press, repeat and release, retained released geometry, cancellation, continued construction, commit/Undo/Redo, pending resize and capture loss. Forty-five affected curve-construction and pending-shape checks also passed. CI38890319632 exposed two fixture assumptions: Windows initially fit at 53% while rotation coordinates assumed 100%, and Linux native discard bypassed the expected browser dialog. Tests now set/restore zoom and undo fixture pixels before New; 86 cursor/geometry and 76 modifier/affected checks pass in a small window. Corrected packaged CI is pending.
 
 ### Version 0.2.24 resize cursor ownership (unpublished, included in 0.2.25)
 

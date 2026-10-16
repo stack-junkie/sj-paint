@@ -2,6 +2,11 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.26] - Unreleased
+
+- Import 8-bit BlackIsZero grayscale TIFFs with a declared unassociated alpha channel through the shared strip codecs, predictor and orientation mapping.
+- Preserve exact decoded gray/alpha bytes and reject unsupported alpha, polarity and mixed-depth variants before pixel allocation. Add independent Pillow fixtures and public Open, Drop and Paste coverage.
+
 ## [0.2.25] - Unreleased
 
 - Update held curves, lines, shapes and pending-shape resizing immediately when Shift changes, including without pointer movement. Preserve constrained geometry after mouse release.

@@ -5,9 +5,9 @@ const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
 // These original fixtures use either Pillow or a specification-based Python
 // producer. Expected pixels always come from Pillow, independently of this codec.
-export async function singleChannelTiffFixtures() {
-  const document = JSON.parse(await readFile(new URL('./fixtures/tiff-single-channel.json', import.meta.url), 'utf8'));
-  return document.fixtures.map(({ encodedBase64, rgbaBase64, ...fixture }) => {
+export async function independentTiffFixtures() {
+  const documents = await Promise.all(['tiff-single-channel.json','tiff-gray-alpha.json'].map(async name => JSON.parse(await readFile(new URL(`./fixtures/${name}`, import.meta.url), 'utf8'))));
+  return documents.flatMap(document => document.fixtures).map(({ encodedBase64, rgbaBase64, ...fixture }) => {
     const bytes = Buffer.from(encodedBase64, 'base64'), rgba = Buffer.from(rgbaBase64, 'base64');
     if (digest(bytes) !== fixture.encodedSha256 || digest(rgba) !== fixture.rgbaSha256 || rgba.length !== fixture.width * fixture.height * 4) {
       throw new Error(`Independent TIFF fixture changed: ${fixture.name}`);
@@ -16,8 +16,8 @@ export async function singleChannelTiffFixtures() {
   });
 }
 
-export async function malformedSingleChannelTiffFixtures() {
-  const fixtures = await singleChannelTiffFixtures();
+export async function malformedTiffFixtures() {
+  const fixtures = await independentTiffFixtures();
   const change = (name, tag, relative, value) => {
     const bytes = Buffer.from(fixtures.find(fixture => fixture.name === name).bytes);
     const view = new DataView(bytes.buffer, bytes.byteOffset, bytes.byteLength), little = bytes[0] === 73;
@@ -31,6 +31,10 @@ export async function malformedSingleChannelTiffFixtures() {
     throw new Error(`Missing fixture tag ${tag}`);
   };
   return [
+    { name: 'gray-alpha-associated-unsupported.tiff', bytes: change('gray-alpha-raw-orientation-1', 338, 8, 1) },
+    { name: 'gray-alpha-unspecified.tiff', bytes: change('gray-alpha-raw-orientation-1', 338, 8, 0) },
+    { name: 'gray-alpha-white-unsupported.tiff', bytes: change('gray-alpha-raw-orientation-1', 262, 8, 0) },
+    { name: 'gray-alpha-mixed-depth.tiff', bytes: change('gray-alpha-raw-orientation-1', 258, 8, 0x00040008) },
     { name: 'palette-short-colormap.tiff', bytes: change('palette-raw', 320, 4, 767) },
     { name: 'palette-truncated-colormap.tiff', bytes: change('palette-raw', 320, 8, 'past-end') },
     { name: 'gray-unsupported-depth.tiff', bytes: change('gray-black-packbits', 258, 8, 16) },

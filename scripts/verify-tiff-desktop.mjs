@@ -1,6 +1,6 @@
 import { readTiff } from '../src/tiff.js';
 import { tiffImportFixture, canvasTiffPixels, optionalNativeTiffs } from './verify-tiff-import.mjs';
-import { singleChannelTiffFixtures, malformedSingleChannelTiffFixtures } from './tiff-fixtures.mjs';
+import { independentTiffFixtures, malformedTiffFixtures } from './tiff-fixtures.mjs';
 
 // The caller owns the hidden app and its native-dialog fixtures. All writes
 // stay inside that existing directory; renderer actions use public controls.
@@ -44,13 +44,13 @@ export async function verifyTiffDesktop(page, check, { main, waitForFile }) {
       await page.locator('#overlay').focus(); await page.keyboard.press('Control+o'); await failed;
       check(`desktop ${name} preserves the document and history controls`, before === await snapshot());
     }
-    for (const sample of await singleChannelTiffFixtures()) {
+    for (const sample of await independentTiffFixtures()) {
       await open(`desktop-${sample.name}.tiff`, sample.bytes);
       check(`desktop native Open matches independent ${sample.name} RGBA and orientation`,
-        JSON.stringify(await pixels()) === JSON.stringify([...sample.rgba]) && await page.locator('#canvas').evaluate((canvas, size) =>
+        JSON.stringify(await pixels()) === JSON.stringify(await canvasTiffPixels(page, sample)) && await page.locator('#canvas').evaluate((canvas, size) =>
           canvas.width === size.width && canvas.height === size.height, { width: sample.width, height: sample.height }));
     }
-    for (const sample of await malformedSingleChannelTiffFixtures()) {
+    for (const sample of await malformedTiffFixtures()) {
       const before = await snapshot(); await fixture(sample.name, sample.bytes);
       const failed = page.waitForEvent('console', { predicate: e => e.type() === 'error' && /TIFF/.test(e.text()) });
       await page.locator('#overlay').focus(); await page.keyboard.press('Control+o'); await failed;
