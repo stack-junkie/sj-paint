@@ -56,7 +56,7 @@ async function stopOwnedApp() {
     // exit event arrives. The launch-owned exit promise is the completion proof.
     clearTimeout(timer);
     const exited = await Promise.race([childExit.then(() => true), new Promise(resolve => {
-      timer = setTimeout(() => resolve(false), 3000);
+      timer = setTimeout(() => resolve(false), 10000);
     })]);
     if (!exited) throw error;
   } finally { clearTimeout(timer); socket?.close(); }
@@ -81,6 +81,11 @@ try {
 } finally {
   await mkdir(resolve(root, 'output'), { recursive: true });
   await writeFile(resolve(root, 'output/windows-launch.log'), log);
-  await stopOwnedApp();
+  try { await stopOwnedApp(); }
+  catch (error) {
+    await writeFile(resolve(root, 'output/windows-cleanup.json'), JSON.stringify({ pid: child.pid, profile, ownedProcessExited: child.exitCode !== null || child.signalCode !== null, error: error.message }, null, 2));
+    throw error;
+  }
+  await writeFile(resolve(root, 'output/windows-cleanup.json'), JSON.stringify({ pid: child.pid, profile, ownedProcessExited: child.exitCode !== null || child.signalCode !== null }, null, 2));
   await rm(profile, { recursive: true, force: true, maxRetries: 10, retryDelay: 200 });
 }
