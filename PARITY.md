@@ -55,6 +55,21 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.11 resource-backed shortcuts
+
+Bounded XBF 2.1 decoding following [Microsoft's XBF parser](https://github.com/microsoft/microsoft-ui-xaml/tree/main/dxaml/xcp/tools/XbfParser/WidgetSpinner) recovered typed key/modifier constants and their consuming `KeyboardAccelerator` properties. The pinned `VirtualKeyResources.xbf` SHA-256 is `a65404675520968e6ea92bd0e4a1e280aee8abc60d64e3608b3b9abad2e18d6f`. Both PRI copies contain identical bytes. Explicit consumers in LayersPanel, ImageToolbar and ZoomSlider establish these combinations:
+
+| Command | Shortcut |
+| --- | --- |
+| Current-layer visibility | Ctrl+H |
+| Move current layer up/down | Ctrl+Shift+PageUp/PageDown |
+| Delete current layer | Ctrl+Shift+Delete |
+| Crop | Ctrl+Shift+X |
+| Fit | Ctrl+1, including numeric keypad 1 |
+| Zoom in/out | Ctrl+PageUp/PageDown |
+
+SJ Paint now routes those keys to its existing editing commands. Text fields and open dialogs retain their keys. Extra Alt modifiers cannot fall through to Cut or another document command, and keypad navigation End is distinct from numeric keypad 1. The complete browser suite passed 565 checks before the final modifier guard; focused checks cover that guard and keypad events. The public-control desktop helper passed ten checks in a headless browser; packaged checks are pending. Stored bindings establish command/key relationships, not native focus scope, zoom increments or runtime overrides. Other XBF streams that stop at unsupported custom data remain unparsed; their resource names alone are not treated as verified bindings.
+
 ### Version 0.2.10 save decisions and editing controls
 
 Read-only Windows SDK `makepri dump` inspection of the installed 11.2605.81.0 package confirms Save/Don't save/Cancel resources, a warning about flattened layer exports, Strikethrough text controls, and control-point help advertising Ctrl+Space to commit. The package `resources.pri` SHA-256 is `07966dd87cc747e8d17c7a68bc607448672183cc1c85d0acb01bd16248ce7ae5`. REA established the executable/resource inventory; the SDK decoded PRI resources. No native window activation was used for this inspection, and Microsoft resource dumps are not distributed here.

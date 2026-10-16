@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.11] - Unreleased
+
+- Match decoded Paint shortcuts for active-layer visibility (Ctrl+H), layer movement (Ctrl+Shift+PageUp/PageDown), layer deletion (Ctrl+Shift+Delete), crop (Ctrl+Shift+X), fit (Ctrl+1), and zoom (Ctrl+PageUp/PageDown).
+- Preserve text-field and modal ownership of keyboard input; crop uses the document operation without touching the clipboard.
+- Ignore extra Alt modifiers instead of falling through to Cut or other document commands; distinguish numeric keypad 1 from keypad navigation End.
+
 ## [0.2.10] - Unreleased
 
 - Offer Save, Don't save and Cancel before New, Open or desktop close. Canceled or failed saves and intervening drawing edits retain the current document.

@@ -385,6 +385,7 @@ const actions={
   'flip-horizontal':()=>doc.flip(true),'flip-vertical':()=>doc.flip(false),
   layers:()=>{state.layers=!state.layers;$('#layers-panel').hidden=!state.layers;render();},
   'add-layer':()=>doc.addLayer(),'delete-layer':()=>doc.deleteLayer(),'duplicate-layer':()=>doc.duplicateLayer(),'merge-layer':()=>doc.mergeDown(),'layer-up':()=>doc.moveLayer(doc.activeLayerId,1),'layer-down':()=>doc.moveLayer(doc.activeLayerId,-1),
+  'toggle-layer':()=>doc.setLayer(doc.activeLayerId,{visible:!doc.activeLayer.visible}),
   background:async()=>{const v=await dialog('Canvas background',`<label>Color<input type="color" name="color" value="${doc.background||'#ffffff'}"></label><label class="check-label"><input name="transparent" type="checkbox" ${!doc.background?'checked':''}>Transparent background</label>`);if(v)doc.setBackground(v.transparent?null:v.color);},
   'toggle-background':()=>doc.setBackground(doc.background?null:state.secondary),
   colors:()=>colorDialog(),primary:()=>colorDialog('primary'),secondary:()=>colorDialog('secondary'),
@@ -398,7 +399,7 @@ const actions={
 const menus={
   file:[['New','new','Ctrl+N'],['Open','open','Ctrl+O'],['Open project','open-project'],null,['Save','save','Ctrl+S'],['Save as','save-as','Ctrl+Shift+S'],['Save as project','save-project'],null,['Print','print','Ctrl+P'],['Image properties','properties','Ctrl+E']],
   edit:[['Undo','undo','Ctrl+Z'],['Redo','redo','Ctrl+Y'],null,['Cut','cut','Ctrl+X'],['Copy','copy','Ctrl+C'],['Copy visible layers','copy-all','Ctrl+Shift+C'],['Paste','paste','Ctrl+V'],['Paste from file','paste-from'],null,['Select all','select-all','Ctrl+A'],['Delete','delete','Delete'],['Invert colors','invert-colors','Ctrl+I']],
-  view:[['Zoom in','zoom-in','Ctrl++'],['Zoom out','zoom-out','Ctrl+-'],['100%','zoom-100'],['Fit to window','fit'],['Full screen','fullscreen','F11'],null,['Gridlines','grid'],['Rulers','rulers'],['Layers','layers'],['Collapse toolbar','collapse','Ctrl+F1']],
+  view:[['Zoom in','zoom-in','Ctrl+PageUp'],['Zoom out','zoom-out','Ctrl+PageDown'],['100%','zoom-100'],['Fit to window','fit','Ctrl+1'],['Full screen','fullscreen','F11'],null,['Gridlines','grid'],['Rulers','rulers'],['Layers','layers'],['Collapse toolbar','collapse','Ctrl+F1']],
   selection:[['Rectangular selection','tool:select'],['Free-form selection','tool:lasso'],null,['Select all','select-all'],['Deselect','deselect'],['Invert selection','invert-selection','Ctrl+Shift+I'],['Transparent selection','transparent-selection']],
   rotate:[['Rotate right 90°','rotate-right'],['Rotate left 90°','rotate-left'],['Rotate 180°','rotate-180'],['Custom rotate','rotate-custom']],
   flip:[['Flip horizontal','flip-horizontal'],['Flip vertical','flip-vertical']],
@@ -442,9 +443,15 @@ document.addEventListener('keydown',safe(async e=>{
   // Save belongs to the document even while a text or numeric field has focus.
   // Editing keys such as Undo, Select All and clipboard shortcuts stay local.
   if(edit&&!(mod&&key==='s'))return;let action;
+  if(e.altKey||(e.ctrlKey&&e.metaKey))return;
   if(e.ctrlKey&&key===' '&&!e.shiftKey&&!e.altKey&&(e.target===overlay||e.target===selectionRotation)&&(doc.selection||pendingShape)){
     if(activePointerId!==null)return;
     e.preventDefault();finishPending();doc.commitSelection();changed();return;
+  }
+  // Explicit Key/Modifiers pairs decoded from the pinned Paint XBF resources.
+  if(e.ctrlKey&&!e.altKey&&!e.metaKey){
+    const referenceAction=(e.shiftKey?{pageup:'layer-up',pagedown:'layer-down',delete:'delete-layer',x:'crop'}:{h:'toggle-layer',pageup:'zoom-in',pagedown:'zoom-out','1':'fit'})[key];
+    if(referenceAction){e.preventDefault();await executeAction(referenceAction);return;}
   }
   if(mod){action=({n:'new',o:'open',s:e.shiftKey?'save-as':'save',z:e.shiftKey?'redo':'undo',y:'redo',c:e.shiftKey?'copy-all':'copy',x:'cut',v:'paste',a:'select-all',p:'print',e:'properties',w:'resize','+':'zoom-in','=':'zoom-in','-':'zoom-out',b:e.shiftKey?'background':undefined,h:e.shiftKey?'toggle-background':undefined,i:e.shiftKey?'invert-selection':'invert-colors',f1:'collapse'})[key];}
   else if(key==='f11')action='fullscreen';else if(key==='delete')action='delete';else if(key==='enter'){if(e.target.closest('button,a[href]'))return;commitText();if(!pendingShape)finishPending();e.preventDefault();return;}

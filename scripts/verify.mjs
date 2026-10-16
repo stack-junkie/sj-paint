@@ -24,6 +24,7 @@ import { verifySaveTargets } from './verify-save-targets.mjs';
 import { verifyUnsavedChanges } from './verify-unsaved-changes.mjs';
 import { verifyStrikethrough } from './verify-strikethrough.mjs';
 import { verifyKeyboardCommit } from './verify-keyboard-commit.mjs';
+import { verifyResourceShortcuts } from './verify-resource-shortcuts.mjs';
 import { createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -58,6 +59,7 @@ try{
  await verifyTextInteractions(page,check);
  await verifyStrikethrough(page,check);
  await verifyKeyboardCommit(page,check);
+ await verifyResourceShortcuts(page,check);
  await verifyDrawingAdmission(page,check);
  await verifyHeldLayerPreview(page,check);
  await verifyEraser(page,check);
