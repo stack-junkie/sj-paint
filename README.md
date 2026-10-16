@@ -112,6 +112,8 @@ Clipboard access requires browser support and permission. Printing depends on th
 
 ## Verification and known limits
 
+Version 0.2.12 passed 637 local headless browser checks, 189 Windows package checks, 184 Linux package checks, 47 Linux installer checks and seven native file tests. The [complete Windows/Linux CI run](https://github.com/stack-junkie/sj-paint/actions/runs/38855013801) passed. A focused local Windows save/close rerun also passed 33 checks and cleaned up. New coverage includes save decisions, native close protection, resource-backed shortcuts, pending draft Undo and Fit layout. Native chooser responses remain harness-controlled; the local clipboard was untouched. These results establish the covered behavior, not full Microsoft Paint parity.
+
 Version 0.2.8 passed 503 local headless browser checks, 138 hidden Windows package checks and 133 Linux package checks on an isolated CI runner. Sixteen TIFF codec groups and four atomic-save tests also passed. New cases cover panning with pending edits, held previews across layers, hidden-layer drawing, TIFF import/reopen, text layout and keyboard focus. Native chooser responses remain harness-controlled; the local Windows clipboard stays untouched. CI fixtures omit private native-reference samples, so their counts differ from local runs.
 
 Version 0.2.6 passed 366 headless browser checks, 96 hidden Windows package checks, 92 isolated Linux package checks and four atomic-save tests. Eraser checks cover observed square coverage, alpha-preserving color replacement, cursor alignment, cancellation and layer history. Native chooser responses remain harness-controlled; Windows clipboard stays untouched.

@@ -2,20 +2,20 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.12] - Unreleased
+## [0.2.12] - 2026-10-15
 
 - Enable Undo and show unsaved work for unfinished curves and polygons using the same pending-drawing state as close protection.
 - Make Fit independent of scrollbars left by the previous zoom level.
 - Match decoded Paint layer creation, ruler/grid/ribbon, 100% zoom and tool-selection shortcuts, preserving input and dialog ownership.
 - Let the Windows verifier recognize its owned app's normal exit when Close has already stopped the inspector.
 
-## [0.2.11] - Unreleased
+## [0.2.11] - Included in 0.2.12
 
 - Match decoded Paint shortcuts for active-layer visibility (Ctrl+H), layer movement (Ctrl+Shift+PageUp/PageDown), layer deletion (Ctrl+Shift+Delete), crop (Ctrl+Shift+X), fit (Ctrl+1), and zoom (Ctrl+PageUp/PageDown).
 - Preserve text-field and modal ownership of keyboard input; crop uses the document operation without touching the clipboard.
 - Ignore extra Alt modifiers instead of falling through to Cut or other document commands; distinguish numeric keypad 1 from keypad navigation End.
 
-## [0.2.10] - Unreleased
+## [0.2.10] - Included in 0.2.12
 
 - Offer Save, Don't save and Cancel before New, Open or desktop close. Canceled or failed saves and intervening drawing edits retain the current document.
 - Confirm exports that flatten editable layer state, retain the current format in Save As, and keep replacement dialogs from consuming earlier dialog events.
