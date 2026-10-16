@@ -4,6 +4,7 @@ export async function verifyResizeCursorsDesktop(page, check) {
   const cursor = () => overlay.evaluate(el => getComputedStyle(el).cursor);
   const pixels = () => page.locator('#canvas').evaluate(el => el.toDataURL());
   const initial = await pixels();
+  const initialZoom=await page.locator('#zoom-presets').inputValue();
   const initialTool=await page.evaluate(()=>({tool:document.querySelector('[data-tool][aria-pressed="true"]')?.dataset.tool,label:document.querySelector('#tool-label').textContent}));
   if (await page.locator('[data-action="undo"]').isEnabled()) throw new Error('Cursor fixture requires a pristine document.');
   const move = async ([x,y]) => { const b = await overlay.boundingBox(); const zoom = Number(await page.locator('#zoom-presets').inputValue()); await page.mouse.move(b.x+x*zoom,b.y+y*zoom,{steps:4}); await frame(); };
@@ -11,6 +12,7 @@ export async function verifyResizeCursorsDesktop(page, check) {
   const handles = [[80,100],[160,100],[240,100],[240,150],[240,200],[160,200],[80,200],[80,150]];
   const expected = ['nwse-resize','ns-resize','nesw-resize','ew-resize','nwse-resize','ns-resize','nesw-resize','ew-resize'];
   try {
+    await page.locator('#zoom-presets').selectOption('1');await frame();
     for (const tool of ['rectangle','select']) {
       await page.locator(`[data-tool="${tool}"]`).click(); await drag(handles[0],handles[4]);
       for (let i=0;i<handles.length;i++) { await move(handles[i]); check(`${tool} handle ${i} cursor matches its resize direction`, await cursor() === expected[i], await cursor()); }
@@ -54,10 +56,12 @@ export async function verifyResizeCursorsDesktop(page, check) {
     check('cursor-only state leaves Redo pixels exact',await pixels() === committed);
   } finally {
     await page.mouse.up(); await page.keyboard.press('Escape');
+    if(await page.locator('[data-action="undo"]').isEnabled())await page.keyboard.press('Control+z');await frame();
     await page.keyboard.press('Control+n');
     const discard=page.getByRole('button',{name:"Don't save",exact:true});if(await discard.isVisible())await discard.click();
     if(initialTool.tool)await page.locator(`[data-tool="${initialTool.tool}"]`).click();
-    else{await page.locator('[data-menu="brushes"]').click();await page.getByRole('menuitemradio',{name:initialTool.label,exact:true}).click();}await frame();
+    else{await page.locator('[data-menu="brushes"]').click();await page.getByRole('menuitemradio',{name:initialTool.label,exact:true}).click();}
+    await page.locator('#zoom-presets').selectOption(initialZoom);await frame();
   }
 }
 export async function verifyResizeCursors(page,check) {
