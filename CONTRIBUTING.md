@@ -69,7 +69,9 @@ DISPLAY=:99 /paint/sj-paint --no-sandbox --disable-gpu \
 
 Publish test ports 9229 and 9231 to host **127.0.0.1 only**, then run `npm run test:linux` from the source checkout. The script replaces native chooser responses through the Node inspector and exercises real IPC, codecs, temporary files and the container's clipboard. Stop the container when testing is complete.
 
-The `--no-sandbox` switch is for the isolated root container. It is not part of the shipped launcher and is not a normal desktop workaround. Inspector ports and chooser overrides are test-only controls. This harness does not test native chooser interaction, physical printing or a user's real desktop environment.
+CI also runs the packaged app under Xvfb on its disposable Ubuntu runner, using loopback inspectors and the runner's disposable clipboard. It archives that verified Linux build and retains the package and verification reports as workflow artifacts.
+
+The `--no-sandbox` switch is limited to isolated test environments. It is not part of the shipped launcher and is not a normal desktop workaround. Inspector ports and chooser overrides are test-only controls. This harness does not test native chooser interaction, physical printing or a user's real desktop environment.
 
 ## Reporting a problem
 

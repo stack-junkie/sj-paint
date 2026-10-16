@@ -102,7 +102,10 @@ export async function verifyTextDesktop(page, check) {
     await page.getByRole('button', { name: 'Fit to window', exact: true }).click();
     await page.waitForFunction(() => {
       const canvas = document.querySelector('#overlay'), rect = canvas.getBoundingClientRect(), zoom = Number(document.querySelector('#zoom-presets').value);
-      return Math.abs(rect.width - canvas.width * zoom) < 0.01 && Math.abs(rect.height - canvas.height * zoom) < 0.01;
+      // Chromium quantizes layout to 1/64 CSS pixel. Fit on a 1024px
+      // runner produces a 0.01215px width delta, even after rendering settles.
+      const layoutUnit = 1 / 64 + Number.EPSILON * canvas.width;
+      return Math.abs(rect.width - canvas.width * zoom) <= layoutUnit && Math.abs(rect.height - canvas.height * zoom) <= layoutUnit;
     }, null, { polling: 100 });
   }
   check('desktop text fixture restores a clean blank canvas with no undo or redo history', await pixels() === blank &&
