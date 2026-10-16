@@ -33,6 +33,13 @@ export async function verifyPendingShapesDesktop(page, check) {
   const blank = await pixels();
   await drag(40, 60, 160, 140);
   await waitPixel(80, 60, [0, 0, 0, 255]);
+  // Pixels are visible during the held gesture too. Wait for the release
+  // controls before deciding whether the shape remains editable.
+  await page.waitForFunction(() => {
+    const canvas = document.querySelector('#overlay');
+    return canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data
+      .some((value, index) => index % 4 === 3 && value);
+  }, null, { polling: 100 });
   check('desktop rectangle stays editable after release', await controls() && await pixels() !== blank);
   await page.locator('[data-color="#ed1c24"]').click();
   await waitPixel(80, 60, [237, 28, 36, 255]);

@@ -276,6 +276,22 @@ try {
   }
 } catch (error) {
   checks.push({ name: 'failure', ok: false, detail: error.stack });
+  try {
+    const page = browser?.contexts().flatMap(context => context.pages())[0];
+    if (page) {
+      const state = await page.evaluate(() => ({
+        title: document.title, focus: document.activeElement?.outerHTML,
+        canvas: { width: document.querySelector('#canvas')?.width, height: document.querySelector('#canvas')?.height },
+        tool: document.querySelector('#tool-label')?.textContent,
+        dialog: document.querySelector('#dialog')?.open,
+        undoDisabled: document.querySelector('[data-action="undo"]')?.disabled,
+        redoDisabled: document.querySelector('[data-action="redo"]')?.disabled,
+        textDraft: document.querySelector('.text-editor')?.value,
+      }));
+      await fs.writeFile(new URL('desktop-failure-state.json', output), JSON.stringify(state, null, 2));
+      await page.screenshot({ path: fileURLToPath(new URL('desktop-failure.png', output)) });
+    }
+  } catch (diagnosticError) { errors.push(`Failure capture: ${diagnosticError.message}`); }
   process.exitCode = 1;
 } finally {
   if (fixturesOwned) {
