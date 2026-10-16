@@ -178,7 +178,7 @@ export async function verifyResourceShortcutsDesktop(page, check) {
     if (await page.locator(`[data-tool="${initial.tool}"]`).count()) await click(`[data-tool="${initial.tool}"]`);
     else {
       await click('[data-menu="brushes"]');
-      await page.getByRole('menuitem', { name: initial.tool, exact: true }).click(); await frame();
+      await page.getByRole('menuitemradio', { name: initial.tool, exact: true }).click(); await frame();
     }
     await page.locator('#zoom-presets').selectOption(initial.zoom); await frame();
     if (await page.locator('#layers-panel').isVisible() !== initial.layersOpen) await click('.layers-group [data-action="layers"]');
