@@ -1,4 +1,5 @@
 import { verifyEraserDesktop } from './verify-eraser-desktop.mjs';
+import { verifyLocalAiDesktop } from './verify-local-ai-desktop.mjs';
 import { verifyKeyboardDesktop } from './verify-keyboard-desktop.mjs';
 import { verifyResourceShortcutsDesktop } from './verify-resource-shortcuts-desktop.mjs';
 import { verifyDraftAffordancesDesktop } from './verify-draft-affordances-desktop.mjs';
@@ -162,6 +163,12 @@ try {
   await page.waitForSelector('#overlay');
   check('packaged desktop renderer loaded', await page.title() === 'Untitled - Stack Junkie Paint', await page.title());
   check('isolated preload bridge', await page.evaluate(() => !!window.paintDesktop && typeof require === 'undefined' && typeof process === 'undefined'));
+  if (process.env.SJ_PAINT_TEST_LOCAL_AI === '1') await verifyLocalAiDesktop(page, check);
+  else {
+    const status = await page.evaluate(() => window.paintDesktop.localAiStatus());
+    check('packaged local AI exposes an honest capability status', status?.ok && typeof status.value.configured === 'boolean' && status.value.active === null);
+    checks.push({ name: 'actual configured local AI inference', skipped: true, reason: 'Set SJ_PAINT_TEST_LOCAL_AI=1 with an already acquired runtime/model to exercise actual inference.' });
+  }
 
   const fixtureOwner = randomUUID();
   fixtureLocation = await main(`(() => {
