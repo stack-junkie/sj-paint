@@ -156,6 +156,9 @@ export async function verifyTiffImport(page, check) {
     }
     if (!native.length) check('native TIFF fixture coverage is optional and absent', true, { skipped: true });
 
+    // The optional native fixtures must not determine the later gesture's bounds.
+    await choose('tiff-before-delayed.tif', encoded); await waitLoaded('tiff-before-delayed.tif');
+
     // Delay the actual selected TIFF read, after the public chooser has returned.
     // No native dialog bridge or operating-system clipboard is replaced.
     await page.evaluate(() => {
