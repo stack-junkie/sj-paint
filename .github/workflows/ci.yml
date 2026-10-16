@@ -16,7 +16,9 @@ jobs:
       matrix:
         os: [windows-2022, ubuntu-22.04]
     runs-on: ${{ matrix.os }}
-    timeout-minutes: 30
+    # Hidden Windows rendering and the expanded public-control suite can exceed
+    # 30 minutes. Individual UI/IPC waits remain bounded by the harness.
+    timeout-minutes: 60
     steps:
       - uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
       - uses: actions/setup-node@949feb2413d6458794dcd2491c4babbbce0c15c1 # v7.1.0

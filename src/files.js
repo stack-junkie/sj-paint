@@ -385,36 +385,49 @@ export async function pasteImage() {
   return null;
 }
 
+// Both adapters use the browser's existing width-fit, height-auto pagination.
+// Reset screen-only root geometry and theme at the print document boundary.
+const PRINT_PAGE_STYLE = '@page{margin:12mm}html,body{margin:0!important;width:auto!important;height:auto!important;overflow:visible!important;background:#fff!important;color-scheme:light!important}img{display:block;max-width:100%;height:auto}';
+let printActive = false;
+
 export async function printCanvas(canvas) {
   dimensions(canvas.width, canvas.height);
-  if (window.paintDesktop) {
-    // Desktop printing uses the existing document because new windows are denied.
-    const printable = document.createElement('div');
-    printable.id = 'paint-print-document';
-    const image = document.createElement('img');
-    image.src = canvas.toDataURL('image/png');
+  if (printActive) throw new Error('Finish the current print operation first.');
+  printActive = true;
+  const desktop = window.paintDesktop;
+  let page, printable, style;
+  try {
+    // Desktop new windows are denied, so its owned subtree is visible only in
+    // print media. Browser printing owns a separate page with the same policy.
+    if (!desktop) {
+      page = window.open('', '_blank');
+      if (!page) throw new Error('Allow a popup to print your drawing.');
+      page.opener = null;
+      page.document.title = 'Print drawing';
+    }
+    const owner = desktop ? document : page.document;
+    style = owner.createElement('style');
+    style.textContent = desktop ? '#paint-print-document{display:none}@media print{' + PRINT_PAGE_STYLE +
+      'body>*:not(#paint-print-document){display:none!important}#paint-print-document{display:block!important}}' : PRINT_PAGE_STYLE;
+    owner.head.append(style);
+    const image = owner.createElement('img');
     image.alt = 'Drawing';
-    printable.append(image);
-    const style = document.createElement('style');
-    style.textContent = '#paint-print-document{display:none}@media print{body>*:not(#paint-print-document){display:none!important}#paint-print-document{display:block!important}#paint-print-document img{display:block;max-width:100%;max-height:100%;object-fit:contain}}';
-    document.head.append(style);
-    document.body.append(printable);
-    try { await image.decode(); return await window.paintDesktop.print(); }
-    finally { printable.remove(); style.remove(); }
+    image.src = canvas.toDataURL('image/png');
+    if (desktop) {
+      printable = owner.createElement('div');
+      printable.id = 'paint-print-document';
+      printable.append(image); owner.body.append(printable);
+    } else owner.body.append(image);
+    await image.decode();
+    if (desktop) return await desktop.print();
+    page.addEventListener('afterprint', () => page.close(), { once: true });
+    page.print();
+    return true;
+  } catch (error) {
+    page?.close();
+    throw error;
+  } finally {
+    if (desktop) { printable?.remove(); style?.remove(); }
+    printActive = false;
   }
-  const page = window.open('', '_blank');
-  if (!page) throw new Error('Allow a popup to print your drawing.');
-  page.opener = null;
-  page.document.title = 'Print drawing';
-  const style = page.document.createElement('style');
-  style.textContent = 'body{margin:0}img{display:block;max-width:100%;height:auto}@page{margin:12mm}';
-  page.document.head.append(style);
-  const image = page.document.createElement('img');
-  image.alt = 'Drawing';
-  image.src = canvas.toDataURL('image/png');
-  page.document.body.append(image);
-  await image.decode();
-  page.addEventListener('afterprint', () => page.close(), { once: true });
-  page.print();
-  return true;
 }

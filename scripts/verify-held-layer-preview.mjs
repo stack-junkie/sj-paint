@@ -136,7 +136,7 @@ export async function verifyHeldLayerPreviewDesktop(page,check) {
       await page.keyboard.press('Control+n');await frame();
     }
     if(initial.tool)await page.locator(`[data-tool="${initial.tool}"]`).click();
-    else{await page.locator('[data-menu="brushes"]').click();await page.getByRole('menuitem',{name:initial.label,exact:true}).click();}
+    else{await page.locator('[data-menu="brushes"]').click();await page.getByRole('menuitemradio',{name:initial.label,exact:true}).click();}
     await page.locator(`[data-color="${initial.primary}"]`).click();await page.locator(`[data-color="${initial.secondary}"]`).click({button:'right'});
     await page.locator('#size-number').fill(initial.size);await page.locator('#size-number').press('Tab');
     await page.locator('#outline').selectOption(initial.outline);await page.locator('#shape-fill').selectOption(initial.fill);

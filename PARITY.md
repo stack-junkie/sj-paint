@@ -38,11 +38,11 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 
 ## Baseline gaps and unresolved behavior
 
-Microsoft documents a mixture of device-specific local models and account-backed cloud services for Paint AI. Cocreator, Image Creator, generative fill, object select and sticker generation have separate requirements. No equivalent backend has been selected or connected for SJ Paint, and matching their output is not established. See [Microsoft Paint application card](https://learn.microsoft.com/en-us/windows/ai/cards/microsoft-paint-application-card) and [Copilot+ Paint requirements](https://support.microsoft.com/en-us/windows/ai/ai-apps/use-copilot-pc-features-in-paint), checked 2026-10-15. This documentation is capability context, not a runtime observation of the pinned reference build.
+Microsoft documents a mixture of device-specific local models and account-backed cloud services for Paint AI. Cocreator, Image Creator, generative fill, object select and sticker generation have separate requirements. Local-first AI was selected. U2NetP has been downloaded and evaluated locally with owner approval; product integration is pending and matching Microsoft output is not established. See [Microsoft Paint application card](https://learn.microsoft.com/en-us/windows/ai/cards/microsoft-paint-application-card) and [Copilot+ Paint requirements](https://support.microsoft.com/en-us/windows/ai/ai-apps/use-copilot-pc-features-in-paint), checked 2026-10-15. This documentation is capability context, not a runtime observation of the pinned reference build.
 
 | Area | Current behavior |
 | --- | --- |
-| Microsoft services and AI | No Microsoft account, sharing or cloud integration. Cocreator, Image Creator, generative fill/erase, object selection and AI background removal are not implemented. |
+| Microsoft services and AI | No Microsoft account, sharing or cloud integration. Cocreator, Image Creator, generative fill/erase, object selection, AI background removal, sticker generation, Coloring book and Reimagine are not implemented. |
 | Project formats | `.sjpaint` preserves all local layer state and legacy `.linuxpaint` remains readable. `.paint` support covers the observed full-canvas BGRA8/raw-DEFLATE layers and overlay background. Hidden-layer or layer-opacity export is rejected; unknown properties, cropped/offset layers and other variants remain unsupported. Exif is accepted but discarded. |
 | Drawing behavior | Brush rasterization, textures, selection and transform edge cases, text metrics and all command shortcuts are not proven identical to the reference. |
 | Visual fidelity | Icons are newly drawn and rendering is independently implemented. Fonts depend on the host platform. Pixel-perfect layout and control behavior have not been established. |
@@ -53,7 +53,27 @@ Microsoft documents a mixture of device-specific local models and account-backed
 
 Implemented controls and passing checks do not close these gaps. Baseline acceptance still requires reference-based verification of appearance and behavior, including features that are missing or currently uncertain. Project-specific feature development follows the completed baseline.
 
+## Local AI and supported integration evidence
+
+On 2026-10-16 the owner approved downloading and evaluating the 4,574,861-byte U2NetP ONNX conversion with the existing CPU runtime. Published MD5 was verified; SHA-256 is `309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8`. The upstream U-2-Net project is Apache-2.0 and the rembg adapter is MIT; no separate per-weight license notice appeared in reviewed release metadata. The ignored local model is not bundled or redistributed.
+
+Existing Python 3.12.10/ONNX Runtime 1.24.4 runs the model with two CPU threads and no thread spinning. The final ten-fixture evaluation measured fresh session load 0.136 s, first inference 0.502 s and warm median 0.581 s (1.094 s CPU). Thirty-one calls plus fixture/report work took 19.487 s elapsed and 34.172 s CPU. First-inference cumulative peak working set was 356.0 MiB; the completed process peaked at 570.2 MiB including retained fixtures/contact-sheet work. OS disk cache was not flushed. These are shared-host measurements, not latency guarantees or model-only memory bounds.
+
+Simple synthetic filled objects separated well; thin-line mask overlap was only 0.0958 and retained unwanted interior background. Uniform inputs amplified weak raw predictions into spatial noise. Existing RGB/alpha preservation and hidden-RGB invariance passed in the evaluation. No natural-photo/hair corpus, product cancellation or stale-result handling was tested by that script. U2NetP supplies a saliency mask, not point-guided object selection, generative erase/fill or image creation. Product work must keep preview and Apply separate and preserve newer edits. Local outputs remain independent of Microsoft Paint output equivalence.
+
+Current [Windows imaging APIs](https://learn.microsoft.com/en-us/windows/ai/apis/imaging) provide foreground/object extraction and erasing, but require a Copilot+ NPU; the existing RTX 4060 is not a supported replacement. [Windows ImageGenerator](https://learn.microsoft.com/en-us/windows/ai/apis/image-generation) offers generation/masked editing and coloring/restyling, but its class reference is experimental and its optional model needs a separate multi-GB acquisition decision and compatible hardware. [Azure image APIs](https://learn.microsoft.com/en-us/azure/foundry/openai/how-to/dall-e) are a separate paid service requiring provider/model/region, budget/privacy and credential decisions. Bounded official-document searches found no documented third-party route to Paint account credits. No service credentials or Windows AI dependencies were installed.
+
+Pinned resources additionally declare Sticker generator, Coloring book and Reimagine. [Microsoft's January 2026 announcement](https://blogs.windows.com/windows-insider/2026/01/21/notepad-and-paint-updates-begin-rolling-out-to-windows-insiders/) describes Coloring book; Reimagine behavior remains resource-only and unresolved. Account/cloud capabilities remain baseline requirements, independent of local background-removal work.
+
 ## Verification history
+
+### Version 0.2.16 menu state and print layout
+
+Decoded SelectionToolbar consumers establish Rectangle, Free-form, Select all, Invert selection, Transparent selection and Delete, plus selectable/toggle item types. SJ Paint derives checked state from the existing tool/transparency owners and exposes radio/checkbox menu semantics. Selection Delete is guarded separately from Edit Delete, including the menu's Delete key, so no-selection activation cannot clear a layer. Twenty-two focused public checks passed, including disabled-item navigation, selected/inverted/all deletion, cancellation and exact Undo/Redo. Native disabled rules and focus transitions remain unobserved.
+
+Ribbon resources establish nine brush entries excluding the separate Pencil tool, each with a 120 by 40 logical-unit preview. SJ Paint now renders its own brush samples in those slots. Shape style resources put No outline first and use Oil brush/Watercolor brush labels. These are static presentation facts, not native screenshot or brush-output equivalence. Existing Pencil drawing support remains in the stroke registry.
+
+A headless reproduction found that desktop printing inherited screen overflow:hidden and fixed root height, dropping the bottom of a tall drawing. Dark color-scheme also colored paper margins. Both print adapters now share width-fit/height-auto pagination and 12 mm margins, resetting screen-only root styles at the print boundary. Twenty focused checks passed: four real Chromium PDFs independently raster-inspected with PyMuPDF retain distant red/blue markers in dark/light themes, with white paper through transparent regions; portrait spans three pages and landscape one. Decode/bridge failures clean up owned styles/DOM and permit retry; concurrent requests cannot overlap print documents. These background PDF checks do not establish native printer, settings, cancellation or Microsoft pagination acceptance.
 
 ### Version 0.2.15 text controls and packed TIFF
 
@@ -215,3 +235,5 @@ The earlier Paint for Linux release was exercised with headless Chrome UI and ca
 File chooser responses were supplied by the harness, while the real preload IPC, encoding, filesystem operations and decoding ran. Atomic-save filesystem checks also ran on Linux. This establishes a Linux baseline for that release, not verification of every platform or later release.
 
 Local results were written to `output/verification.json` and `output/linux-verification.json`. These generated files are not committed. A successful build or container check does not establish physical printing, real desktop integration or compatibility on every machine.
+
+The 0.2.16 brush-menu check measured first opening at 77.7 ms and five warm openings at a 64.8 ms median on Windows HeadlessChrome 155, 1364 by 820, DPR 1. This measures synchronous menu creation, nine previews and layout only; paint, startup, CPU time and memory were not measured.

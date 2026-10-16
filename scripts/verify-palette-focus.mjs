@@ -95,7 +95,7 @@ export async function verifyPaletteFocusDesktop(page, check) {
     if (await page.locator('[data-action="undo"]').isEnabled()) throw new Error('Palette storage was restored, but unexpected document history prevents a safe renderer reload.');
     await page.reload(); await page.locator('#custom-colors button').first().waitFor();
     if (initial.tool) await page.locator(`[data-tool="${initial.tool}"]`).click();
-    else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitem', { name: initial.label, exact: true }).click(); }
+    else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitemradio', { name: initial.label, exact: true }).click(); }
     await page.locator(`[data-color="${initial.primary}"]`).first().click(); await page.locator(`[data-color="${initial.secondary}"]`).first().click({ button: 'right' });
     await page.locator('#size-number').fill(initial.size); await page.locator('#size-number').press('Tab');
     await page.locator('#outline').selectOption(initial.outline); await page.locator('#shape-fill').selectOption(initial.fill);

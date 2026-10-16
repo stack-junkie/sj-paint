@@ -132,7 +132,7 @@ export async function verifyTextFocusDesktop(page, check) {
     await page.locator(`[data-color="${initial.primary}"]`).click();
     await page.locator(`[data-color="${initial.secondary}"]`).click({ button: 'right' });
     if (initial.tool) await page.locator(`[data-tool="${initial.tool}"]`).click();
-    else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitem', { name: initial.label, exact: true }).click(); }
+    else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitemradio', { name: initial.label, exact: true }).click(); }
     await page.locator('#zoom-presets').selectOption(initial.zoom);
     await frame();
   }

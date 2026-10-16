@@ -26,3 +26,5 @@
 @media(min-width:810px){#font{width:190px}}
 
 #text-align{display:flex;gap:0}#text-align svg{width:16px;height:16px}
+
+.menu button>span{display:flex;align-items:center;gap:8px}.menu [aria-checked="false"]>span>svg{visibility:hidden}.menu .brush-preview{width:120px;height:40px;flex-shrink:0}

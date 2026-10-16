@@ -97,7 +97,7 @@ export async function verifyTextControlsDesktop(page, check) {
     await page.locator('#font-size').fill(initial.fontSize); await page.locator('#font-size').press('Tab');
     await page.locator(`[data-text-align="${initial.align}"]`).click();
     if (initial.tool) await page.locator(`[data-tool="${initial.tool}"]`).click();
-    else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitem', { name: initial.label, exact: true }).click(); }
+    else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitemradio', { name: initial.label, exact: true }).click(); }
     await page.locator('#zoom-presets').selectOption(initial.zoom); await frame();
     await page.locator('#viewport').evaluate((el, scroll) => { [el.scrollLeft, el.scrollTop] = scroll; }, initial.scroll);
   }

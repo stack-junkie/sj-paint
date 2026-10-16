@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.16] - Unreleased
+
+- Match decoded selection-menu labels and checked states, add selection-scoped Delete, and keep menu keyboard Delete from clearing an unselected layer.
+- Show nine brush choices with independently rendered previews, retaining Pencil as its separate tool; align shape-style labels and outline order with resource evidence.
+- Prevent tall desktop print output from being clipped by screen styles, isolate paper from the active theme, and clean up failed or concurrent print requests.
+
 ## [0.2.15] - Unreleased
 
 - Cancel the browser default for a middle-button pan release, including release after cancellation or outside the canvas, so Linux selection-paste cannot overwrite a live text selection.

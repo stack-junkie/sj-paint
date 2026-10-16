@@ -7,6 +7,7 @@ import { verifyTextFocusDesktop } from './verify-text-focus.mjs';
 import { verifyPaletteFocusDesktop } from './verify-palette-focus.mjs';
 import { verifyTextPanFocusDesktop } from './verify-text-pan-focus.mjs';
 import { verifyTextControlsDesktop } from './verify-text-controls.mjs';
+import { verifySelectionMenuDesktop } from './verify-selection-menu.mjs';
 import { verifyCurveConstructionDesktop } from './verify-curve-construction.mjs';
 import { verifyTiffDesktop } from './verify-tiff-desktop.mjs';
 import { verifyDrawingAdmissionDesktop } from './verify-drawing-admission-desktop.mjs';
@@ -27,11 +28,17 @@ import { tmpdir } from 'node:os';
 // neither launches an app nor interacts with the operating system desktop.
 const output = new URL('../output/', import.meta.url);
 const checks = [], errors = [], pending = new Map();
+const startedAt = Date.now();
+let lastProgress = startedAt;
 let socket, browser, version, fixtureLocation, targetWindowClosed = false, fixturesOwned = false, sequence = 0;
 await fs.mkdir(output, { recursive: true });
 
 function check(name, ok, detail = null) {
   checks.push({ name, ok, detail });
+  if (Date.now() - lastProgress >= 30000) {
+    lastProgress = Date.now();
+    console.log(JSON.stringify({ progress: checks.length, lastCheck: name, elapsedSeconds: Math.round((lastProgress - startedAt) / 1000) }));
+  }
   if (!ok) throw new Error(`${name}: ${JSON.stringify(detail)}`);
 }
 
@@ -188,6 +195,7 @@ try {
   await verifyPaletteFocusDesktop(page, check);
   await verifyTextPanFocusDesktop(page, check);
   await verifyTextControlsDesktop(page, check);
+  await verifySelectionMenuDesktop(page, check);
   await verifyInteractions(page, check);
   await verifyPendingShapesDesktop(page, check);
   await verifySelectionDesktop(page, check);

@@ -31,7 +31,7 @@ $('#app').innerHTML=`
     <div class="toolgroup image-group"><div class="group-content image-tools">${btn('crop','Crop','crop')}${btn('rotate-menu','Rotate','rotate')}${btn('flip-menu','Flip','flip')}${btn('resize','Resize and skew','resize')}</div><span class="group-label">Image</span></div>
     <div class="toolgroup"><div class="group-content tool-grid">${toolBtn('pencil','Pencil')}${toolBtn('fill','Fill with color')}${toolBtn('text','Text')}${toolBtn('eraser','Eraser')}${toolBtn('picker','Color picker')}${toolBtn('zoom','Magnifier')}</div><span class="group-label">Tools</span></div>
     <div class="toolgroup brush-group"><div class="group-content"><button class="large brush-selector" data-menu="brushes" title="Brushes" aria-label="Brushes">${icon('brush',30)}<span>⌄</span></button></div><span class="group-label">Brushes</span></div>
-    <div class="toolgroup shapes-group"><div class="group-content shapes-content"><div class="shape-grid">${SHAPES.map(s=>toolBtn(s,label(s))).join('')}</div><div class="shape-settings"><label title="Shape outline">${icon('pencil',15)}<select id="outline" aria-label="Shape outline"><option value="solid">Solid outline</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor</option><option value="none">No outline</option></select></label><label title="Shape fill">${icon('fill',15)}<select id="shape-fill" aria-label="Shape fill"><option value="none">No fill</option><option value="solid">Solid fill</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor</option></select></label></div></div><span class="group-label">Shapes</span></div>
+    <div class="toolgroup shapes-group"><div class="group-content shapes-content"><div class="shape-grid">${SHAPES.map(s=>toolBtn(s,label(s))).join('')}</div><div class="shape-settings"><label title="Shape outline">${icon('pencil',15)}<select id="outline" aria-label="Shape outline"><option value="none">No outline</option><option value="solid" selected>Solid outline</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil brush</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor brush</option></select></label><label title="Shape fill">${icon('fill',15)}<select id="shape-fill" aria-label="Shape fill"><option value="none">No fill</option><option value="solid">Solid fill</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil brush</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor brush</option></select></label></div></div><span class="group-label">Shapes</span></div>
     <div class="toolgroup colors-group"><div class="group-content"><div class="primary-colors"><button id="primary" data-action="primary" title="Color 1" aria-label="Color 1"></button><button id="secondary" data-action="secondary" title="Color 2" aria-label="Color 2"></button></div><div><div class="palette">${colors.map(c=>`<button data-color="${c}" style="--swatch:${c}" title="${c}" aria-label="Color ${c}"></button>`).join('')}</div><div class="custom-palette" id="custom-colors"></div></div><button data-action="colors" class="color-wheel" title="Edit colors" aria-label="Edit colors"></button></div><span class="group-label">Colors</span></div>
     <div class="toolgroup layers-group"><div class="group-content">${btn('layers','Layers','layers','class="large"')}</div><span class="group-label">Layers</span></div>
     <button class="collapse-tools" data-action="collapse" title="Collapse toolbar" aria-label="Collapse toolbar">⌃</button>
@@ -429,6 +429,7 @@ const actions={
   paste:async()=>{commitText();finishPending();const target=doc.captureEditTarget();const c=await pasteImage();if(c){if(!doc.matchesEditTarget(target)){toast('Paste canceled because the drawing changed.');return;}doc.pasteCanvas(c);state.tool='select';changed();}},
   'paste-from':async()=>{commitText();finishPending();const target=doc.captureEditTarget();const r=await openImageFile();if(r){if(!doc.matchesEditTarget(target)){toast('Paste canceled because the drawing changed.');return;}doc.pasteCanvas(r.canvas);state.tool='select';changed();}},
   delete:()=>doc.selection?doc.deleteSelection():doc.clear(),'select-all':()=>{chooseTool('select');doc.setSelectionTransparency(state.transparentSelection,state.secondary);doc.selectAll();},deselect:()=>doc.deselect(),
+  'delete-selection':()=>{if(doc.selection)doc.deleteSelection();},
   'invert-selection':()=>doc.invertSelection(),'invert-colors':()=>doc.invertColors(),'transparent-selection':()=>{state.transparentSelection=!state.transparentSelection;doc.setSelectionTransparency(state.transparentSelection,state.secondary);toast(state.transparentSelection?'New selections ignore Color 2.':'New selections include every color.');},
   crop:()=>{doc.crop();fit();},resize:resizeDialog,
   'rotate-menu':e=>showMenu('rotate',e.currentTarget||e.target.closest('button')),'flip-menu':e=>showMenu('flip',e.currentTarget||e.target.closest('button')),
@@ -452,7 +453,7 @@ const menus={
   file:[['New','new','Ctrl+N'],['Open','open','Ctrl+O'],['Open project','open-project'],null,['Save','save','Ctrl+S'],['Save as','save-as','Ctrl+Shift+S'],['Save as project','save-project'],null,['Print','print','Ctrl+P'],['Image properties','properties','Ctrl+E']],
   edit:[['Undo','undo','Ctrl+Z'],['Redo','redo','Ctrl+Y'],null,['Cut','cut','Ctrl+X'],['Copy','copy','Ctrl+C'],['Copy visible layers','copy-all','Ctrl+Shift+C'],['Paste','paste','Ctrl+V'],['Paste from file','paste-from'],null,['Select all','select-all','Ctrl+A'],['Delete','delete','Delete'],['Invert colors','invert-colors','Ctrl+I']],
   view:[['Zoom in','zoom-in','Ctrl+PageUp'],['Zoom out','zoom-out','Ctrl+PageDown'],['100%','zoom-100'],['Fit to window','fit','Ctrl+1'],['Full screen','fullscreen','F11'],null,['Gridlines','grid'],['Rulers','rulers'],['Layers','layers'],['Collapse toolbar','collapse','Ctrl+F1']],
-  selection:[['Rectangular selection','tool:select'],['Free-form selection','tool:lasso'],null,['Select all','select-all'],['Deselect','deselect'],['Invert selection','invert-selection','Ctrl+Shift+I'],['Transparent selection','transparent-selection']],
+  selection:[['Rectangle','tool:select'],['Free-form','tool:lasso'],null,['Select all','select-all','Ctrl+A'],['Invert selection','invert-selection','Ctrl+Shift+I'],['Transparent selection','transparent-selection'],['Delete','delete-selection','Delete']],
   rotate:[['Rotate right 90°','rotate-right'],['Rotate left 90°','rotate-left'],['Rotate 180°','rotate-180'],['Custom rotate','rotate-custom']],
   flip:[['Flip horizontal','flip-horizontal'],['Flip vertical','flip-vertical']],
 };
@@ -464,7 +465,21 @@ async function executeAction(name,event){
 }
 function showMenu(name,anchor){
   commitText();const m=$('#menu');if(!m.hidden&&menuAnchor===anchor){closeMenu();return;}if(menuAnchor)menuAnchor.setAttribute('aria-expanded','false');menuAnchor=anchor;anchor.setAttribute('aria-expanded','true');
-  const entries=name==='brushes'?BRUSHES.map(b=>[b.label,'tool:'+b.id]):menus[name];m.innerHTML=entries.map(item=>item?`<button type="button" role="menuitem" data-command="${item[1]}"><span>${esc(item[0])}</span><kbd>${item[2]||''}</kbd></button>`:'<hr>').join('');const r=anchor.getBoundingClientRect();m.hidden=false;m.style.left=Math.min(r.left,innerWidth-m.offsetWidth-10)+'px';m.style.top=r.bottom+4+'px';m.querySelector('button')?.focus({preventScroll:true});
+  const entries=name==='brushes'?BRUSHES.filter(b=>b.id!=='pencil').map(b=>[b.label,'tool:'+b.id]):menus[name];
+  m.innerHTML=entries.map(item=>{
+    if(!item)return '<hr role="separator">';
+    const [title,command,shortcut]=item,tool=command.startsWith('tool:')?command.slice(5):null;
+    const checked=tool?state.tool===tool:command==='transparent-selection'?state.transparentSelection:null;
+    const role=tool?'menuitemradio':checked!==null?'menuitemcheckbox':'menuitem';
+    const disabled=command==='delete-selection'&&!doc.selection;
+    return `<button type="button" role="${role}" data-command="${command}"${checked!==null?` aria-checked="${checked}"`:''}${disabled?' disabled':''}><span>${checked!==null?icon('check',14):''}${esc(title)}</span>${name==='brushes'?'<canvas class="brush-preview" width="120" height="40" aria-hidden="true"></canvas>':`<kbd>${shortcut||''}</kbd>`}</button>`;
+  }).join('');
+  if(name==='brushes')for(const preview of m.querySelectorAll('.brush-preview')){
+    const tool=preview.parentElement.dataset.command.slice(5),context=preview.getContext('2d');
+    const sample=createStroke(context,tool,{color:getComputedStyle(m).color,size:8,opacity:1,seed:`preview:${tool}`});
+    for(let x=8;x<=112;x+=2)sample.move(x,20+8*Math.sin(x/25),1);sample.end();
+  }
+  const r=anchor.getBoundingClientRect();m.hidden=false;m.style.left=Math.min(r.left,innerWidth-m.offsetWidth-10)+'px';m.style.top=r.bottom+4+'px';m.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
 }
 function closeMenu(){const menu=$('#menu'),anchor=menuAnchor,restore=menu.contains(document.activeElement);menu.hidden=true;menuAnchor=null;if(anchor){anchor.setAttribute('aria-expanded','false');if(restore&&anchor.isConnected)anchor.focus({preventScroll:true});}}
 $('#menu').setAttribute('role','menu');
@@ -486,8 +501,11 @@ document.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-colo
 document.addEventListener('keydown',safe(async e=>{
   if($('#dialog').open)return;
   if(e.key==='Escape'&&!$('#menu').hidden){e.preventDefault();closeMenu();return;}
+  if(!$('#menu').hidden&&$('#menu').contains(e.target)&&menuAnchor?.dataset.menu==='selection'&&e.key==='Delete'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
+    e.preventDefault();if(doc.selection){closeMenu();await executeAction('delete-selection',e);}return;
+  }
   if(!$('#menu').hidden&&$('#menu').contains(e.target)&&['ArrowDown','ArrowUp','Home','End'].includes(e.key)){
-    e.preventDefault();const buttons=[...$('#menu').querySelectorAll('button')];const index=buttons.indexOf(document.activeElement);
+    e.preventDefault();const buttons=[...$('#menu').querySelectorAll('button:not(:disabled)')];const index=buttons.indexOf(document.activeElement);
     buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();return;
   }
   const edit=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
