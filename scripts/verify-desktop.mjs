@@ -126,6 +126,12 @@ try {
   const pages = browser.contexts().flatMap(context => context.pages());
   check('exactly one dedicated renderer', pages.length === 1, pages.length);
   const page = pages[0];
+  // Electron owns beforeunload through will-prevent-unload. Prevent Playwright
+  // from auto-accepting the corresponding CDP event: Chromium has no browser
+  // dialog to accept here, and that races Electron's native close decision.
+  page.on('dialog', dialog => {
+    if (dialog.type() !== 'beforeunload') errors.push(`Unexpected browser dialog: ${dialog.type()}`);
+  });
   page.on('close', () => { targetWindowClosed = true; });
   if (version.platform === 'win32') {
     const token = randomUUID();

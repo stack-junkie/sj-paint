@@ -30,7 +30,7 @@ import path from 'node:path';
 import { fileURLToPath } from 'node:url';
 const root=fileURLToPath(new URL('../',import.meta.url));
 const output=path.join(root,'output');await fs.mkdir(output,{recursive:true});
-const server=await createServer({root,server:{host:'127.0.0.1',port:5187,strictPort:true}});await server.listen();
+const server=await createServer({root,server:{host:'127.0.0.1',port:5187,strictPort:true,watch:{ignored:['**/release/**','**/dist/**','**/output/**']}}});await server.listen();
 const browser=await chromium.launch({headless:true,...(process.env.PAINT_CHROME_PATH?{executablePath:process.env.PAINT_CHROME_PATH}:{channel:process.env.PAINT_CHROME_CHANNEL||'chrome'})});
 const page=await browser.newPage({viewport:{width:1364,height:820},deviceScaleFactor:1});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
