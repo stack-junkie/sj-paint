@@ -58,7 +58,9 @@ export async function verifyTiffImport(page, check) {
   const pixels = () => page.locator('#canvas').evaluate(c => [...c.getContext('2d').getImageData(0, 0, c.width, c.height).data]);
   const snapshot = () => page.evaluate(() => JSON.stringify({ data: paintApp.doc.serialize(), revision: paintApp.doc.revision,
     dirty: paintApp.doc.dirty, undo: paintApp.doc._undo.length, redo: paintApp.doc._redo.length, name: paintApp.state.name, format: paintApp.state.format }));
-  const waitLoaded = name => page.waitForFunction(stem => paintApp.state.name === stem && !paintApp.doc.dirty,
+  // The title is updated by the same render that paints the replacement canvas.
+  // Model identity can change before that frame, especially for tiny fixtures.
+  const waitLoaded = name => page.waitForFunction(stem => document.title === `${stem} - Stack Junkie Paint`,
     name.replace(/\.[^.]+$/, ''), { polling: 100 });
   const choose = async (name, bytes, mimeType = 'image/tiff') => {
     const pending = page.waitForEvent('filechooser');
