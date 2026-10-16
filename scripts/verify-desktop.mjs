@@ -1,6 +1,7 @@
 import { verifyEraserDesktop } from './verify-eraser-desktop.mjs';
 import { verifyKeyboardDesktop } from './verify-keyboard-desktop.mjs';
 import { verifyResourceShortcutsDesktop } from './verify-resource-shortcuts-desktop.mjs';
+import { verifyDraftAffordancesDesktop } from './verify-draft-affordances-desktop.mjs';
 import { verifyTextDesktop } from './verify-text-desktop.mjs';
 import { verifyTiffDesktop } from './verify-tiff-desktop.mjs';
 import { verifyDrawingAdmissionDesktop } from './verify-drawing-admission-desktop.mjs';
@@ -188,6 +189,7 @@ try {
   await verifyTiffDesktop(page, check, { main, waitForFile });
   await verifyKeyboardDesktop(page, check);
   await verifyResourceShortcutsDesktop(page, check);
+  await verifyDraftAffordancesDesktop(page, check);
   await verifyTextDesktop(page, check);
   await verifyDrawingAdmissionDesktop(page, check);
   await verifyHeldLayerPreviewDesktop(page, check);

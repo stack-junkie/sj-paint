@@ -55,6 +55,16 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.12 draft state, Fit and remaining decoded shortcuts
+
+The selected resource audit now decodes all 84 streams in ten XBF files. Explicit consumers establish Ctrl+Shift+N for a layer above the active layer, Ctrl+R for rulers, Ctrl+G for gridlines, Ctrl+T for ribbon visibility, and Ctrl+0 for 100% zoom. Tool consumers use B/T/I/Z/P/E/S for fill/text/picker/magnifier/pencil/eraser/selection. Their omitted modifier property is interpreted using Microsoft's documented [None default](https://learn.microsoft.com/en-us/windows/apps/develop/input/keyboard-accelerators). These are resource and framework-derived bindings; native focus rules and runtime overrides remain unobserved.
+
+SJ Paint routes those shortcuts to its existing commands. Ctrl+Shift+N no longer falls through to New. Source inspection also found that unfinished curves and polygons were absent from the toolbar Undo and dirty-state checks. The UI now uses the same pending-drawing state as unload protection, and text input invalidates that display immediately. These are internal correctness fixes, not native behavior measurements.
+
+The packaged Linux shortcut check exposed inconsistent Fit results when entering from different zoom levels. Fit now measures the viewport's stable layout dimensions and subtracts its actual responsive padding and borders, rather than reusing the previous zoom's scrollbar-reduced client dimensions. Twelve focused headless checks cover wide/narrow layouts, tall/wide drawings and both zoom directions. Twelve draft checks and 45 additional shortcut checks passed. The complete local browser suite passed 637 checks, and the 43 new public-control package checks passed in headless Chrome. Final packaged verification is pending.
+
+Windows 0.2.10 completed 146 app checks, but its harness failed during cleanup because the app's successful Close had already stopped the inspector. The corrected harness retains the launch-owned exit promise across every transport stage; an unavailable inspector alone never establishes cleanup authority. Versions 0.2.10 and 0.2.11 remain unreleased while their fixes are consolidated into this next verified package.
+
 ### Version 0.2.11 resource-backed shortcuts
 
 Bounded XBF 2.1 decoding following [Microsoft's XBF parser](https://github.com/microsoft/microsoft-ui-xaml/tree/main/dxaml/xcp/tools/XbfParser/WidgetSpinner) recovered typed key/modifier constants and their consuming `KeyboardAccelerator` properties. The pinned `VirtualKeyResources.xbf` SHA-256 is `a65404675520968e6ea92bd0e4a1e280aee8abc60d64e3608b3b9abad2e18d6f`. Both PRI copies contain identical bytes. Explicit consumers in LayersPanel, ImageToolbar and ZoomSlider establish these combinations:

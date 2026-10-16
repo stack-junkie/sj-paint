@@ -65,16 +65,16 @@ function render(){
   for(const c of [canvas,overlay]){c.style.width=`${doc.width*state.zoom}px`;c.style.height=`${doc.height*state.zoom}px`;}
   stage.classList.toggle('pixelated',state.zoom>=3);
   renderOverlay();
-  const dirty=doc.dirty||pendingShape?' •':'';const title=`${state.name}${dirty} - ${PROJECT.productName}`;
+  const hasPendingDrawing=pendingDrawing(),dirty=doc.dirty||hasPendingDrawing?' •':'';const title=`${state.name}${dirty} - ${PROJECT.productName}`;
   $('#title').textContent=title;document.title=title;window.paintDesktop?.setTitle(title);
   const size=canvasResize.candidate||doc;$('#dimensions').textContent=`${size.width} × ${size.height}px`;
-  $('#document-state').textContent=doc.dirty||pendingShape?'Unsaved changes':'';
+  $('#document-state').textContent=doc.dirty||hasPendingDrawing?'Unsaved changes':'';
   const geometry=doc.getSelectionGeometry({zoom:state.zoom});
   const selection=drag?.kind==='select'?box(drag.start,drag.current):pendingShape?box(pendingShape.start,pendingShape.end):geometry?{width:geometry.frameWidth,height:geometry.frameHeight}:null;
   $('#selection-size').textContent=selection?`${Math.round(selection.width)} × ${Math.round(selection.height)}px`:'';
   selectionRotation.hidden=!geometry;
   if(geometry){selectionRotation.style.left=`${geometry.rotationHandle[0]*state.zoom}px`;selectionRotation.style.top=`${geometry.rotationHandle[1]*state.zoom}px`;}
-  $('[data-action="undo"]').disabled=!doc.canUndo&&!pendingShape;$('[data-action="redo"]').disabled=!doc.canRedo;$('[data-action="crop"]').disabled=!doc.selection;
+  $('[data-action="undo"]').disabled=!doc.canUndo&&!hasPendingDrawing;$('[data-action="redo"]').disabled=!doc.canRedo;$('[data-action="crop"]').disabled=!doc.selection;
   if(state.layers)renderLayers();updateToolState();
 }
 function renderOverlay(){
@@ -225,7 +225,8 @@ function finishPending(){
 }
 function startText(p){
   doc.begin('Text');
-  const t=document.createElement('textarea');t.className='text-editor';t.setAttribute('aria-label','Text on canvas');t.spellcheck=false;t.style.left=`${p[0]*state.zoom}px`;t.style.top=`${p[1]*state.zoom}px`;t.style.width=`${Math.min(400,doc.width-p[0])*state.zoom}px`;t.style.minHeight=`${100*state.zoom}px`;stage.append(t);textEditor={el:t,x:p[0],y:p[1]};styleText();t.focus();
+  // Typing changes pending work before it changes the document raster.
+  const t=document.createElement('textarea');t.className='text-editor';t.setAttribute('aria-label','Text on canvas');t.spellcheck=false;t.style.left=`${p[0]*state.zoom}px`;t.style.top=`${p[1]*state.zoom}px`;t.style.width=`${Math.min(400,doc.width-p[0])*state.zoom}px`;t.style.minHeight=`${100*state.zoom}px`;t.addEventListener('input',changed);stage.append(t);textEditor={el:t,x:p[0],y:p[1]};styleText();t.focus();
 }
 function styleText(){if(!textEditor)return;Object.assign(textEditor.el.style,{fontFamily:state.font,fontSize:`${state.fontSize*state.zoom}px`,fontWeight:state.bold?'bold':'normal',fontStyle:state.italic?'italic':'normal',textDecoration:[state.underline?'underline':'',state.strikethrough?'line-through':''].filter(Boolean).join(' ')||'none',color:state.primary,background:state.textBackground?state.secondary:'transparent',textAlign:state.align,lineHeight:'1.2'});}
 function commitText(){
@@ -247,7 +248,14 @@ function commitText(){
   el.remove();textEditor=null;doc.commit();changed();
 }
 function setZoom(value){canvasResize.cancel();if(activePointerId!==null)cancelPointerInteraction();commitText();state.zoom=Math.max(.125,Math.min(8,Number(value)));$('#zoom-slider').value=Math.log2(state.zoom);const select=$('#zoom-presets');let option=[...select.options].find(o=>+o.value===state.zoom);if(!option){option=new Option(`${Math.round(state.zoom*100)}%`,String(state.zoom));select.add(option);}select.value=option.value;changed();}
-function fit(){setZoom(Math.min(1,(viewport.clientWidth-80)/doc.width,(viewport.clientHeight-60)/doc.height));}
+function fit(){
+  // Scrollbars from the previous zoom must not reduce the next Fit result.
+  // The viewport owns its responsive padding; measure its full content box.
+  const css=getComputedStyle(viewport),px=name=>parseFloat(css[name])||0;
+  const width=viewport.offsetWidth-px('borderLeftWidth')-px('borderRightWidth')-px('paddingLeft')-px('paddingRight');
+  const height=viewport.offsetHeight-px('borderTopWidth')-px('borderBottomWidth')-px('paddingTop')-px('paddingBottom');
+  setZoom(Math.min(1,width/doc.width,height/doc.height));
+}
 viewport.addEventListener('wheel',e=>{if(e.ctrlKey){e.preventDefault();setZoom(state.zoom*(e.deltaY>0?.9:1.1));}},{passive:false});
 viewport.addEventListener('pointerdown',safe(e=>{if(e.target===viewport&&e.button===0&&activePointerId===null){commitText();finishPending();doc.deselect();overlay.focus({preventScroll:true});}}));
 $('#zoom-slider').addEventListener('input',e=>setZoom(2**+e.target.value));$('#zoom-presets').addEventListener('change',e=>setZoom(+e.target.value));
@@ -450,9 +458,10 @@ document.addEventListener('keydown',safe(async e=>{
   }
   // Explicit Key/Modifiers pairs decoded from the pinned Paint XBF resources.
   if(e.ctrlKey&&!e.altKey&&!e.metaKey){
-    const referenceAction=(e.shiftKey?{pageup:'layer-up',pagedown:'layer-down',delete:'delete-layer',x:'crop'}:{h:'toggle-layer',pageup:'zoom-in',pagedown:'zoom-out','1':'fit'})[key];
+    const referenceAction=(e.shiftKey?{n:'add-layer',pageup:'layer-up',pagedown:'layer-down',delete:'delete-layer',x:'crop'}:{h:'toggle-layer',r:'rulers',g:'grid',t:'collapse',pageup:'zoom-in',pagedown:'zoom-out','1':'fit','0':'zoom-100'})[key];
     if(referenceAction){e.preventDefault();await executeAction(referenceAction);return;}
   }
+  if(!mod&&!e.shiftKey){const tool=({b:'fill',t:'text',i:'picker',z:'zoom',p:'pencil',e:'eraser',s:'select'})[key];if(tool){e.preventDefault();chooseTool(tool);return;}}
   if(mod){action=({n:'new',o:'open',s:e.shiftKey?'save-as':'save',z:e.shiftKey?'redo':'undo',y:'redo',c:e.shiftKey?'copy-all':'copy',x:'cut',v:'paste',a:'select-all',p:'print',e:'properties',w:'resize','+':'zoom-in','=':'zoom-in','-':'zoom-out',b:e.shiftKey?'background':undefined,h:e.shiftKey?'toggle-background':undefined,i:e.shiftKey?'invert-selection':'invert-colors',f1:'collapse'})[key];}
   else if(key==='f11')action='fullscreen';else if(key==='delete')action='delete';else if(key==='enter'){if(e.target.closest('button,a[href]'))return;commitText();if(!pendingShape)finishPending();e.preventDefault();return;}
   else if(doc.selection&&['arrowup','arrowdown','arrowleft','arrowright'].includes(key)){e.preventDefault();const step=e.shiftKey?10:1;doc.translateSelection(key==='arrowright'?step:key==='arrowleft'?-step:0,key==='arrowdown'?step:key==='arrowup'?-step:0);return;}
