@@ -81,7 +81,9 @@ export async function verifyPaintProjectDesktop(page, check, { main, waitForFile
     await page.waitForFunction(() => document.title.includes('•'), null, { polling: 100 });
     const beforePng = await pixels();
     await fixture('desktop-native-to-png.png'); await openSaveAs('desktop-native-to-png', 'png');
-    await page.locator('#dialog button[type="submit"]').click(); await waitForFile();
+    await page.locator('#dialog button[type="submit"]').click();
+    await page.getByRole('heading', { name: 'Save as flattened image?' }).waitFor(); await page.locator('#dialog button[type="submit"]').click();
+    await waitForFile();
     await page.waitForFunction(() => document.title.startsWith('desktop-native-to-png'), null, { polling: 100 });
     const pngBytes = await fileBytes();
     check('desktop Save as PNG after .paint retains layers and unsaved-change protection',
@@ -91,7 +93,9 @@ export async function verifyPaintProjectDesktop(page, check, { main, waitForFile
     await page.mouse.click(pngBounds.x + 15, pngBounds.y + 15);
     await page.waitForFunction(previous => document.querySelector('#canvas').toDataURL() !== previous, beforePng, { polling: 100 });
     const updatedPng = await pixels(); await page.locator('#overlay').focus();
-    await page.keyboard.press('Control+s'); await waitForFile({ differentFrom: pngBytes });
+    await page.keyboard.press('Control+s');
+    await page.getByRole('heading', { name: 'Save as flattened image?' }).waitFor(); await page.locator('#dialog button[type="submit"]').click();
+    await waitForFile({ differentFrom: pngBytes });
     const pngAgain = await fileBytes();
     check('desktop Ctrl+S after .paint to PNG export keeps PNG and the editable working layers',
       pngAgain.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) &&

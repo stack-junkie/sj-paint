@@ -30,7 +30,7 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 - Dark and light layouts, palette and custom colors, tool sizes, opacity, zoom, grid, rulers, full screen, collapsible toolbar and layers panel.
 - Pencil, brush, eraser, calligraphy variants, airbrush, oil, crayon, marker, natural pencil and watercolor.
 - 23 shapes, two-control-point curves, polygon construction, outline/fill styles, constrained shapes and lines.
-- Fill tolerance, color picker and multiline text with font, size, bold, italic, underline, alignment and background controls.
+- Fill tolerance, color picker and multiline text with font, size, bold, italic, underline, strikethrough, alignment and background controls.
 - Rectangular and free-form selections, inverse selection, color-key transparency for new selections, color inversion, move/resize/crop, copy/cut/paste, image rotation, flips, resize/skew and canvas dimensions.
 - Layer add/delete/duplicate/reorder/rename, opacity, visibility, merge and transparent background.
 - Undo/redo with saved-state identity, editable `.sjpaint` projects, legacy `.linuxpaint` project import, native file dialogs, image export and print integration.
@@ -55,11 +55,19 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.10 save decisions and editing controls
+
+Read-only Windows SDK `makepri dump` inspection of the installed 11.2605.81.0 package confirms Save/Don't save/Cancel resources, a warning about flattened layer exports, Strikethrough text controls, and control-point help advertising Ctrl+Space to commit. The package `resources.pri` SHA-256 is `07966dd87cc747e8d17c7a68bc607448672183cc1c85d0acb01bd16248ce7ae5`. REA established the executable/resource inventory; the SDK decoded PRI resources. No native window activation was used for this inspection, and Microsoft resource dumps are not distributed here.
+
+SJ Paint implements those capabilities. New, Open and desktop close keep the drawing after canceled or failed saves or intervening edits. Native close uses a window-owned request and the renderer's document identity check, without bypassing its unload veto. Reload cannot become a close request. Dialog invocations own their results so an earlier queued close event cannot resolve a replacement dialog. Strikethrough shares the existing text edit and history. Ctrl+Space commits pending selections and ordinary shapes from their canvas controls while leaving text input alone.
+
+A headless pointer regression exposed different antialiasing between a pending shape and its accepted layer: 2,397 channel values differed, by up to 48. Initializing both layer and scratch contexts with the engine's existing readback setting eliminated that difference in the captured case. This corrects SJ Paint's internal preview consistency; it is not evidence of Microsoft raster equivalence. Exact native dialog appearance, strikethrough metrics and control-point focus rules remain unverified. The complete browser suite passed 551 checks; seven native file-target/atomic-write tests passed with normal filesystem permissions. Packaged checks are pending. Rendering throughput and process memory changes have not been benchmarked.
+
 ### Version 0.2.9 desktop save identity
 
 Source inspection and a failing headless reproduction found that every desktop Save reopened the chooser and discarded the actual chosen filename. Open and successful saves now retain an opaque native destination, bound to the current document generation and encoded format. Save As selects a new destination; cancellation and late completion after document replacement preserve the current identity. TIFF content under a mismatched extension does not reuse an incompatible destination. Save shortcuts also work while typing text or editing a numeric control.
 
-The browser suite passed 514 checks and seven native file-target/atomic-write tests passed. Packaged Windows and Linux verification is pending. These are source-derived file workflow corrections, not a claim that all native save dialogs or Microsoft Paint file semantics have been compared.
+The browser suite passed 514 checks and seven native file-target/atomic-write tests passed. The hidden Windows package passed 139 checks, the isolated Linux CI package passed 134, and Linux app-drawer installation passed 47. [CI 38849766386](https://github.com/stack-junkie/sj-paint/actions/runs/38849766386) passed on Windows and Linux. Both published archives contain the verified app.asar. These are source-derived file workflow corrections, not a claim that all native save dialogs or Microsoft Paint file semantics have been compared.
 
 ### Version 0.2.8 pending drawing ownership and compositing
 

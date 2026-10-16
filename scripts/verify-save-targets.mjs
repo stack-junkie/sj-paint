@@ -9,7 +9,7 @@ export async function verifySaveTargets(page, check) {
       bytes: new Uint8Array(await blob.arrayBuffer()), requests: [], openName: 'opened.png', receipt: { name: 'renamed.png', target: 'saved-png' } };
     const save = async request => { q.requests.push(request); return q.receipt; };
     Object.defineProperty(window, 'paintDesktop', { configurable: true, value: {
-      setTitle() {}, confirmDiscard: async () => true,
+      setTitle() {}, confirmSaveChanges: async () => 'discard',
       openImage: async () => ({ bytes: q.bytes, name: q.openName, target: 'opened-png', targetFormat: 'png' }),
       saveImage: save, savePaint: save, saveProject: save,
     } });

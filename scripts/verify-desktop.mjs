@@ -13,12 +13,14 @@ import { verifyPaintProjectDesktop } from './verify-paint-project-desktop.mjs';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import path from 'node:path';
+import { tmpdir } from 'node:os';
 
 // Attach only to an already running, dedicated test instance. This harness
 // neither launches an app nor interacts with the operating system desktop.
 const output = new URL('../output/', import.meta.url);
 const checks = [], errors = [], pending = new Map();
-let socket, browser, version, fixturesOwned = false, sequence = 0;
+let socket, browser, version, fixtureLocation, targetWindowClosed = false, fixturesOwned = false, sequence = 0;
 await fs.mkdir(output, { recursive: true });
 
 function check(name, ok, detail = null) {
@@ -124,6 +126,7 @@ try {
   const pages = browser.contexts().flatMap(context => context.pages());
   check('exactly one dedicated renderer', pages.length === 1, pages.length);
   const page = pages[0];
+  page.on('close', () => { targetWindowClosed = true; });
   if (version.platform === 'win32') {
     const token = randomUUID();
     const assign = `globalThis.__sjPaintTestIdentity = ${JSON.stringify(token)}`;
@@ -140,7 +143,8 @@ try {
   check('packaged desktop renderer loaded', await page.title() === 'Untitled - Stack Junkie Paint', await page.title());
   check('isolated preload bridge', await page.evaluate(() => !!window.paintDesktop && typeof require === 'undefined' && typeof process === 'undefined'));
 
-  await main(`(() => {
+  const fixtureOwner = randomUUID();
+  fixtureLocation = await main(`(() => {
     if (globalThis.__sjPaintVerification) throw new Error('Another verification session owns the main-process fixtures.');
     const electron = process.mainModule.require('electron');
     const fs = process.mainModule.require('node:fs');
@@ -148,7 +152,9 @@ try {
     const os = process.mainModule.require('node:os');
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'sj-paint-verification-'));
     const original = { save: electron.dialog.showSaveDialog, open: electron.dialog.showOpenDialog, confirm: electron.dialog.showMessageBox };
-    const q = { fs, path, directory, electron, original, saveDialogs: 0, file: path.join(directory, 'verification.sjpaint') };
+    const owner = ${JSON.stringify(fixtureOwner)};
+    fs.writeFileSync(path.join(directory, '.verification-owner'), owner, { flag: 'wx' });
+    const q = { fs, path, directory, owner, electron, original, confirmResponse: 1, confirmCalls: 0, saveDialogs: 0, file: path.join(directory, 'verification.sjpaint') };
     globalThis.__sjPaintVerification = q;
     electron.dialog.showSaveDialog = async (_window, options) => {
       q.saveDialogs++;
@@ -159,8 +165,11 @@ try {
       q.lastOpenOptions = options;
       return { canceled: false, filePaths: [q.file] };
     };
-    electron.dialog.showMessageBox = async () => ({ response: 1 });
-    return true;
+    electron.dialog.showMessageBox = async (_window, options) => {
+      q.confirmCalls++; q.lastConfirmOptions = options;
+      return { response: q.confirmResponse };
+    };
+    return { directory, temporaryRoot: os.tmpdir(), owner };
   })()`);
   fixturesOwned = true;
   await verifyInteractions(page, check);
@@ -247,6 +256,7 @@ try {
     await command('File', 'save-as');
     await page.locator('select[name="format"]').selectOption(format);
     await page.locator('#dialog button[type="submit"]').click();
+    await page.getByRole('heading', { name: 'Save as flattened image?' }).waitFor(); await page.locator('#dialog button[type="submit"]').click();
     const size = await waitForFile();
     check(`native ${format} export`, size > 50, size);
   }
@@ -275,6 +285,87 @@ try {
   if (version.platform === 'win32') {
     check('Windows window remained hidden', await main('__sjPaintVerification.electron.BrowserWindow.getAllWindows().every(window => !window.isVisible())'));
   }
+
+  // Exercise the production BrowserWindow close -> preload notification ->
+  // renderer confirmation/save -> beforeunload path. Only dialog responses are
+  // substituted; native window closure and saved bytes remain real.
+  check('closed-window fixtures are on the verifier filesystem',
+    path.resolve(fixtureLocation.temporaryRoot) === path.resolve(tmpdir()) &&
+    path.dirname(path.resolve(fixtureLocation.directory)) === path.resolve(tmpdir()) &&
+    await fs.readFile(path.join(fixtureLocation.directory, '.verification-owner'), 'utf8') === fixtureOwner);
+  await page.getByRole('button', { name: 'Pencil', exact: true }).click();
+  await page.getByRole('button', { name: 'Color #ed1c24', exact: true }).click();
+  const closeBox = await page.locator('#overlay').boundingBox();
+  await page.mouse.move(closeBox.x + 15, closeBox.y + 15);
+  await page.mouse.down();
+  await page.mouse.move(closeBox.x + 65, closeBox.y + 35, { steps: 8 });
+  await page.mouse.up();
+  await page.waitForFunction(() => document.title.includes('•'));
+  const closePixels = await pixels();
+  const closeFile = await main('__sjPaintVerification.file');
+  const beforeCloseBytes = await fs.readFile(closeFile);
+  const reloadIdentity = randomUUID();
+  await page.evaluate(value => { globalThis.__sjPaintReloadIdentity = value; }, reloadIdentity);
+  await main(`(() => {
+    const q = __sjPaintVerification, owner = q.electron.BrowserWindow.getAllWindows()[0];
+    q.confirmResponse = 2; q.confirmCalls = 0; q.reloadVetoSeen = false;
+    owner.webContents.once('will-prevent-unload', () => { q.reloadVetoSeen = true; });
+    owner.webContents.reload();
+    return true;
+  })()`);
+  let reloadVetoSeen = false;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (await main('__sjPaintVerification.reloadVetoSeen')) { reloadVetoSeen = true; break; }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  check('dirty native reload is vetoed without a close prompt', reloadVetoSeen && !page.isClosed() &&
+    await page.evaluate(() => globalThis.__sjPaintReloadIdentity) === reloadIdentity &&
+    await pixels() === closePixels && (await page.title()).includes('•') &&
+    await main('__sjPaintVerification.confirmCalls') === 0);
+  await main(`(() => {
+    const q = __sjPaintVerification;
+    q.confirmResponse = 2; q.confirmCalls = 0;
+    q.electron.BrowserWindow.getAllWindows()[0].close();
+    return true;
+  })()`);
+  let closePromptSeen = false;
+  for (let attempt = 0; attempt < 100; attempt++) {
+    if (await main('__sjPaintVerification.confirmCalls') > 0) { closePromptSeen = true; break; }
+    await new Promise(resolve => setTimeout(resolve, 50));
+  }
+  check('native close asks Save, Don\'t save or Cancel', closePromptSeen &&
+    JSON.stringify(await main('__sjPaintVerification.lastConfirmOptions.buttons')) === JSON.stringify(['Save', "Don't save", 'Cancel']));
+  check('native close Cancel retains dirty drawing and original file', !page.isClosed() &&
+    await pixels() === closePixels && (await page.title()).includes('•') &&
+    beforeCloseBytes.equals(await fs.readFile(closeFile)));
+
+  // Leave a real application modal open with an unsubmitted dimension edit.
+  // Closing through Save must not submit that form or silently resize pixels.
+  await command('File', 'properties');
+  await page.getByRole('heading', { name: 'Image properties', exact: true }).waitFor();
+  const draftWidth = Number(await page.locator('#dialog input[name="width"]').inputValue()) + 1;
+  await page.locator('#dialog input[name="width"]').fill(String(draftWidth));
+  check('native close Save starts with an unsubmitted Properties modal',
+    await page.locator('#dialog').evaluate(dialog => dialog.open) && await pixels() === closePixels);
+
+  // Keep inspector evaluation independent of shutdown: schedule close after its
+  // reply, then await the actual renderer closing rather than a success receipt.
+  await main(`(() => {
+    const q = __sjPaintVerification; q.confirmResponse = 0;
+    return true;
+  })()`);
+  const closed = page.waitForEvent('close', { timeout: 30000 });
+  await main(`(() => {
+    const owner = __sjPaintVerification.electron.BrowserWindow.getAllWindows()[0];
+    setTimeout(() => owner.close(), 50);
+    return true;
+  })()`);
+  await closed;
+  socket.close();
+  const closeSavedBytes = await fs.readFile(closeFile);
+  check('native close Save writes current pixels before closing without submitting Properties', targetWindowClosed &&
+    closeSavedBytes.equals(Buffer.from(closePixels.split(',')[1], 'base64')) && !closeSavedBytes.equals(beforeCloseBytes));
+  check('native close workflow has no renderer errors', errors.length === 0, errors);
 } catch (error) {
   checks.push({ name: 'failure', ok: false, detail: error.stack });
   try {
@@ -297,7 +388,18 @@ try {
 } finally {
   if (fixturesOwned) {
     try {
-      await main(`(() => {
+      if (targetWindowClosed) {
+        const directory = path.resolve(fixtureLocation.directory), temporaryRoot = path.resolve(fixtureLocation.temporaryRoot);
+        if (temporaryRoot !== path.resolve(tmpdir()) || path.dirname(directory) !== temporaryRoot ||
+            !path.basename(directory).startsWith('sj-paint-verification-') ||
+            (await fs.lstat(directory)).isSymbolicLink() ||
+            await fs.readFile(path.join(directory, '.verification-owner'), 'utf8') !== fixtureLocation.owner) {
+          throw new Error('Refusing to remove an unverified closed-app fixture directory: ' + directory);
+        }
+        await fs.rm(directory, { recursive: true });
+        checks.push({ name: 'closed-app owned temporary fixtures removed', ok: true });
+      } else {
+        await main(`(() => {
         const q = globalThis.__sjPaintVerification;
         q.electron.dialog.showSaveDialog = q.original.save;
         q.electron.dialog.showOpenDialog = q.original.open;
@@ -311,7 +413,8 @@ try {
         delete globalThis.__sjPaintVerification;
         return true;
       })()`);
-      checks.push({ name: 'temporary fixtures removed and native dialogs restored', ok: true });
+        checks.push({ name: 'temporary fixtures removed and native dialogs restored', ok: true });
+      }
     } catch (error) {
       checks.push({ name: 'fixture cleanup failed', ok: false, detail: error.message });
       process.exitCode = 1;

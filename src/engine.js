@@ -32,6 +32,9 @@ export function createCanvas(width, height) {
   const canvas = document.createElement('canvas');
   canvas.width = width;
   canvas.height = height;
+  // Establish one raster backend before any consumer obtains the context.
+  // Draft scratch surfaces and accepted layers must use the same antialiasing.
+  canvas.getContext('2d', { willReadFrequently: true });
   return canvas;
 }
 

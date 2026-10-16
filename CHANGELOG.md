@@ -2,7 +2,16 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.9] - Unreleased
+## [0.2.10] - Unreleased
+
+- Offer Save, Don't save and Cancel before New, Open or desktop close. Canceled or failed saves and intervening drawing edits retain the current document.
+- Confirm exports that flatten editable layer state, retain the current format in Save As, and keep replacement dialogs from consuming earlier dialog events.
+- Add strikethrough for live and committed text, including combined underline and strikethrough.
+- Support Ctrl+Space to commit a pending selection or ordinary shape from the canvas controls.
+- Initialize document layers and preview scratch surfaces consistently so shape commitment preserves preview edge pixels.
+- Keep dirty reloads from being mistaken for window-close requests.
+
+## [0.2.9] - 2026-10-15
 
 - Save desktop documents back to their opened or last saved file without reopening the chooser, including files named Untitled.
 - Adopt the actual filename chosen in Save As, retain the previous destination after cancellation, and prevent new documents from inheriting old save destinations.

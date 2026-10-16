@@ -89,7 +89,9 @@ export async function verifyPaintProject(page, check) {
   };
   const saveAs = async (name, format = 'paint') => {
     await openSaveAs(name, format); const pending = page.waitForEvent('download');
-    await page.locator('#dialog button[type="submit"]').click(); return pending;
+    await page.locator('#dialog button[type="submit"]').click();
+    if (format !== 'paint') { await page.getByRole('heading', { name: 'Save as flattened image?' }).waitFor(); await page.locator('#dialog button[type="submit"]').click(); }
+    return pending;
   };
   const errorEvent = () => page.waitForEvent('console', { predicate: event => event.type() === 'error' && /paint|layer|opacity|compress/i.test(event.text()) });
   try {
@@ -162,7 +164,9 @@ export async function verifyPaintProject(page, check) {
       await page.evaluate(() => paintApp.state.format === 'png' && !paintApp.state.project && paintApp.doc.layers.length === 2 && paintApp.doc.dirty) &&
       (await snapshot()).project === beforePng.project);
     const pngSavePending = page.waitForEvent('download');
-    await page.locator('#overlay').focus(); await page.keyboard.press('Control+s'); const pngSave = await pngSavePending;
+    await page.locator('#overlay').focus(); await page.keyboard.press('Control+s');
+    await page.getByRole('heading', { name: 'Save as flattened image?' }).waitFor(); await page.locator('#dialog button[type="submit"]').click();
+    const pngSave = await pngSavePending;
     const pngSaveBytes = await downloadBytes(pngSave);
     check('Ctrl+S after .paint to PNG export stays PNG without flattening the working document',
       pngSave.suggestedFilename() === 'native-to-png.png' && pngSaveBytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) &&
@@ -212,7 +216,7 @@ async function verifyDeferredFileOperations(page, check, encoded) {
       document.querySelector('#toast').textContent = ''; document.querySelector('#toast').hidden = true;
     };
     Object.defineProperty(window, 'paintDesktop', { configurable: true, value: {
-      setTitle() {}, confirmDiscard: async () => true,
+      setTitle() {}, confirmSaveChanges: async () => 'discard',
       openImage: () => control.mode === 'decode' ? Promise.resolve(control.raster) : control.defer('picker', control.paint),
       savePaint: request => control.defer('save', true),
       saveProject: request => control.defer('save', true),

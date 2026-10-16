@@ -1,6 +1,7 @@
 const { app, BrowserWindow, dialog, ipcMain, session } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
+const { randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 const { writeFileAtomically } = require('./atomic-write.cjs');
 const { FileTargets } = require('./file-targets.cjs');
@@ -14,6 +15,7 @@ const entryUrl = pathToFileURL(entry).href;
 const hidden = process.argv.includes('--hidden');
 let mainWindow;
 let dialogBusy = false;
+let closeRequest = null;
 const fileTargets = new FileTargets();
 
 function authorized(event) {
@@ -154,18 +156,33 @@ function registerHandlers() {
       else reject(new Error(reason || 'Printing failed.'));
     });
   })));
-  handle('confirm-discard', () => withDialog(async () => {
+  handle('confirm-save-changes', () => withDialog(async () => {
     const result = await dialog.showMessageBox(mainWindow, {
-      type: 'warning', title: 'Unsaved changes', message: 'Discard unsaved changes?',
-      detail: 'Save your work first if you want to keep it.', buttons: ['Keep editing', 'Discard'],
-      defaultId: 0, cancelId: 0, noLink: true,
+      type: 'warning', title: 'Unsaved changes', message: 'Do you want to save your changes?',
+      buttons: ['Save', "Don't save", 'Cancel'], defaultId: 0, cancelId: 2, noLink: true,
     });
-    return result.response === 1;
+    return result.response === 0 ? 'save' : result.response === 1 ? 'discard' : 'cancel';
   }));
+  handle('finish-close', (request) => {
+    if (!request || typeof request !== 'object' || Array.isArray(request) ||
+        Object.keys(request).length !== 2 || typeof request.requestId !== 'string' || typeof request.allow !== 'boolean' ||
+        !closeRequest || closeRequest.owner !== mainWindow || closeRequest.requestId !== request.requestId || closeRequest.finalizing) {
+      throw new Error('Invalid or expired close request.');
+    }
+    if (!request.allow) { closeRequest = null; return false; }
+    const pending = closeRequest;
+    pending.finalizing = true;
+    // Retry normal close. The renderer must independently allow beforeunload
+    // for the exact document state it approved; main never overrides that gate.
+    try { pending.owner.close(); }
+    catch (error) { if (closeRequest === pending) closeRequest = null; throw error; }
+    return true;
+  });
 }
 
 function createWindow() {
   fileTargets.clear();
+  closeRequest = null;
   mainWindow = new BrowserWindow({
     width: 1440, height: 940, minWidth: 800, minHeight: 600, title: PROJECT.productName, show: !hidden,
     backgroundColor: '#f3f3f3', autoHideMenuBar: true,
@@ -174,15 +191,24 @@ function createWindow() {
   mainWindow.webContents.setWindowOpenHandler(() => ({ action: 'deny' }));
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
-  mainWindow.webContents.on('will-prevent-unload', (event) => {
-    if (dialogBusy) return;
-    const choice = dialog.showMessageBoxSync(mainWindow, {
-      type: 'warning', title: 'Unsaved changes', message: 'Discard unsaved changes and close?',
-      buttons: ['Keep editing', 'Discard'], defaultId: 0, cancelId: 0, noLink: true,
-    });
-    if (choice === 1) event.preventDefault();
+  const owner = mainWindow;
+  let closeIntent = false;
+  owner.on('close', () => { closeIntent = true; });
+  owner.webContents.on('will-prevent-unload', () => {
+    if (owner !== mainWindow) return;
+    // Reload also emits will-prevent-unload. Only a real window-close attempt
+    // may start a workflow that eventually closes the window.
+    const requestedClose = closeIntent;
+    closeIntent = false;
+    if (!requestedClose) return;
+    // A newer edit can veto the final retry. Retire its nonce without starting
+    // another prompt; the user may request close again for the newer document.
+    if (closeRequest?.finalizing) { closeRequest = null; return; }
+    if (dialogBusy || closeRequest) return;
+    closeRequest = { owner, requestId: randomUUID(), finalizing: false };
+    owner.webContents.send('paint:close-requested', closeRequest.requestId);
   });
-  mainWindow.on('closed', () => { fileTargets.clear(); mainWindow = null; });
+  owner.on('closed', () => { fileTargets.clear(); closeRequest = null; mainWindow = null; });
   mainWindow.loadFile(entry);
 }
 
