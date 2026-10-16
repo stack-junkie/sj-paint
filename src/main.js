@@ -137,7 +137,12 @@ function updateToolState(){
   $('#opacity-control').hidden=['select','lasso','picker','zoom','text','eraser'].includes(state.tool);
   $('#tolerance-control').hidden=state.tool!=='fill';$('#text-controls').hidden=state.tool!=='text';
   renderEraserCursor();
-  overlay.style.cursor=state.tool==='eraser'?'none':state.tool==='text'?'text':state.tool==='zoom'?'zoom-in':state.tool==='select'||state.tool==='lasso'?'crosshair':state.tool==='picker'?'copy':'crosshair';
+  updateCursor();
+}
+function updateCursor(){
+  let hit=drag?.kind==='pending-shape'||drag?.kind==='selection-transform'?drag.hit:null;
+  if(!drag&&hoverClient){const p=point({clientX:hoverClient[0],clientY:hoverClient[1]});hit=pendingShape?hitPendingShape(pendingShape,p,state.zoom):doc.hitSelection(p,{zoom:state.zoom});}
+  overlay.style.cursor=hit?.kind==='resize'?hit.cursor:hit?.kind==='move'?'move':hit?.kind==='rotate'?(drag?'grabbing':'grab'):state.tool==='eraser'?'none':state.tool==='text'?'text':state.tool==='zoom'?'zoom-in':state.tool==='picker'?'copy':'crosshair';
 }
 const loadFonts=bindFontPicker($('#font'));
 function chooseTool(tool){if(tool==='text')void loadFonts();if(activePointerId!==null&&!pendingShape)cancelPointerInteraction();commitText();finishPending();doc.deselect();if(state.tool==='eraser'&&tool!=='eraser')state.size=state.lastBrushSize;else if(state.tool!=='eraser'&&tool==='eraser'){state.lastBrushSize=state.size;state.size=state.eraserSize;}state.tool=tool;$('#size').value=$('#size-number').value=state.size;if(BRUSHES.some(b=>b.id===tool))state.brush=tool;updateToolState();closeMenu();overlay.focus({preventScroll:true});changed();}
@@ -158,8 +163,8 @@ overlay.addEventListener('contextmenu',e=>e.preventDefault());
 viewport.addEventListener('scroll',renderEraserCursor,{passive:true});
 new ResizeObserver(renderEraserCursor).observe(viewport);
 window.addEventListener('resize',renderEraserCursor);
-overlay.addEventListener('pointerenter',e=>{hoverClient=[e.clientX,e.clientY];renderEraserCursor();});
-overlay.addEventListener('pointerleave',()=>{hoverClient=null;renderEraserCursor();});
+overlay.addEventListener('pointerenter',e=>{hoverClient=[e.clientX,e.clientY];renderEraserCursor();updateCursor();});
+overlay.addEventListener('pointerleave',()=>{hoverClient=null;renderEraserCursor();updateCursor();});
 // Chromium can paste the primary selection into a focused editor on middle
 // release even when pointerdown was canceled. Own that release through pan
 // cancellation and capture loss, including releases outside the canvas.
@@ -204,7 +209,7 @@ overlay.addEventListener('pointermove',safe(e=>{
   const p=point(e);hoverClient=[e.clientX,e.clientY];renderEraserCursor();$('#coordinates').textContent=`${Math.round(p[0])}, ${Math.round(p[1])}px`;
   if(drag?.kind==='pan'){viewport.scrollLeft=drag.scroll[0]+drag.start[0]-e.clientX;viewport.scrollTop=drag.scroll[1]+drag.start[1]-e.clientY;return;}
   if(curve){curve.hover=p;changed();return;}
-  if(!drag){const hit=pendingShape?hitPendingShape(pendingShape,p,state.zoom):doc.hitSelection(p,{zoom:state.zoom});if(pendingShape||doc.selection)overlay.style.cursor=hit?.kind==='move'?'move':hit?.kind==='rotate'?'grab':hit?'nwse-resize':'crosshair';return;}
+  if(!drag){updateCursor();return;}
   if(drag.kind==='stroke'){const samples=e.getCoalescedEvents?.();for(const q of samples?.length?samples:[e])stroke.move(...point(q),pressure(q));}
   else if(drag.kind==='pending-shape')pendingShape=transformPendingShape(drag.original,drag.hit,drag.start,p,{constrain:e.shiftKey});
   else if(drag.kind==='selection-transform')doc.updateSelectionTransform(p);

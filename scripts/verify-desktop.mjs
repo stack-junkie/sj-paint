@@ -1,3 +1,4 @@
+import { verifyResizeCursorsDesktop } from './verify-resize-cursors.mjs';
 import { verifyColorSpectrumDesktop } from './verify-color-spectrum.mjs';
 import { verifyShapeStyleMenuDesktop } from './verify-shape-style-menu.mjs';
 import { verifyColorInputsDesktop } from './verify-color-inputs.mjs';
@@ -206,6 +207,7 @@ try {
   fixturesOwned = true;
   await verifyColorInputsDesktop(page, check);
   await verifyColorSpectrumDesktop(page, check);
+  await verifyResizeCursorsDesktop(page, check);
   await verifyFontCatalogDesktop(page, check);
   await verifyPaletteFocusDesktop(page, check);
   await verifyTextPanFocusDesktop(page, check);

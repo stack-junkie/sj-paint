@@ -1,3 +1,4 @@
+import { verifyResizeCursors } from './verify-resize-cursors.mjs';
 import { verifyColorSpectrum } from './verify-color-spectrum.mjs';
 import { verifyShapeStyleMenu } from './verify-shape-style-menu.mjs';
 import { verifyColorInputs } from './verify-color-inputs.mjs';
@@ -79,6 +80,7 @@ try{
  await verifyPaletteFocus(page,check);
  await verifyColorInputs(page,check);
  await verifyColorSpectrum(page,check);
+ await verifyResizeCursors(page,check);
  await verifyFontCatalog(page,check);
  await verifyTextPanFocus(page,check);
  await verifyTextControls(page,check);

@@ -1,4 +1,5 @@
 // Source-space selection geometry. All matrices map source pixels to document coordinates.
+import { resizeCursor } from './resize-cursor.js';
 const HANDLES = [[0, 0], [.5, 0], [1, 0], [1, .5], [1, 1], [.5, 1], [0, 1], [0, .5]];
 const clean = value => Math.abs(value - Math.round(value)) < 1e-10 ? Math.round(value) : value;
 export const matrix = values => Object.freeze(values.map(clean));
@@ -42,7 +43,12 @@ export function hitSelectionGeometry(selection, point, zoom = 1) {
     const d = distance(handle);
     if (d <= tolerance && d < minimum) { nearest = index; minimum = d; }
   });
-  if (nearest >= 0) return { kind: 'resize', index: nearest };
+  if (nearest >= 0) {
+    const [horizontal, vertical] = HANDLES[nearest].map(value => value - .5);
+    const [a, b, c, d] = selection.transform, sx = Math.hypot(a, b), sy = Math.hypot(c, d);
+    return { kind: 'resize', index: nearest,
+      cursor: resizeCursor([horizontal*a/sx + vertical*c/sy, horizontal*b/sx + vertical*d/sy]) };
+  }
   const [x, y] = mapPoint(inverse(selection.transform), point);
   return x >= 0 && y >= 0 && x <= selection.canvas.width && y <= selection.canvas.height ? { kind: 'move' } : null;
 }

@@ -1,4 +1,5 @@
 import { drawShape } from './shapes.js';
+import { resizeCursor } from './resize-cursor.js';
 
 // Clockwise from the northwest corner: NW, N, NE, E, SE, S, SW, W.
 const HANDLES = [[0, 0], [0.5, 0], [1, 0], [1, 0.5], [1, 1], [0.5, 1], [0, 1], [0, 0.5]];
@@ -104,7 +105,8 @@ export function hitPendingShape(shape, point, zoom = 1) {
       nearest = index; nearestDistance = distance;
     }
   }
-  if (nearest >= 0) return { kind: 'resize', index: nearest };
+  if (nearest >= 0) return { kind: 'resize', index: nearest,
+    cursor: resizeCursor(rotateVector(HANDLES[nearest].map(value => value - .5), shape.angle)) };
   const padding = shape.type === 'line' ? tolerance : 0;
   if (x >= box.left - padding && x <= box.right + padding && y >= box.top - padding && y <= box.bottom + padding) {
     return { kind: 'move' };
