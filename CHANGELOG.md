@@ -2,7 +2,13 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.22] - Unreleased
+## [0.2.23] - Unreleased
+
+- Add an inline hue/saturation spectrum, value slider, color preview, Basic colors, Custom colors and Add color to Edit colors.
+- Keep palette changes inside the dialog until accepted. Cancel, Escape and interrupted pointer capture preserve the document and saved palette; keyboard controls share the numeric color owner.
+- Cache the fixed spectrum image and keep controls reachable in small windows.
+
+## [0.2.22] - 2026-10-16
 
 - Discover installed Windows and Linux font families through bounded, read-only desktop queries, reusing one catalog per app lifetime and preserving the standard list on failure.
 - Keep live text selection and the current font when discovery finishes; defer list replacement while the font picker owns keyboard focus.

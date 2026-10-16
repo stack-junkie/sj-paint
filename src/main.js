@@ -1,6 +1,6 @@
 import './style.css';
 import { STANDARD_FONTS, bindFontPicker, fontFamilyCss } from './font-catalog.js';
-import { bindColorInputs } from './color-inputs.js';
+import { bindColorInputs, colorDialogMarkup } from './color-inputs.js';
 import PROJECT from './project-format.json' with { type: 'json' };
 import { VERSION } from './version.js';
 import { bindCanvasResize } from './canvas-resize.js';
@@ -412,10 +412,10 @@ async function saveAs() {
   return false;
 }
 async function colorDialog(which='primary'){
-  const pending=dialog('Edit colors',`<div class="color-editor"><input type="color" name="color" value="${state[which]}" aria-label="Color spectrum"><label>Hex<input id="hex" value="${state[which]}" pattern="#[0-9a-fA-F]{6}" maxlength="7" required spellcheck="false"></label></div><label>Color model<select name="color-model"><option value="rgb">RGB</option><option value="hsv">HSV</option></select></label><fieldset class="color-channels" data-color-model="rgb"><legend>RGB channels</legend>${['Red','Green','Blue'].map(name=>`<label>${name}<input type="number" name="${name.toLowerCase()}" min="0" max="255" step="1" required></label>`).join('')}</fieldset><fieldset class="color-channels" data-color-model="hsv" hidden disabled><legend>HSV channels</legend>${[['Hue',359],['Saturation',100],['Value',100]].map(([name,max])=>`<label>${name}<input type="number" name="${name.toLowerCase()}" min="0" max="${max}" step="1" required></label>`).join('')}</fieldset><p class="hint">RGB uses 0 to 255. Hue uses 0 to 359 degrees; saturation and value use 0 to 100 percent.</p>`);
-  bindColorInputs($('#dialog form'));
-  const values=await pending;
-  if(values){state[which]=values.color;customColors=[values.color,...customColors.filter(c=>c!==values.color)].slice(0,10);localStorage.setItem('paint-colors',JSON.stringify(customColors));updateToolState();styleText();updatePendingStyle();}
+  const pending=dialog('Edit colors',colorDialogMarkup(state[which]));
+  const controls=bindColorInputs($('#dialog form'),{basicColors:colors,customColors});
+  let values;try{values=await pending;}finally{controls.dispose();}
+  if(values){state[which]=values.color;customColors=[values.color,...controls.customColors.filter(c=>c!==values.color)].slice(0,10);localStorage.setItem('paint-colors',JSON.stringify(customColors));updateToolState();styleText();updatePendingStyle();}
 }
 async function resizeDialog(){
   commitText();const geometry=doc.getSelectionGeometry(),w=geometry?Math.round(geometry.frameWidth):doc.width,h=geometry?Math.round(geometry.frameHeight):doc.height;
