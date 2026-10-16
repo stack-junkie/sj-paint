@@ -2,7 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.18] - Unreleased
+## [0.2.19] - Unreleased
+
+- Expose checked Rulers and Gridlines states and a Status bar toggle in View, preserving pending drawings and keyboard zoom.
+- Name each shared dialog from its current heading without changing its submit, cancellation or ownership behavior.
+
+## [0.2.18] - Included in 0.2.19
 
 - Render the background-removal preview through the document compositor, preserving background/layer context and matching the accepted display pixels.
 

@@ -1,3 +1,4 @@
+import { verifyViewStateDesktop } from './verify-view-state.mjs';
 import { verifyEraserDesktop } from './verify-eraser-desktop.mjs';
 import { verifyLocalAiDesktop } from './verify-local-ai-desktop.mjs';
 import { verifyKeyboardDesktop } from './verify-keyboard-desktop.mjs';
@@ -203,6 +204,7 @@ try {
   await verifyTextPanFocusDesktop(page, check);
   await verifyTextControlsDesktop(page, check);
   await verifySelectionMenuDesktop(page, check);
+  await verifyViewStateDesktop(page, check);
   await verifyInteractions(page, check);
   await verifyPendingShapesDesktop(page, check);
   await verifySelectionDesktop(page, check);

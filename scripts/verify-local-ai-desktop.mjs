@@ -3,12 +3,52 @@
 // file fixture, native chooser or main-process inspector is used here.
 export async function verifyLocalAiDesktop(page, check) {
   const frame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
-  const snapshot = () => page.evaluate(() => {
-    const canvas = document.querySelector('#canvas'), context = canvas.getContext('2d');
-    return { pixels: canvas.toDataURL(), center: [...context.getImageData(canvas.width/2,canvas.height/2,1,1).data],
+  // Decode captured PNGs in a separate software canvas. Reading live display
+  // contexts can switch Chromium's raster backend and perturb later drawing.
+  const snapshot = () => page.evaluate(async () => {
+    const canvas = document.querySelector('#canvas'), pixels = canvas.toDataURL();
+    const image = new Image(); image.src = pixels; await image.decode();
+    const decoded = document.createElement('canvas'); decoded.width = image.width; decoded.height = image.height;
+    const context = decoded.getContext('2d', { willReadFrequently: true }); context.drawImage(image, 0, 0);
+    return { pixels, center: [...context.getImageData(decoded.width/2,decoded.height/2,1,1).data],
       corner: [...context.getImageData(10,10,1,1).data], title: document.title,
       undo: !document.querySelector('[data-action="undo"]').disabled, redo: !document.querySelector('[data-action="redo"]').disabled };
   });
+  const pngDifference = (expectedPng, actualPng) => page.evaluate(async ({ expectedPng, actualPng }) => {
+    const decode = async png => {
+      const image = new Image(); image.src = png; await image.decode();
+      const canvas = document.createElement('canvas'); canvas.width = image.width; canvas.height = image.height;
+      const context = canvas.getContext('2d', { willReadFrequently: true }); context.drawImage(image, 0, 0);
+      return { width: canvas.width, height: canvas.height, rgba: context.getImageData(0, 0, canvas.width, canvas.height).data };
+    };
+    const expected = await decode(expectedPng), actual = await decode(actualPng);
+    const channelCounts = [0,0,0,0], maxAbsoluteDifference = [0,0,0,0], samples = [];
+    let differingPixels = 0;
+    const dimensionsEqual = expected.width === actual.width && expected.height === actual.height;
+    if (dimensionsEqual) for (let offset = 0; offset < actual.rgba.length; offset += 4) {
+      let different = false;
+      for (let channel = 0; channel < 4; channel++) {
+        const difference = Math.abs(actual.rgba[offset + channel] - expected.rgba[offset + channel]);
+        if (difference) { different = true; channelCounts[channel]++; maxAbsoluteDifference[channel] = Math.max(maxAbsoluteDifference[channel], difference); }
+      }
+      if (different) {
+        differingPixels++;
+        if (samples.length < 12) samples.push({ x: offset / 4 % actual.width, y: Math.floor(offset / 4 / actual.width),
+          expected: [...expected.rgba.slice(offset, offset + 4)], actual: [...actual.rgba.slice(offset, offset + 4)] });
+      }
+    }
+    const chunks = png => {
+      const bytes = Uint8Array.from(atob(png.split(',')[1]), c => c.charCodeAt(0)), view = new DataView(bytes.buffer), result = [];
+      for (let offset = 8; offset + 12 <= bytes.length;) {
+        const length = view.getUint32(offset), type = String.fromCharCode(...bytes.slice(offset + 4, offset + 8));
+        result.push({ type, length, crc: view.getUint32(offset + 8 + length) }); offset += length + 12;
+      }
+      return result;
+    };
+    return { dimensionsEqual, width: actual.width, height: actual.height, expectedWidth: expected.width, expectedHeight: expected.height,
+      differingPixels, channelCounts, maxAbsoluteDifference, samples, pngEqual: expectedPng === actualPng,
+      expectedChunks: chunks(expectedPng), actualChunks: chunks(actualPng) };
+  }, { expectedPng, actualPng });
   const initial = await page.evaluate(() => ({
     clean: document.title === 'Untitled - Stack Junkie Paint' && document.querySelector('#canvas').width === 1152 &&
       document.querySelector('#canvas').height === 648 && document.querySelector('[data-action="undo"]').disabled &&
@@ -28,7 +68,6 @@ export async function verifyLocalAiDesktop(page, check) {
     state.value.bounds.maxPngBytes === 64*1024*1024 && state.value.model.sha256 === '309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8', state.value);
   const blank = await snapshot();
   let owned = false;
-  let previewRaster = null;
   const clickCanvas = async (x,y) => {
     const box = await page.locator('#overlay').boundingBox();
     await page.mouse.move(box.x+x*box.width/1152,box.y+y*box.height/648);
@@ -45,10 +84,6 @@ export async function verifyLocalAiDesktop(page, check) {
     },null,{timeout:45_000});
     const preview=page.locator('.background-removal-dialog canvas[aria-label="Background removal preview"]');
     check('packaged real inference produces an explicit background-removal preview',await preview.count()===1);
-    await previewRaster?.dispose();
-    previewRaster=await preview.evaluateHandle(canvas=>({png:canvas.toDataURL(),width:canvas.width,height:canvas.height,
-      rgba:canvas.getContext('2d').getImageData(0,0,canvas.width,canvas.height).data,
-      attributes:canvas.getContext('2d').getContextAttributes()}));
     return preview.evaluate(canvas=>({pixels:canvas.toDataURL(),width:canvas.width,height:canvas.height}));
   };
   try {
@@ -116,37 +151,13 @@ export async function verifyLocalAiDesktop(page, check) {
     await page.locator('.background-removal-dialog').getByRole('button',{name:'Apply',exact:true}).click();
     await page.locator('.background-removal-dialog').waitFor({state:'detached'});await frame();
     const applied=await snapshot();
-    const previewDifference=await previewRaster.evaluate(expected=>{
-      const canvas=document.querySelector('#canvas'),context=canvas.getContext('2d');
-      const actual=context.getImageData(0,0,canvas.width,canvas.height).data;
-      const channelCounts=[0,0,0,0],maxAbsoluteDifference=[0,0,0,0],samples=[];let differingPixels=0;
-      for(let offset=0;offset<actual.length;offset+=4){
-        let different=false;
-        for(let channel=0;channel<4;channel++){
-          const difference=Math.abs(actual[offset+channel]-expected.rgba[offset+channel]);
-          if(difference){different=true;channelCounts[channel]++;maxAbsoluteDifference[channel]=Math.max(maxAbsoluteDifference[channel],difference);}
-        }
-        if(different){differingPixels++;if(samples.length<12)samples.push({x:offset/4%canvas.width,y:Math.floor(offset/4/canvas.width),
-          expected:[...expected.rgba.slice(offset,offset+4)],actual:[...actual.slice(offset,offset+4)]});}
-      }
-      const chunks=png=>{
-        const bytes=Uint8Array.from(atob(png.split(',')[1]),c=>c.charCodeAt(0)),view=new DataView(bytes.buffer),result=[];
-        for(let offset=8;offset+12<=bytes.length;){const length=view.getUint32(offset),type=String.fromCharCode(...bytes.slice(offset+4,offset+8));
-          result.push({type,length,crc:view.getUint32(offset+8+length)});offset+=length+12;}
-        return result;
-      };
-      const actualPng=canvas.toDataURL();
-      return {width:canvas.width,height:canvas.height,expectedWidth:expected.width,expectedHeight:expected.height,
-        differingPixels,channelCounts,maxAbsoluteDifference,samples,pngEqual:expected.png===actualPng,
-        expectedChunks:chunks(expected.png),actualChunks:chunks(actualPng),
-        expectedContext:expected.attributes,actualContext:context.getContextAttributes()};
-    });
+    const previewDifference = await pngDifference(acceptedPreview.pixels, applied.pixels);
     check('Apply commits the real preview and removes background while retaining the subject',applied.pixels===acceptedPreview.pixels &&
       applied.pixels!==source.pixels && applied.corner[3]<20 && applied.center[3]>240,{corner:applied.corner,center:applied.center,previewDifference});
     await undo();check('one Undo restores the exact pre-inference drawing',(await snapshot()).pixels===source.pixels);
-    await redo();check('one Redo restores the exact applied mask',(await snapshot()).pixels===applied.pixels);
+    await redo(); const redone = await snapshot();
+    check('one Redo restores the exact applied mask', redone.pixels === applied.pixels, await pngDifference(applied.pixels, redone.pixels));
   } finally {
-    await previewRaster?.dispose();
     const panel=page.locator('.background-removal-dialog');
     if(await panel.count()){
       await panel.getByRole('button',{name:'Cancel',exact:true}).click();

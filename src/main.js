@@ -17,7 +17,7 @@ const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const label = (s) => s.replaceAll('-',' ').replace(/^./,c=>c.toUpperCase());
 const doc = new PaintDocument(1152,648);
-const state = {tool:'brush',brush:'brush',primary:'#000000',secondary:'#ffffff',size:5,opacity:1,tolerance:0,zoom:1,outline:'solid',fillStyle:'none',layers:false,grid:false,rulers:false,name:'Untitled',format:'png',project:false,transparentSelection:false,font:'Arial',fontSize:24,bold:false,italic:false,underline:false,strikethrough:false,textBackground:false,align:'left',theme:localStorage.getItem('paint-theme')||'dark',lastBrushSize:5,eraserSize:8};
+const state = {tool:'brush',brush:'brush',primary:'#000000',secondary:'#ffffff',size:5,opacity:1,tolerance:0,zoom:1,outline:'solid',fillStyle:'none',layers:false,grid:false,rulers:false,statusBar:true,name:'Untitled',format:'png',project:false,transparentSelection:false,font:'Arial',fontSize:24,bold:false,italic:false,underline:false,strikethrough:false,textBackground:false,align:'left',theme:localStorage.getItem('paint-theme')||'dark',lastBrushSize:5,eraserSize:8};
 let drag=null,stroke=null,shapePreview=null,pendingShape=null,curve=null,polygon=[],textEditor=null,raf=0,toastTimer,menuAnchor=null,activePointerId=null,hoverClient=null;
 const colors=['#000000','#7f7f7f','#880015','#ed1c24','#ff7f27','#fff200','#22b14c','#00a2e8','#3f48cc','#a349a4','#ffffff','#c3c3c3','#b97a57','#ffaec9','#ffc90e','#efe4b0','#b5e61d','#99d9ea','#7092be','#c8bfe7'];
 let customColors=[];try{const saved=JSON.parse(localStorage.getItem('paint-colors')||'[]');if(Array.isArray(saved))customColors=saved.filter(c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c)).slice(0,10);}catch{}
@@ -64,6 +64,7 @@ function safe(fn){return async(...args)=>{try{return await fn(...args);}catch(e)
 function changed(){if(!raf)raf=requestAnimationFrame(()=>{raf=0;render();});}
 doc.addEventListener('change',changed);doc.addEventListener('preview',changed);
 function render(){
+  $('.statusbar').hidden=!state.statusBar;
   if(canvas.width!==doc.width||canvas.height!==doc.height){canvas.width=overlay.width=doc.width;canvas.height=overlay.height=doc.height;}
   const hasDraft=shapePreview||pendingShape||curve||polygon.length;
   doc.renderTo(ctx,{layerPreview:hasDraft?{layerId:doc.activeLayerId,paint:paintDrawingDraft}:null});
@@ -316,7 +317,8 @@ let activeDialog=null;
 async function dialog(title,body,submit='OK',alternate=null){
   closeMenu();activeDialog?.finish(null);
   const d=$('#dialog');
-  d.innerHTML=`<form method="dialog"><h2>${esc(title)}</h2><div class="dialog-content">${body}</div><footer><button type="button" id="dialog-cancel">Cancel</button>${alternate?`<button type="button" id="dialog-alternate">${esc(alternate)}</button>`:''}<button class="accent" type="submit">${esc(submit)}</button></footer></form>`;
+  d.setAttribute('aria-labelledby','dialog-title');
+  d.innerHTML=`<form method="dialog"><h2 id="dialog-title">${esc(title)}</h2><div class="dialog-content">${body}</div><footer><button type="button" id="dialog-cancel">Cancel</button>${alternate?`<button type="button" id="dialog-alternate">${esc(alternate)}</button>`:''}<button class="accent" type="submit">${esc(submit)}</button></footer></form>`;
   const form=d.querySelector('form');
   return new Promise(resolve=>{
     const owner={finish(result){
@@ -445,7 +447,7 @@ const actions={
   'toggle-background':()=>doc.setBackground(doc.background?null:state.secondary),
   colors:()=>colorDialog(),primary:()=>colorDialog('primary'),secondary:()=>colorDialog('secondary'),
   fullscreen:async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();},
-  fit,'zoom-in':()=>setZoom(state.zoom*1.25),'zoom-out':()=>setZoom(state.zoom/1.25),'zoom-100':()=>setZoom(1),grid:()=>{state.grid=!state.grid;changed();},rulers:()=>{state.rulers=!state.rulers;changed();},
+  fit,'zoom-in':()=>setZoom(state.zoom*1.25),'zoom-out':()=>setZoom(state.zoom/1.25),'zoom-100':()=>setZoom(1),grid:()=>{state.grid=!state.grid;changed();},rulers:()=>{state.rulers=!state.rulers;changed();},'status-bar':()=>{state.statusBar=!state.statusBar;changed();},
   collapse:()=>{document.body.classList.toggle('collapsed');$('.collapse-tools').textContent=document.body.classList.contains('collapsed')?'⌄':'⌃';},
   bold:()=>{state.bold=!state.bold;styleText();updateToolState();},italic:()=>{state.italic=!state.italic;styleText();updateToolState();},underline:()=>{state.underline=!state.underline;styleText();updateToolState();},strikethrough:()=>{state.strikethrough=!state.strikethrough;styleText();updateToolState();},'commit-text':commitText,
   properties:async()=>{const v=await dialog('Image properties',`<p>${esc(state.name)}<br>${doc.layers.length} layer${doc.layers.length===1?'':'s'}</p><div class="two-columns"><label>Width (pixels)<input name="width" type="number" min="1" max="16384" value="${doc.width}" required></label><label>Height (pixels)<input name="height" type="number" min="1" max="16384" value="${doc.height}" required></label></div><p class="hint">Changes canvas dimensions without scaling the image.</p>`);if(v){doc.resize(+v.width,+v.height,{scale:false,target:'document'});fit();}},
@@ -454,13 +456,13 @@ const actions={
 const menus={
   file:[['New','new','Ctrl+N'],['Open','open','Ctrl+O'],['Open project','open-project'],null,['Save','save','Ctrl+S'],['Save as','save-as','Ctrl+Shift+S'],['Save as project','save-project'],null,['Print','print','Ctrl+P'],['Image properties','properties','Ctrl+E']],
   edit:[['Undo','undo','Ctrl+Z'],['Redo','redo','Ctrl+Y'],null,['Cut','cut','Ctrl+X'],['Copy','copy','Ctrl+C'],['Copy visible layers','copy-all','Ctrl+Shift+C'],['Paste','paste','Ctrl+V'],['Paste from file','paste-from'],null,['Select all','select-all','Ctrl+A'],['Delete','delete','Delete'],['Invert colors','invert-colors','Ctrl+I']],
-  view:[['Zoom in','zoom-in','Ctrl+PageUp'],['Zoom out','zoom-out','Ctrl+PageDown'],['100%','zoom-100'],['Fit to window','fit','Ctrl+1'],['Full screen','fullscreen','F11'],null,['Gridlines','grid'],['Rulers','rulers'],['Layers','layers'],['Collapse toolbar','collapse','Ctrl+F1']],
+  view:[['Zoom in','zoom-in','Ctrl+PageUp'],['Zoom out','zoom-out','Ctrl+PageDown'],['100%','zoom-100'],['Fit to window','fit','Ctrl+1'],['Full screen','fullscreen','F11'],null,['Gridlines','grid'],['Rulers','rulers'],['Status bar','status-bar'],['Layers','layers'],['Collapse toolbar','collapse','Ctrl+F1']],
   selection:[['Rectangle','tool:select'],['Free-form','tool:lasso'],null,['Select all','select-all','Ctrl+A'],['Invert selection','invert-selection','Ctrl+Shift+I'],['Transparent selection','transparent-selection'],['Delete','delete-selection','Delete']],
   rotate:[['Rotate right 90°','rotate-right'],['Rotate left 90°','rotate-left'],['Rotate 180°','rotate-180'],['Custom rotate','rotate-custom']],
   flip:[['Flip horizontal','flip-horizontal'],['Flip vertical','flip-vertical']],
 };
 // These commands change presentation or pending style, so the shape stays editable.
-const pendingCommands=new Set(['undo','redo','colors','primary','secondary','bold','italic','underline','strikethrough','layers','fullscreen','fit','zoom-in','zoom-out','zoom-100','grid','rulers','collapse','settings','rotate-menu','flip-menu']);
+const pendingCommands=new Set(['undo','redo','colors','primary','secondary','bold','italic','underline','strikethrough','layers','fullscreen','fit','zoom-in','zoom-out','zoom-100','grid','rulers','status-bar','collapse','settings','rotate-menu','flip-menu']);
 async function executeAction(name,event){
   if(!pendingCommands.has(name)){if(activePointerId!==null&&!pendingShape)cancelPointerInteraction();commitText();finishPending();}
   return actions[name]?.(event);
@@ -468,10 +470,11 @@ async function executeAction(name,event){
 function showMenu(name,anchor){
   commitText();const m=$('#menu');if(!m.hidden&&menuAnchor===anchor){closeMenu();return;}if(menuAnchor)menuAnchor.setAttribute('aria-expanded','false');menuAnchor=anchor;anchor.setAttribute('aria-expanded','true');
   const entries=name==='brushes'?BRUSHES.filter(b=>b.id!=='pencil').map(b=>[b.label,'tool:'+b.id]):menus[name];
+  const toggleStates={'transparent-selection':state.transparentSelection,grid:state.grid,rulers:state.rulers,'status-bar':state.statusBar};
   m.innerHTML=entries.map(item=>{
     if(!item)return '<hr role="separator">';
     const [title,command,shortcut]=item,tool=command.startsWith('tool:')?command.slice(5):null;
-    const checked=tool?state.tool===tool:command==='transparent-selection'?state.transparentSelection:null;
+    const checked=tool?state.tool===tool:(toggleStates[command]??null);
     const role=tool?'menuitemradio':checked!==null?'menuitemcheckbox':'menuitem';
     const disabled=command==='delete-selection'&&!doc.selection;
     return `<button type="button" role="${role}" data-command="${command}"${checked!==null?` aria-checked="${checked}"`:''}${disabled?' disabled':''}><span>${checked!==null?icon('check',14):''}${esc(title)}</span>${name==='brushes'?'<canvas class="brush-preview" width="120" height="40" aria-hidden="true"></canvas>':`<kbd>${shortcut||''}</kbd>`}</button>`;

@@ -1,3 +1,5 @@
+import { verifyViewState } from './verify-view-state.mjs';
+import { verifyDialogAccessibility } from './verify-dialog-accessibility.mjs';
 import { chromium } from 'playwright-core';
 import { verifyBackgroundRemoval } from './verify-background-removal.mjs';
 import { verifyInteractions } from './verify-interactions.mjs';
@@ -73,6 +75,8 @@ try{
  await verifyTextPanFocus(page,check);
  await verifyTextControls(page,check);
  await verifySelectionMenu(page,check);
+ await verifyViewState(page,check);
+ await verifyDialogAccessibility(page,check);
  await verifyPrintLayout(page,check);
  await verifyBackgroundRemoval(page,check);
  await verifyCurveConstruction(page,check);
