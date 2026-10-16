@@ -55,13 +55,19 @@ Implemented controls and passing checks do not close these gaps. Baseline accept
 
 ## Verification history
 
+### Version 0.2.9 desktop save identity
+
+Source inspection and a failing headless reproduction found that every desktop Save reopened the chooser and discarded the actual chosen filename. Open and successful saves now retain an opaque native destination, bound to the current document generation and encoded format. Save As selects a new destination; cancellation and late completion after document replacement preserve the current identity. TIFF content under a mismatched extension does not reuse an incompatible destination. Save shortcuts also work while typing text or editing a numeric control.
+
+The browser suite passed 514 checks and seven native file-target/atomic-write tests passed. Packaged Windows and Linux verification is pending. These are source-derived file workflow corrections, not a claim that all native save dialogs or Microsoft Paint file semantics have been compared.
+
 ### Version 0.2.8 pending drawing ownership and compositing
 
 The local browser suite passed 503 checks, hidden Windows passed 138 and the isolated Ubuntu CI runner passed 133 packaged-app checks. The local Windows clipboard was untouched; CI used its disposable clipboard. Private native-reference fixtures are omitted from CI. The added cases compare actual display canvas and overlay pixels while a pointer is held, after release and after acceptance. Rectangles, curves and polygons apply active-layer opacity once and remain behind foreground layers. Existing layer pixels and history stay unchanged until acceptance; cancellation removes the preview. The shared compositor reuses its existing scratch canvas. Large-document latency and peak process-family memory have not been measured.
 
 The desktop test waits for release handles separately from held shape pixels. A Fit-to-window test failure at a 1024-pixel viewport was reproduced as a 0.01215 CSS-pixel layout rounding difference; the geometry wait now permits one Chromium layout unit (1/64 CSS pixel). Seven focused text checks and the following brush stroke passed at that viewport. This tolerance applies to CSS geometry readiness, not document pixel comparisons.
 
-Pan tests preserve pending text, ordinary shapes, curves, polygons and selections through Escape, pointer cancellation, capture loss, blur and normal release. Continued editing remains one undoable operation. Fill, Text and Polygon now share the existing hidden-layer admission policy. These source-derived correctness fixes do not establish unobserved Microsoft Paint behavior. Further reference comparison is blocked by the disposable native Paint window remaining unresponsive; the user's separate document has been preserved.
+Pan tests preserve pending text, ordinary shapes, curves, polygons and selections through Escape, pointer cancellation, capture loss, blur and normal release. Continued editing remains one undoable operation. Fill, Text and Polygon now share the existing hidden-layer admission policy. These source-derived correctness fixes do not establish unobserved Microsoft Paint behavior. The disposable native Paint window was later observed minimized. Further foreground comparison is deferred under the owner's background-only instruction; the user's separate document has been preserved.
 
 ### Version 0.2.7 TIFF, text and keyboard controls
 

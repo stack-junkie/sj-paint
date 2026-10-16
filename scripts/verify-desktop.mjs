@@ -67,10 +67,10 @@ async function readProject() {
   return main('JSON.parse(__sjPaintVerification.fs.readFileSync(__sjPaintVerification.file, "utf8"))');
 }
 
-async function waitForFile() {
+async function waitForFile({ differentFrom } = {}) {
   for (let attempt = 0; attempt < 100; attempt += 1) {
     const size = await main('(() => { const q = __sjPaintVerification; return q.fs.existsSync(q.file) ? q.fs.statSync(q.file).size : 0; })()');
-    if (size > 50) return size;
+    if (size > 50 && (differentFrom === undefined || await main('__sjPaintVerification.fs.readFileSync(__sjPaintVerification.file).toString("base64")') !== Buffer.from(differentFrom).toString('base64'))) return size;
     await new Promise(resolve => setTimeout(resolve, 100));
   }
   throw new Error('Native save did not produce a complete fixture within 10 seconds.');
@@ -148,9 +148,10 @@ try {
     const os = process.mainModule.require('node:os');
     const directory = fs.mkdtempSync(path.join(os.tmpdir(), 'sj-paint-verification-'));
     const original = { save: electron.dialog.showSaveDialog, open: electron.dialog.showOpenDialog, confirm: electron.dialog.showMessageBox };
-    const q = { fs, path, directory, electron, original, file: path.join(directory, 'verification.sjpaint') };
+    const q = { fs, path, directory, electron, original, saveDialogs: 0, file: path.join(directory, 'verification.sjpaint') };
     globalThis.__sjPaintVerification = q;
     electron.dialog.showSaveDialog = async (_window, options) => {
+      q.saveDialogs++;
       q.lastSaveOptions = options;
       return { canceled: false, filePath: q.file };
     };

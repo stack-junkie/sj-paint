@@ -2,6 +2,13 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.9] - Unreleased
+
+- Save desktop documents back to their opened or last saved file without reopening the chooser, including files named Untitled.
+- Adopt the actual filename chosen in Save As, retain the previous destination after cancellation, and prevent new documents from inheriting old save destinations.
+- Honor Ctrl+S and Ctrl+Shift+S while typing text or editing a numeric control, while preserving local text-editing shortcuts.
+- Keep destination paths in the native process behind bounded, format-specific handles; format changes and mismatched file signatures require a new destination.
+
 ## [0.2.8] - 2026-10-15
 
 - Preserve pending text, shapes, curves, polygons and selections when panning ends or is canceled, including interrupted pointer capture and window blur.

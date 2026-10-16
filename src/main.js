@@ -265,7 +265,13 @@ async function dialog(title,body,submit='OK'){
 function settleForOutput(){commitText();finishPending();doc.commitSelection();}
 async function canDiscard(){settleForOutput();if(!doc.dirty)return true;if(window.paintDesktop?.confirmDiscard)return window.paintDesktop.confirmDiscard();return !!await dialog('Unsaved changes','<p>Discard the changes to this image?</p>','Discard');}
 async function loadImage(result){if(!result)return;await doc.load({format:PROJECT.format,version:PROJECT.schemaVersion,width:result.canvas.width,height:result.canvas.height,background:null,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;const format=result.format||result.name.split('.').at(-1).toLowerCase();state.format=['tif','tiff'].includes(format)?'tiff':['jpg','jpeg'].includes(format)?'jpeg':['png','webp','bmp','gif'].includes(format)?format:'png';fit();}
-let fileOperation = false;
+let fileOperation = false, documentFile = null;
+function rememberDocumentFile(target, format) {
+  documentFile = target ? { target, format, generation: doc.captureEditTarget().generation } : null;
+}
+function currentFileTarget(format) {
+  return documentFile?.generation === doc.captureEditTarget().generation && documentFile.format === format ? documentFile.target : undefined;
+}
 async function withFileOperation(operation) {
   if (fileOperation) { toast('Finish the current file operation first.'); return; }
   fileOperation = true;
@@ -276,23 +282,29 @@ async function openDocument(picker) {
   const target = doc.captureEditTarget(), result = await picker();
   if (!result) return;
   if (!doc.matchesEditTarget(target)) { toast('Open canceled because the drawing changed.'); return; }
-  if (!result.data) return loadImage(result);
-  if (result.format === 'paint') doc.loadRaster(result.data);
-  else await doc.load(result.data);
-  state.name = result.name.replace(/\.[^.]+$/, '');
-  state.project = true; state.format = result.format;
-  fit();
+  if (!result.data) await loadImage(result);
+  else {
+    if (result.format === 'paint') doc.loadRaster(result.data);
+    else await doc.load(result.data);
+    state.name = result.name.replace(/\.[^.]+$/, '');
+    state.project = true; state.format = result.format;
+    fit();
+  }
+  rememberDocumentFile(result.targetFormat === state.format ? result.target : undefined, state.format);
 }
-async function saveDocument(format, name) {
+async function saveDocument(format, name, { saveAs = false } = {}) {
   settleForOutput();
   const target = doc.captureEditTarget(), revision = doc.revision;
   const project = format === 'paint' || format === PROJECT.extension;
   const canMarkSaved = project || (doc.layers.length === 1 && doc.activeLayer.visible && doc.activeLayer.opacity === 1 && !state.project);
-  const ok = format === 'paint' ? await savePaintFile(doc, name) : format === PROJECT.extension ?
-    await saveProjectFile(doc.serialize(), name) : await saveImageFile(doc.composite(), format, name);
-  if (!ok || doc.captureEditTarget().generation !== target.generation) return;
-  state.name = name; state.format = format;
+  const destination = saveAs ? undefined : currentFileTarget(format);
+  const options = { target: destination };
+  const receipt = format === 'paint' ? await savePaintFile(doc, name, options) : format === PROJECT.extension ?
+    await saveProjectFile(doc.serialize(), name, options) : await saveImageFile(doc.composite(), format, name, options);
+  if (!receipt || doc.captureEditTarget().generation !== target.generation) return;
+  state.name = receipt.name ? receipt.name.replace(/\.[^.]+$/, '') : name; state.format = format;
   state.project = project;
+  rememberDocumentFile(receipt.target, format);
   if (canMarkSaved) doc.markSaved(revision);
   else toast('Image exported. Save a project to preserve editable layers.');
   changed();
@@ -300,7 +312,7 @@ async function saveDocument(format, name) {
 async function saveAs() {
   settleForOutput();
   const values = await dialog('Save image', `<label>File name<input name="name" value="${esc(state.name)}" required></label><label>File type<select name="format"><option value="png">PNG image (.png)</option><option value="jpeg">JPEG image (.jpg)</option><option value="bmp">Bitmap image (.bmp)</option><option value="webp">WebP image (.webp)</option><option value="gif">GIF image (.gif)</option><option value="tiff">TIFF image (.tiff)</option><option value="paint">Paint project (.paint)</option></select></label><p class="hint">Paint projects preserve visible layers at full opacity. Use Save as project (.sjpaint) to preserve hidden layers or layer opacity.</p>`, 'Save');
-  if (values) await saveDocument(values.format, values.name);
+  if (values) await saveDocument(values.format, values.name, { saveAs: true });
 }
 async function colorDialog(which='primary'){
   const values=await dialog('Edit colors',`<div class="color-editor"><input type="color" name="color" value="${state[which]}" aria-label="Color spectrum"><label>Hex<input id="hex" value="${state[which]}" pattern="#[0-9a-fA-F]{6}" maxlength="7"></label></div><p class="hint">Choose a color, or enter its hexadecimal value.</p>`);
@@ -317,8 +329,8 @@ const actions={
   new:async()=>{if(await canDiscard()){doc.newDocument(1152,648);state.name='Untitled';state.project=false;state.format='png';fit();}},
   open:()=>withFileOperation(()=>openDocument(()=>openImageFile({allowProjects:true}))),
   'open-project':()=>withFileOperation(()=>openDocument(openProjectFile)),
-  save:()=>withFileOperation(()=>state.project ? saveDocument(state.format==='paint'?'paint':PROJECT.extension,state.name) : state.name==='Untitled' ? saveAs() : saveDocument(state.format,state.name)),
-  'save-as':()=>withFileOperation(saveAs),'save-project':()=>withFileOperation(()=>saveDocument(PROJECT.extension,state.name)),
+  save:()=>withFileOperation(()=>state.project ? saveDocument(state.format==='paint'?'paint':PROJECT.extension,state.name) : state.name==='Untitled'&&!currentFileTarget(state.format) ? saveAs() : saveDocument(state.format,state.name)),
+  'save-as':()=>withFileOperation(saveAs),'save-project':()=>withFileOperation(()=>saveDocument(PROJECT.extension,state.name,{saveAs:true})),
   print:()=>{settleForOutput();return printCanvas(doc.composite());},
   undo:()=>{if(canvasResize.cancel()||cancelPointerInteraction())return;commitText();doc.undo();},redo:()=>{if(textEditor||canvasResize.cancel()||cancelPointerInteraction())return;doc.redo();},
   copy:async()=>{commitText();await copyCanvas(doc.selectionCanvas()||doc.composite({onlyActive:true}));toast('Copied image.');},
@@ -388,7 +400,10 @@ document.addEventListener('keydown',safe(async e=>{
   }
   const edit=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
   if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}if(drag?.kind==='pan'){cancelPointerInteraction();e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){textEditor.el.remove();textEditor=null;doc.cancel();}doc.deselect();changed();return;}
-  if(edit)return;const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;let action;
+  const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;
+  // Save belongs to the document even while a text or numeric field has focus.
+  // Editing keys such as Undo, Select All and clipboard shortcuts stay local.
+  if(edit&&!(mod&&key==='s'))return;let action;
   if(mod){action=({n:'new',o:'open',s:e.shiftKey?'save-as':'save',z:e.shiftKey?'redo':'undo',y:'redo',c:e.shiftKey?'copy-all':'copy',x:'cut',v:'paste',a:'select-all',p:'print',e:'properties',w:'resize','+':'zoom-in','=':'zoom-in','-':'zoom-out',b:e.shiftKey?'background':undefined,h:e.shiftKey?'toggle-background':undefined,i:e.shiftKey?'invert-selection':'invert-colors',f1:'collapse'})[key];}
   else if(key==='f11')action='fullscreen';else if(key==='delete')action='delete';else if(key==='enter'){if(e.target.closest('button,a[href]'))return;commitText();if(!pendingShape)finishPending();e.preventDefault();return;}
   else if(doc.selection&&['arrowup','arrowdown','arrowleft','arrowright'].includes(key)){e.preventDefault();const step=e.shiftKey?10:1;doc.translateSelection(key==='arrowright'?step:key==='arrowleft'?-step:0,key==='arrowdown'?step:key==='arrowup'?-step:0);return;}

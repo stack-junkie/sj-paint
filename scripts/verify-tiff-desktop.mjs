@@ -29,11 +29,12 @@ export async function verifyTiffDesktop(page, check, { main, waitForFile }) {
     check('desktop native Open imports TIFF pixels and transparency', JSON.stringify(await pixels()) === JSON.stringify(canonical));
     const options = await main('__sjPaintVerification.lastOpenOptions');
     check('desktop native chooser includes .tif and .tiff', options.filters.some(f => f.extensions.includes('tif') && f.extensions.includes('tiff')));
-    await fixture('desktop-tiff-save.tiff'); await page.locator('#overlay').focus(); await page.keyboard.press('Control+s');
-    await waitForFile();
+    const beforeSave = await bytes(), saveDialogs = await main('__sjPaintVerification.saveDialogs');
+    await page.locator('#overlay').focus(); await page.keyboard.press('Control+s');
+    await waitForFile({ differentFrom: beforeSave });
     const exported = await bytes(), decoded = await readTiff(exported);
     check('desktop Ctrl+S retains TIFF after a .tif import', JSON.stringify([...decoded.rgba]) === JSON.stringify(canonical) &&
-      (await main('__sjPaintVerification.lastSaveOptions.defaultPath')).endsWith('.tiff'));
+      await main('__sjPaintVerification.saveDialogs') === saveDialogs);
     await open('desktop-tiff-reopen.tiff', exported);
     check('desktop native TIFF export reopens with unchanged alpha and RGB', JSON.stringify(await pixels()) === JSON.stringify(canonical));
     for (const [name, data] of [['desktop-tiff-truncated.tif', expected.bytes.subarray(0, 30)], ['desktop-tiff-invalid.tiff', Buffer.from('not TIFF')]]) {

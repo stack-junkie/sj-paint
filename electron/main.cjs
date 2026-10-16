@@ -3,6 +3,7 @@ const fs = require('node:fs/promises');
 const path = require('node:path');
 const { pathToFileURL } = require('node:url');
 const { writeFileAtomically } = require('./atomic-write.cjs');
+const { FileTargets } = require('./file-targets.cjs');
 const PROJECT = require('../src/project-format.json');
 
 app.setName(PROJECT.productName);
@@ -13,6 +14,7 @@ const entryUrl = pathToFileURL(entry).href;
 const hidden = process.argv.includes('--hidden');
 let mainWindow;
 let dialogBusy = false;
+const fileTargets = new FileTargets();
 
 function authorized(event) {
   if (!mainWindow || event.sender !== mainWindow.webContents ||
@@ -63,8 +65,31 @@ async function readBounded(filePath) {
   } finally { await file.close(); }
 }
 
+async function openedFile(filePath, owner) {
+  const bytes = new Uint8Array(await readBounded(filePath));
+  if (!owner || mainWindow !== owner || owner.isDestroyed()) return null;
+  const name = path.basename(filePath), format = fileTargets.formatForName(name);
+  return { bytes, name, ...(format ? { target: fileTargets.grant(filePath, format), targetFormat: format } : {}) };
+}
+
+async function saveFile(request, format, options, bytes) {
+  const owner = mainWindow;
+  let destination;
+  if (request.target !== undefined) destination = fileTargets.resolve(request.target, format);
+  else {
+    const result = await dialog.showSaveDialog(mainWindow, options);
+    if (result.canceled || !result.filePath) return false;
+    destination = result.filePath;
+  }
+  if (!owner || mainWindow !== owner || owner.isDestroyed()) return false;
+  await writeFileAtomically(destination, bytes);
+  if (mainWindow !== owner || owner.isDestroyed()) return false;
+  return { name: path.basename(destination), target: request.target ?? fileTargets.grant(destination, format) };
+}
+
 function registerHandlers() {
   handle('open-image', (request) => withDialog(async () => {
+    const owner = mainWindow;
     if (request !== undefined && (!request || typeof request.allowProjects !== 'boolean')) throw new Error('Invalid open request.');
     const extensions = ['png', 'jpg', 'jpeg', 'webp', 'bmp', 'gif', 'tif', 'tiff'];
     if (request?.allowProjects) extensions.push('paint', ...PROJECT.readableExtensions);
@@ -73,7 +98,7 @@ function registerHandlers() {
       filters: [{ name: request?.allowProjects ? 'Images and layered projects' : 'Images', extensions }],
     });
     if (result.canceled || !result.filePaths[0]) return null;
-    return { bytes: new Uint8Array(await readBounded(result.filePaths[0])), name: path.basename(result.filePaths[0]) };
+    return openedFile(result.filePaths[0], owner);
   }));
   handle('save-image', (request) => withDialog(async () => {
     if (!request || !['png', 'jpeg', 'webp', 'bmp', 'gif', 'tiff'].includes(request.format) ||
@@ -82,21 +107,19 @@ function registerHandlers() {
       throw new Error('Invalid image data or unsupported format. Maximum encoded size is 64 MiB.');
     }
     const extension = request.format === 'jpeg' ? 'jpg' : request.format;
-    const result = await dialog.showSaveDialog(mainWindow, {
+    return saveFile(request, request.format, {
       title: 'Save image', defaultPath: suggestedName(request.suggestedName, extension),
       filters: [{ name: extension.toUpperCase(), extensions: [extension] }],
-    });
-    if (result.canceled || !result.filePath) return false;
-    await writeFileAtomically(result.filePath, Buffer.from(request.bytes));
-    return true;
+    }, Buffer.from(request.bytes));
   }));
   handle('open-project', () => withDialog(async () => {
+    const owner = mainWindow;
     const result = await dialog.showOpenDialog(mainWindow, {
       title: 'Open layered project', properties: ['openFile'],
       filters: [{ name: 'Layered projects', extensions: ['paint', ...PROJECT.readableExtensions] }],
     });
     if (result.canceled || !result.filePaths[0]) return null;
-    return { bytes: new Uint8Array(await readBounded(result.filePaths[0])), name: path.basename(result.filePaths[0]) };
+    return openedFile(result.filePaths[0], owner);
   }));
   handle('save-project', (request) => withDialog(async () => {
     if (!request || typeof request.text !== 'string' || Buffer.byteLength(request.text) > MAX_BYTES) {
@@ -106,13 +129,10 @@ function registerHandlers() {
     if (!PROJECT.readableFormats.includes(data?.format) || data.version !== PROJECT.schemaVersion || !Array.isArray(data.layers)) {
       throw new Error('Unsupported project format.');
     }
-    const result = await dialog.showSaveDialog(mainWindow, {
+    return saveFile(request, PROJECT.extension, {
       title: 'Save layered project', defaultPath: suggestedName(request.suggestedName, PROJECT.extension),
       filters: [{ name: `${PROJECT.productName} project`, extensions: [PROJECT.extension] }],
-    });
-    if (result.canceled || !result.filePath) return false;
-    await writeFileAtomically(result.filePath, JSON.stringify({ ...data, format: PROJECT.format, version: PROJECT.schemaVersion }));
-    return true;
+    }, JSON.stringify({ ...data, format: PROJECT.format, version: PROJECT.schemaVersion }));
   }));
   handle('set-title', (title) => {
     if (typeof title !== 'string' || title.length > 500 || /[\u0000-\u001f]/.test(title)) throw new Error('Invalid title.');
@@ -122,13 +142,10 @@ function registerHandlers() {
     if (!request || !(request.bytes instanceof Uint8Array) || !request.bytes.length || request.bytes.length > MAX_BYTES) {
       throw new Error('Invalid .paint bytes. Maximum project size is 64 MiB.');
     }
-    const result = await dialog.showSaveDialog(mainWindow, {
+    return saveFile(request, 'paint', {
       title: 'Save Paint project', defaultPath: suggestedName(request.suggestedName, 'paint'),
       filters: [{ name: 'Paint project', extensions: ['paint'] }],
-    });
-    if (result.canceled || !result.filePath) return false;
-    await writeFileAtomically(result.filePath, Buffer.from(request.bytes));
-    return true;
+    }, Buffer.from(request.bytes));
   }));
   handle('print', () => withDialog(() => new Promise((resolve, reject) => {
     mainWindow.webContents.print({ silent: false, printBackground: true }, (success, reason) => {
@@ -148,6 +165,7 @@ function registerHandlers() {
 }
 
 function createWindow() {
+  fileTargets.clear();
   mainWindow = new BrowserWindow({
     width: 1440, height: 940, minWidth: 800, minHeight: 600, title: PROJECT.productName, show: !hidden,
     backgroundColor: '#f3f3f3', autoHideMenuBar: true,
@@ -164,7 +182,7 @@ function createWindow() {
     });
     if (choice === 1) event.preventDefault();
   });
-  mainWindow.on('closed', () => { mainWindow = null; });
+  mainWindow.on('closed', () => { fileTargets.clear(); mainWindow = null; });
   mainWindow.loadFile(entry);
 }
 

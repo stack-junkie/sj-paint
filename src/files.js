@@ -61,7 +61,7 @@ function download(blob, name) {
   link.click();
   link.remove();
   setTimeout(() => URL.revokeObjectURL(url), 30000);
-  return true;
+  return { name };
 }
 
 async function decode(blob, name) {
@@ -103,7 +103,8 @@ export async function openImageFile({ allowProjects = false } = {}) {
     const result = await window.paintDesktop.openImage({ allowProjects });
     if (!result) return null;
     const file = new File([result.bytes], result.name);
-    return allowProjects && isProjectFile(file.name) ? readProjectFile(file) : readImageFile(file);
+    const decoded = await (allowProjects && isProjectFile(file.name) ? readProjectFile(file) : readImageFile(file));
+    return { ...decoded, ...(result.target ? { target: result.target, targetFormat: result.targetFormat } : {}) };
   }
   const projects = allowProjects ? `,.paint,${PROJECT.readableExtensions.map(extension => `.${extension}`).join(',')}` : '';
   const file = await chooseFile(`image/png,image/jpeg,image/webp,image/bmp,image/gif,image/tiff,.bmp,.tif,.tiff${projects}`);
@@ -288,7 +289,7 @@ export function exportTiff(canvas) {
   return new Blob([header, rgba], { type: MIME.tiff });
 }
 
-export async function saveImageFile(canvas, format = 'png', name = 'Untitled') {
+export async function saveImageFile(canvas, format = 'png', name = 'Untitled', { target } = {}) {
   dimensions(canvas.width, canvas.height);
   if (format === 'jpg') format = 'jpeg';
   if (format === 'tif') format = 'tiff';
@@ -298,7 +299,7 @@ export async function saveImageFile(canvas, format = 'png', name = 'Untitled') {
     await canvasBlob(format === 'jpeg' ? flattenedCanvas(canvas) : canvas, MIME[format]);
   const suggestedName = filename(name, format === 'jpeg' ? 'jpg' : format);
   if (window.paintDesktop) {
-    return window.paintDesktop.saveImage({ bytes: Array.from(new Uint8Array(await blob.arrayBuffer())), suggestedName, format });
+    return window.paintDesktop.saveImage({ bytes: Array.from(new Uint8Array(await blob.arrayBuffer())), suggestedName, format, ...(target !== undefined ? { target } : {}) });
   }
   return download(blob, suggestedName);
 }
@@ -339,7 +340,8 @@ export async function openProjectFile() {
   if (window.paintDesktop) {
     const result = await window.paintDesktop.openProject();
     if (!result) return null;
-    return readProjectFile(new File([result.bytes], result.name));
+    const decoded = await readProjectFile(new File([result.bytes], result.name));
+    return { ...decoded, ...(result.target ? { target: result.target, targetFormat: result.targetFormat } : {}) };
   }
   const file = await chooseFile(`.paint,${PROJECT.readableExtensions.map(extension => `.${extension}`).join(',')},application/json`);
   return file ? readProjectFile(file) : null;
@@ -364,7 +366,7 @@ export async function readProjectFile(file) {
   return parseProject(await file.text(), file.name);
 }
 
-export async function savePaintFile(doc, name = 'Untitled') {
+export async function savePaintFile(doc, name = 'Untitled', { target } = {}) {
   // Capture before awaiting compression or a dialog so the saved revision and
   // pixels describe the same drawing even if the user continues editing.
   let background = [0, 0, 0, 0];
@@ -384,17 +386,17 @@ export async function savePaintFile(doc, name = 'Untitled') {
       rgba: new Uint8Array(layer.canvas.getContext('2d').getImageData(0, 0, doc.width, doc.height).data.buffer) })) };
   const bytes = await writePaint(data);
   const suggestedName = filename(name, 'paint');
-  return window.paintDesktop ? window.paintDesktop.savePaint({ bytes, suggestedName }) :
+  return window.paintDesktop ? window.paintDesktop.savePaint({ bytes, suggestedName, ...(target !== undefined ? { target } : {}) }) :
     download(new Blob([bytes], { type: 'application/octet-stream' }), suggestedName);
 }
 
-export async function saveProjectFile(data, name = 'Untitled') {
+export async function saveProjectFile(data, name = 'Untitled', { target } = {}) {
   validateProject(data);
   const text = JSON.stringify({ ...data, format: PROJECT.format, version: PROJECT.schemaVersion });
   const blob = new Blob([text], { type: 'application/json' });
   if (blob.size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
   const suggestedName = filename(name, PROJECT.extension);
-  return window.paintDesktop ? window.paintDesktop.saveProject({ text, suggestedName }) : download(blob, suggestedName);
+  return window.paintDesktop ? window.paintDesktop.saveProject({ text, suggestedName, ...(target !== undefined ? { target } : {}) }) : download(blob, suggestedName);
 }
 
 export async function copyCanvas(canvas) {

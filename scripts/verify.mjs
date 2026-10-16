@@ -20,6 +20,7 @@ import { verifyHeldLayerPreview } from './verify-held-layer-preview.mjs';
 import { verifyEraser } from './verify-eraser.mjs';
 import { verifyEraserInteractions } from './verify-eraser-interactions.mjs';
 import { verifyRasterImport } from './verify-raster-import.mjs';
+import { verifySaveTargets } from './verify-save-targets.mjs';
 import { createServer } from 'vite';
 import fs from 'node:fs/promises';
 import path from 'node:path';
@@ -46,6 +47,7 @@ try{
  await verifySelectionInteractions(page,check);
  await verifyClipboardOwnership(page,check);
  await verifyPaintProject(page,check);
+ await verifySaveTargets(page,check);
  await verifyTiffImport(page,check);
  await verifyKeyboardControls(page,check);
  await verifyTextLayout(page,check);

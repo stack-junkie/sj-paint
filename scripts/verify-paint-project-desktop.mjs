@@ -47,7 +47,7 @@ export async function verifyPaintProjectDesktop(page, check, { main, waitForFile
     const options = await main('__sjPaintVerification.lastOpenOptions');
     check('desktop Open chooser advertises .paint projects', options.filters.some(filter => filter.extensions.includes('paint')));
 
-    await fixture('desktop-native-export.paint'); await openSaveAs('desktop-native-export');
+    await fixture('desktop-native-export.paint'); await openSaveAs('suggested-but-renamed');
     await page.locator('#dialog button[type="submit"]').click(); await waitForFile(); await waitLoaded('desktop-native-export');
     const comparison = comparePaintProject(await readPaint(await fileBytes()), expected);
     check('desktop native save preserves layer names, order, background and pixels (partial RGB tolerance 1)', comparison.ok, comparison);
@@ -55,14 +55,16 @@ export async function verifyPaintProjectDesktop(page, check, { main, waitForFile
     check('desktop .paint save uses the native extension and leaves the layered document clean',
       saveOptions.defaultPath.endsWith('.paint') && saveOptions.filters.some(filter => filter.extensions.includes('paint')) &&
       !await page.title().then(title => title.includes('•')));
+    check('desktop Save As adopts the actual chooser filename', (await page.title()).startsWith('desktop-native-export - '));
 
     await page.locator('[data-tool="pencil"]').click();
     const bounds = await page.locator('#overlay').boundingBox(); await page.mouse.click(bounds.x + 5, bounds.y + 5);
     await page.waitForFunction(() => document.title.includes('•'), null, { polling: 100 });
-    await fixture('desktop-native-save-again.paint'); await page.keyboard.press('Control+s'); await waitForFile();
+    const beforeSave = await fileBytes(), dialogsBeforeSave = await main('__sjPaintVerification.saveDialogs');
+    await page.keyboard.press('Control+s'); await waitForFile({ differentFrom: beforeSave });
     await page.waitForFunction(() => !document.title.includes('•'), null, { polling: 100 });
     check('desktop Ctrl+S keeps the imported native project format after drawing', (await readPaint(await fileBytes())).layers.length === 2 &&
-      (await main('__sjPaintVerification.lastSaveOptions.defaultPath')).endsWith('.paint'));
+      await main('__sjPaintVerification.saveDialogs') === dialogsBeforeSave);
 
     await fixture('desktop-native-project.paint', encoded); await command('open-project'); await waitLoaded('desktop-native-project');
     check('desktop Open project imports identical native pixels and editable layers', await pixels() === imported &&
@@ -85,13 +87,16 @@ export async function verifyPaintProjectDesktop(page, check, { main, waitForFile
     check('desktop Save as PNG after .paint retains layers and unsaved-change protection',
       pngBytes.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) &&
       await pixels() === beforePng && await page.locator('#layer-list .layer').count() === 2 && (await page.title()).includes('•'));
-    await fixture('desktop-native-to-png-again.png'); await page.locator('#overlay').focus();
-    await page.keyboard.press('Control+s'); await waitForFile();
+    const pngSaveDialogs = await main('__sjPaintVerification.saveDialogs');
+    await page.mouse.click(pngBounds.x + 15, pngBounds.y + 15);
+    await page.waitForFunction(previous => document.querySelector('#canvas').toDataURL() !== previous, beforePng, { polling: 100 });
+    const updatedPng = await pixels(); await page.locator('#overlay').focus();
+    await page.keyboard.press('Control+s'); await waitForFile({ differentFrom: pngBytes });
     const pngAgain = await fileBytes();
     check('desktop Ctrl+S after .paint to PNG export keeps PNG and the editable working layers',
       pngAgain.subarray(0, 8).equals(Buffer.from([137, 80, 78, 71, 13, 10, 26, 10])) &&
-      (await main('__sjPaintVerification.lastSaveOptions.defaultPath')).endsWith('.png') &&
-      await pixels() === beforePng && await page.locator('#layer-list .layer').count() === 2 && (await page.title()).includes('•'));
+      await main('__sjPaintVerification.saveDialogs') === pngSaveDialogs &&
+      await pixels() === updatedPng && await page.locator('#layer-list .layer').count() === 2 && (await page.title()).includes('•'));
 
     await page.locator('#layer-list [data-visible]').first().click();
     // Raster export already left this layered document dirty. Wait for this
