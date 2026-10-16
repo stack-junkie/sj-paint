@@ -17,7 +17,9 @@ for (const port of [9229, 9231]) {
 }
 const profile = await mkdtemp(resolve(tmpdir(), 'sj-paint-test-'));
 const executable = resolve(root, 'release/win-unpacked/Stack Junkie Paint.exe');
-const child = spawn(executable, ['--hidden', `--user-data-dir=${profile}`, '--inspect=127.0.0.1:9231', '--remote-debugging-port=9229'], {
+// Hidden Windows compositors otherwise pace rAF at 1 Hz even with Electron's
+// backgroundThrottling disabled. This changes test pacing, not the raster backend.
+const child = spawn(executable, ['--hidden', '--disable-frame-rate-limit', `--user-data-dir=${profile}`, '--inspect=127.0.0.1:9231', '--remote-debugging-port=9229'], {
   cwd: root, windowsHide: true, stdio: ['ignore', 'pipe', 'pipe'],
 });
 const childExit = new Promise(resolve => child.once('exit', resolve));
