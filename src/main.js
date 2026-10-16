@@ -41,6 +41,10 @@ $('#app').innerHTML=`
   <footer class="statusbar"><span id="coordinates">${icon('pencil',14)}<span>Ready</span></span><span id="selection-size"></span><span id="dimensions"></span><span id="document-state"></span><span class="grow"></span>${btn('fit','Fit to window','fit')}<select id="zoom-presets" aria-label="Zoom"><option value=".125">12.5%</option><option value=".25">25%</option><option value=".5">50%</option><option value=".75">75%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="4">400%</option><option value="8">800%</option></select>${btn('zoom-out','Zoom out','minus')}<input id="zoom-slider" type="range" min="-3" max="3" step=".05" value="0" aria-label="Zoom slider">${btn('zoom-in','Zoom in','plus')}</footer>
   <div id="menu" class="menu" hidden></div><div id="toast" role="status" hidden></div><dialog id="dialog"></dialog>`;
 const canvas=$('#canvas'),overlay=$('#overlay'),viewport=$('#viewport'),stage=$('#stage'),ctx=canvas.getContext('2d'),oc=overlay.getContext('2d');
+const customColorSlots=Array.from({length:10},(_,i)=>{
+  const button=document.createElement('button');button.type='button';button.setAttribute('aria-label',`Custom color ${i+1}`);
+  $('#custom-colors').append(button);return button;
+});
 const selectionRotation=document.createElement('button');
 selectionRotation.id='selection-rotation';selectionRotation.type='button';selectionRotation.title='Rotate selection';selectionRotation.setAttribute('aria-label','Rotate selection');selectionRotation.innerHTML=icon('rotate',12);selectionRotation.hidden=true;stage.append(selectionRotation);
 const eraserCursor=document.createElement('div');
@@ -117,7 +121,12 @@ function updateToolState(){
   document.querySelectorAll('[data-tool]').forEach(el=>{const active=el.dataset.tool===state.tool;el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active));});
   $('.brush-selector').classList.toggle('active',BRUSHES.some(b=>b.id===state.tool));
   $('#primary').style.background=state.primary;$('#secondary').style.background=state.secondary;
-  $('#custom-colors').innerHTML=Array.from({length:10},(_,i)=>`<button style="--swatch:${customColors[i]||'transparent'}" ${customColors[i]?`data-color="${customColors[i]}"`:'data-action="colors"'} aria-label="Custom color ${i+1}" title="${customColors[i]||'Add custom color'}"></button>`).join('');
+  for(const [i,button] of customColorSlots.entries()){
+    const color=customColors[i];button.style.setProperty('--swatch',color||'transparent');button.title=color||'Add custom color';
+    if(color){button.dataset.color=color;delete button.dataset.action;}
+    else{button.dataset.action='colors';delete button.dataset.color;}
+  }
+  for(const action of ['bold','italic','underline','strikethrough']){const button=$(`[data-action="${action}"]`);button.classList.toggle('active',state[action]);button.setAttribute('aria-pressed',String(state[action]));}
   $('#tool-label').textContent=BRUSHES.find(b=>b.id===state.tool)?.label||label(state.tool);
   $('#opacity-control').hidden=['select','lasso','picker','zoom','text','eraser'].includes(state.tool);
   $('#tolerance-control').hidden=state.tool!=='fill';$('#text-controls').hidden=state.tool!=='text';
@@ -150,8 +159,12 @@ const beginPointer=safe(e=>{
   const p=point(e),secondary=e.button===2,pan=e.button===1||e.altKey;
   const pendingHit=pendingShape&&!pan?hitPendingShape(pendingShape,p,state.zoom):null;
   if(pendingShape&&!pan&&!pendingHit)finishPending();
-  activePointerId=e.pointerId;closeMenu();overlay.focus({preventScroll:true});overlay.setPointerCapture(e.pointerId);
-  if(pan){drag={kind:'pan',start:[e.clientX,e.clientY],scroll:[viewport.scrollLeft,viewport.scrollTop],suspendedDrag:drag};return;}
+  activePointerId=e.pointerId;closeMenu();overlay.setPointerCapture(e.pointerId);
+  // Panning changes the viewport, not the editing focus. Suppress the pointer's
+  // default focus/autoscroll so text selections and deliberate toolbar focus
+  // survive every ending, including blur, without a later refocus side effect.
+  if(pan){e.preventDefault();drag={kind:'pan',start:[e.clientX,e.clientY],scroll:[viewport.scrollLeft,viewport.scrollTop],suspendedDrag:drag};return;}
+  overlay.focus({preventScroll:true});
   if(pendingHit){drag={kind:'pending-shape',original:pendingShape,hit:pendingHit,start:p};return;}
   if(textEditor){commitText();return;}
   if(!doc.activeLayer.visible&&!['select','lasso','zoom','picker'].includes(state.tool)){toast('Show the active layer before drawing.');return;}
@@ -424,7 +437,7 @@ const actions={
   fullscreen:async()=>{if(document.fullscreenElement)await document.exitFullscreen();else await document.documentElement.requestFullscreen();},
   fit,'zoom-in':()=>setZoom(state.zoom*1.25),'zoom-out':()=>setZoom(state.zoom/1.25),'zoom-100':()=>setZoom(1),grid:()=>{state.grid=!state.grid;changed();},rulers:()=>{state.rulers=!state.rulers;changed();},
   collapse:()=>{document.body.classList.toggle('collapsed');$('.collapse-tools').textContent=document.body.classList.contains('collapsed')?'⌄':'⌃';},
-  bold:()=>{state.bold=!state.bold;styleText();$('[data-action="bold"]').classList.toggle('active',state.bold);},italic:()=>{state.italic=!state.italic;styleText();$('[data-action="italic"]').classList.toggle('active',state.italic);},underline:()=>{state.underline=!state.underline;styleText();$('[data-action="underline"]').classList.toggle('active',state.underline);},strikethrough:()=>{state.strikethrough=!state.strikethrough;styleText();$('[data-action="strikethrough"]').classList.toggle('active',state.strikethrough);},'commit-text':commitText,
+  bold:()=>{state.bold=!state.bold;styleText();updateToolState();},italic:()=>{state.italic=!state.italic;styleText();updateToolState();},underline:()=>{state.underline=!state.underline;styleText();updateToolState();},strikethrough:()=>{state.strikethrough=!state.strikethrough;styleText();updateToolState();},'commit-text':commitText,
   properties:async()=>{const v=await dialog('Image properties',`<p>${esc(state.name)}<br>${doc.layers.length} layer${doc.layers.length===1?'':'s'}</p><div class="two-columns"><label>Width (pixels)<input name="width" type="number" min="1" max="16384" value="${doc.width}" required></label><label>Height (pixels)<input name="height" type="number" min="1" max="16384" value="${doc.height}" required></label></div><p class="hint">Changes canvas dimensions without scaling the image.</p>`);if(v){doc.resize(+v.width,+v.height,{scale:false,target:'document'});fit();}},
   settings:async()=>{const v=await dialog('Settings',`<label>App theme<select name="theme"><option value="dark" ${state.theme==='dark'?'selected':''}>Dark</option><option value="light" ${state.theme==='light'?'selected':''}>Light</option></select></label><p>${PROJECT.productName} (${PROJECT.shortName})<br>Version ${VERSION}</p><p class="hint">An independent editor for Windows and Linux, built toward Microsoft Paint parity before adding its own features. Projects use .${PROJECT.extension}; older .linuxpaint projects remain readable. Paint .paint projects support full-canvas visible layers; unsupported variants are rejected. Cloud AI services are not connected.</p>`);if(v){state.theme=v.theme;document.documentElement.dataset.theme=v.theme;localStorage.setItem('paint-theme',v.theme);}},
 };

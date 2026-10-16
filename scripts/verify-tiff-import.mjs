@@ -3,6 +3,7 @@ import { createHash } from 'node:crypto';
 import { deflateSync } from 'node:zlib';
 import { exportTiff } from '../src/files.js';
 import { readTiff } from '../src/tiff.js';
+import { singleChannelTiffFixtures, malformedSingleChannelTiffFixtures } from './tiff-fixtures.mjs';
 
 export async function tiffImportFixture() {
   const width = 64, height = 48, rgba = new Uint8Array(width * height * 4);
@@ -107,6 +108,47 @@ export async function verifyTiffImport(page, check) {
     });
     check('Paste from file uses TIFF decoding and preserves selection alpha', JSON.stringify(pasted) === JSON.stringify(canonical));
     await page.keyboard.press('Escape'); await page.evaluate(() => paintApp.doc.markSaved());
+
+    const independent = await singleChannelTiffFixtures();
+    for (const sample of independent) {
+      const name = `independent-${sample.name}.tiff`;
+      await choose(name, sample.bytes); await waitLoaded(name);
+      check(`Open matches independent ${sample.name} dimensions and RGBA`,
+        JSON.stringify(await pixels()) === JSON.stringify([...sample.rgba]) && await page.locator('#canvas').evaluate((canvas, size) =>
+          canvas.width === size.width && canvas.height === size.height, { width: sample.width, height: sample.height }));
+    }
+    const gray = independent.find(sample => sample.name === 'gray-white-lzw');
+    const grayTransfer = await page.evaluateHandle(bytes => {
+      const transfer = new DataTransfer(); transfer.items.add(new File([Uint8Array.from(bytes)], 'gray-magic.bin', { type: 'application/octet-stream' })); return transfer;
+    }, [...gray.bytes]);
+    try { await page.dispatchEvent('#viewport', 'drop', { dataTransfer: grayTransfer }); }
+    finally { await grayTransfer.dispose(); }
+    await waitLoaded('gray-magic.bin');
+    check('Drop recognizes grayscale TIFF by magic and applies polarity and orientation', JSON.stringify(await pixels()) === JSON.stringify([...gray.rgba]));
+    const palette = independent.find(sample => sample.name === 'palette-raw');
+    const palettePaste = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Edit', exact: true }).click(); await page.locator('[data-command="paste-from"]').click();
+    await (await palettePaste).setFiles({ name: 'palette-paste.tiff', mimeType: 'image/tiff', buffer: palette.bytes });
+    await page.waitForFunction(() => Boolean(paintApp.doc.selection), null, { polling: 100 });
+    const pastedPalette = await page.evaluate(() => {
+      const c = paintApp.doc.selection.canvas; return [...c.getContext('2d').getImageData(0, 0, c.width, c.height).data];
+    });
+    check('Paste from file expands the complete palette into selection pixels', JSON.stringify(pastedPalette) === JSON.stringify([...palette.rgba]));
+    await page.keyboard.press('Escape'); await page.evaluate(() => paintApp.doc.markSaved());
+    const malformed = await malformedSingleChannelTiffFixtures();
+    for (const sample of malformed) {
+      const before = await snapshot();
+      const failed = page.waitForEvent('console', { predicate: e => e.type() === 'error' && /TIFF/.test(e.text()) });
+      await choose(sample.name, sample.bytes); await failed;
+      check(`${sample.name} preserves the current document, name and history`, await snapshot() === before);
+    }
+    const beforeFailedPaste = await snapshot(), failedPaste = page.waitForEvent('filechooser');
+    const pasteError = page.waitForEvent('console', { predicate: e => e.type() === 'error' && /TIFF/.test(e.text()) });
+    await page.getByRole('button', { name: 'Edit', exact: true }).click(); await page.locator('[data-command="paste-from"]').click();
+    await (await failedPaste).setFiles({ name: malformed[0].name, mimeType: 'image/tiff', buffer: malformed[0].bytes });
+    await pasteError;
+    check('Malformed palette Paste from file preserves the current document and history', await snapshot() === beforeFailedPaste);
+
     const native = await optionalNativeTiffs();
     for (const sample of native) {
       await choose(sample.name, sample.bytes); await waitLoaded(sample.name);

@@ -6,6 +6,7 @@ import { deflateSync, inflateSync } from 'node:zlib';
 import { readTiff, writeTiff, writeTiffAsync } from '../src/tiff.js';
 import { exportTiff, exportTiffAsync, saveImageFile } from '../src/files.js';
 import { readPaint } from '../src/paint-format.js';
+import { singleChannelTiffFixtures } from './tiff-fixtures.mjs';
 
 const pixels = Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 0, 0, 0, 255, 128, 1, 2, 3, 4, 5, 6, 7, 8, 255, 255, 255, 255]);
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
@@ -39,7 +40,7 @@ function literalPackBits(bytes) {
 }
 
 function fixture({ width = 3, height = 2, samples = 4, raw = pixels, little = true, compression = 1,
-  predictor = 1, orientation = 1, rowsPerStrip = height, alpha = 2, overrides = [], stripData } = {}) {
+  predictor = 1, orientation = 1, rowsPerStrip = height, alpha = 2, photometric = 2, overrides = [], stripData } = {}) {
   const strips = [];
   for (let row = 0; row < height; row += rowsPerStrip) {
     const rows = Math.min(rowsPerStrip, height - row), data = raw.slice(row * width * samples, (row + rows) * width * samples);
@@ -52,7 +53,7 @@ function fixture({ width = 3, height = 2, samples = 4, raw = pixels, little = tr
   }
   const tags = new Map([
     [256, [4, [width]]], [257, [4, [height]]], [258, [3, Array(samples).fill(8)]], [259, [3, [compression]]],
-    [262, [3, [2]]], [273, [4, Array(strips.length).fill(0)]], [274, [3, [orientation]]], [277, [3, [samples]]],
+    [262, [3, [photometric]]], [273, [4, Array(strips.length).fill(0)]], [274, [3, [orientation]]], [277, [3, [samples]]],
     [278, [4, [rowsPerStrip]]], [279, [4, strips.map(strip => strip.length)]], [284, [3, [1]]], [317, [3, [predictor]]],
   ]);
   if (samples === 4) tags.set(338, [3, [alpha]]);
@@ -100,6 +101,82 @@ test('both byte orders and all supported compression schemes preserve RGBA and p
   for (const little of [true, false]) for (const compression of [1, 5, 8, 32946, 32773]) for (const predictor of [1, 2]) {
     const decoded = await readTiff(fixture({ little, compression, predictor, rowsPerStrip: 1 }));
     assert.deepEqual(decoded, { width: 3, height: 2, rgba: pixels });
+  }
+});
+
+test('8-bit grayscale imports both polarities with opaque alpha', async () => {
+  const raw = Uint8Array.of(0, 17, 127, 128, 254, 255);
+  for (const photometric of [0, 1]) {
+    const expected = Uint8Array.from([...raw].flatMap(value => {
+      const gray = photometric === 0 ? 255 - value : value;
+      return [gray, gray, gray, 255];
+    }));
+    assert.deepEqual(await readTiff(fixture({ samples: 1, raw, photometric })), { width: 3, height: 2, rgba: expected });
+  }
+});
+
+test('single-channel TIFF reuses strip codecs, predictor rows and both byte orders', async () => {
+  const raw = Uint8Array.of(0, 17, 127, 128, 254, 255);
+  const palette = Array.from({ length: 768 }, (_, index) => ((index * 37) & 255) * 256 + (index & 255));
+  palette[255] = 65535;
+  for (const photometric of [0, 1, 3]) for (const little of [true, false]) {
+    const expected = Uint8Array.from([...raw].flatMap(index => photometric === 3 ?
+      [palette[index] >>> 8, palette[256 + index] >>> 8, palette[512 + index] >>> 8, 255] :
+      [0, 0, 0].map(() => photometric === 0 ? 255 - index : index).concat(255)));
+    for (const compression of [1, 5, 8, 32946, 32773]) for (const predictor of [1, 2]) {
+      const overrides = photometric === 3 ? [[320, [3, palette]]] : [];
+      const decoded = await readTiff(fixture({ samples: 1, raw, photometric, little, compression, predictor, rowsPerStrip: 1, overrides }));
+      assert.deepEqual(decoded, { width: 3, height: 2, rgba: expected });
+    }
+  }
+});
+
+test('palette indexes cover all 256 entries and retain high channel bytes', async () => {
+  const raw = Uint8Array.from({ length: 256 }, (_, index) => index);
+  const palette = [...raw].map(value => value * 256).concat([...raw].map(value => 65535 - value * 257), [...raw].map(value => value * 257));
+  const decoded = await readTiff(fixture({ width: 256, height: 1, samples: 1, raw, photometric: 3, overrides: [[320, [3, palette]]] }));
+  assert.deepEqual(decoded.rgba, Uint8Array.from([...raw].flatMap(value => [value, 255 - value, value, 255])));
+});
+
+test('single-channel orientations share the RGB coordinate mapping', async () => {
+  const raw = Uint8Array.of(1, 2, 3, 4, 5, 6);
+  const grids = [[1, 2, 3, 4, 5, 6], [3, 2, 1, 6, 5, 4], [6, 5, 4, 3, 2, 1], [4, 5, 6, 1, 2, 3],
+    [1, 4, 2, 5, 3, 6], [4, 1, 5, 2, 6, 3], [6, 3, 5, 2, 4, 1], [3, 6, 2, 5, 1, 4]];
+  const palette = Array.from({ length: 768 }, (_, index) => (index & 255) * 257);
+  for (const photometric of [0, 1, 3]) for (let orientation = 1; orientation <= 8; orientation++) {
+    const decoded = await readTiff(fixture({ samples: 1, raw, photometric, orientation, overrides: photometric === 3 ? [[320, [3, palette]]] : [] }));
+    assert.equal(decoded.width, orientation >= 5 ? 2 : 3); assert.equal(decoded.height, orientation >= 5 ? 3 : 2);
+    assert.deepEqual([...decoded.rgba].filter((_, index) => index % 4 === 0), grids[orientation - 1].map(value => photometric === 0 ? 255 - value : value));
+  }
+});
+
+test('single-channel interpretation rejects malformed or conflicting fields before inflation', async () => {
+  const raw = Uint8Array.of(0, 17, 127, 128, 254, 255), palette = Array(768).fill(0);
+  let calls = 0;
+  const cases = [
+    fixture({ samples: 1, raw, photometric: 3 }),
+    ...[[3, palette.slice(1)], [3, [...palette, 0]], [4, palette]].map(field => fixture({ samples: 1, raw, photometric: 3, compression: 8, overrides: [[320, field]] })),
+    ...[0, 1, 2].map(photometric => fixture({ samples: photometric === 2 ? 4 : 1, photometric, compression: 8, overrides: [[320, [3, palette]]] })),
+    ...[0, 1, 3].flatMap(photometric => [
+      fixture({ samples: 1, raw, photometric, compression: 8, overrides: [[258, [3, [4]]]] }),
+      fixture({ samples: 1, raw, photometric, compression: 8, overrides: [[338, [3, [2]]]] }),
+      fixture({ samples: 1, raw, photometric, compression: 8, overrides: [[339, [3, [2]]]] }),
+      fixture({ samples: 2, raw: new Uint8Array(12), photometric, compression: 8 }),
+    ]),
+  ];
+  const valid = fixture({ samples: 1, raw, photometric: 3, compression: 8, overrides: [[320, [3, palette]]] });
+  cases.push(change(valid, 320, 4, 0xffffffff), change(valid, 320, 8, valid.length - 1));
+  for (const bytes of cases) await assert.rejects(readTiff(bytes, { inflate: () => { calls++; throw new Error('unexpected inflation'); } }), /Unsupported or invalid TIFF/);
+  assert.equal(calls, 0);
+  const withoutSamples = fixture({ samples: 1, raw, photometric: 1, overrides: [[277, null]] });
+  assert.deepEqual((await readTiff(withoutSamples)).rgba, Uint8Array.from([...raw].flatMap(value => [value, value, value, 255])));
+});
+
+test('independent Pillow grayscale and palette fixtures match exact oriented RGBA', async () => {
+  for (const fixture of await singleChannelTiffFixtures()) {
+    const decoded = await readTiff(fixture.bytes);
+    assert.equal(decoded.width, fixture.width, fixture.name); assert.equal(decoded.height, fixture.height, fixture.name);
+    assert.equal(digest(decoded.rgba), fixture.rgbaSha256, fixture.name);
   }
 });
 

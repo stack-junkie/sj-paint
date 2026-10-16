@@ -34,7 +34,7 @@ The native automation API performs a drag atomically. Attempts to snapshot an in
 - Rectangular and free-form selections, inverse selection, color-key transparency for new selections, color inversion, move/resize/crop, copy/cut/paste, image rotation, flips, resize/skew and canvas dimensions.
 - Layer add/delete/duplicate/reorder/rename, opacity, visibility, merge and transparent background.
 - Undo/redo with saved-state identity, editable `.sjpaint` projects, legacy `.linuxpaint` project import, native file dialogs, image export and print integration.
-- PNG, JPEG, WebP, BMP, GIF and TIFF export. PNG/JPEG/WebP/BMP/GIF import uses Chromium decoding. GIF is a single frame; classic TIFF import supports RGB/RGBA8 strips with uncompressed, PackBits, LZW and Deflate data.
+- PNG, JPEG, WebP, BMP, GIF and TIFF export. PNG/JPEG/WebP/BMP/GIF import uses Chromium decoding. GIF is a single frame; classic TIFF import supports RGB/RGBA8, grayscale8 and palette8 strips with uncompressed, PackBits, LZW and Deflate data.
 
 ## Baseline gaps and unresolved behavior
 
@@ -47,13 +47,27 @@ Microsoft documents a mixture of device-specific local models and account-backed
 | Drawing behavior | Brush rasterization, textures, selection and transform edge cases, text metrics and all command shortcuts are not proven identical to the reference. |
 | Visual fidelity | Icons are newly drawn and rendering is independently implemented. Fonts depend on the host platform. Pixel-perfect layout and control behavior have not been established. |
 | Advanced editing | Ordinary shapes remain editable with a free-rotation handle until committed. Committed text and shapes become pixels. Post-commit vector/text re-editing is not implemented. Curve/polygon editing still uses its earlier construction workflow. |
-| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export uses LZW/predictor-2 RGBA. TIFF import covers classic RGB/RGBA8 strips and orientations 1 through 8; multipage, tiled, planar, palette/grayscale, higher bit depth and color-profile variants are rejected. Full metadata preservation and color-managed workflows are not established. |
+| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export uses LZW/predictor-2 RGBA. TIFF import covers classic RGB/RGBA8, grayscale8 and palette8 strips and orientations 1 through 8; multipage, tiled, planar, grayscale alpha, higher bit depth and color-profile variants are rejected. Full metadata preservation and color-managed workflows are not established. |
 | Platform integration | The Linux installer passed GIO menu registration, eligibility and fixture-launch checks. Actual menu presentation in each desktop shell remains unverified. Physical printing, native chooser interaction, Wayland, complete accessibility support and ARM compatibility also remain unverified. |
 | Resource limits | The editor enforces its own document, history and encoded-file bounds. Their equivalence to Microsoft Paint limits is unknown. |
 
 Implemented controls and passing checks do not close these gaps. Baseline acceptance still requires reference-based verification of appearance and behavior, including features that are missing or currently uncertain. Project-specific feature development follows the completed baseline.
 
 ## Verification history
+
+### Version 0.2.14 palette focus, layout and TIFF variants
+
+Public keyboard reproduction showed that selecting a custom color or merely hovering a pending curve replaced the focused palette button and moved focus to BODY. Ten persistent slot controls now own their identity while their values update in place. Formatting active classes and accessible pressed states derive from the same state. All 17 focused public-control checks pass, including dialog return, Tab navigation, passive previews and fixture restoration.
+
+Static XBF decoding established tool buttons at 32 by 32 logical units, independent images at 16 by 16, declared spacing of 8, and status metric text at 12. Text controls use spacing 8, font minimum width 126 (explicit 190 above window width 810), size minimum 72 and formatting buttons 32 by 32. SJ Paint applies these scoped values. The native text panel's 48-unit height applies only to the text-control group, not the generic context bar. Headless inspection confirmed wide and narrow metrics and horizontal scrolling. This establishes resource-backed dimensions, not native rendered pixel equivalence or native toolbar placement.
+
+Provenance was rechecked against installed Paint 11.2605.81.0: a fresh detailed dump of PaintApp/PaintUI.pri matched the retained UI dump byte for byte (SHA-256 `0dd59c98de146252a3cbb0e6ed57cbd1a3144732ca4a473c8b2dbc34ffc8a292`). The PRI SHA-256 is `ec5eb2d687d70fe4bdcd19d37863c5a1de22cc2168782f95773a40712a010a81`. All node streams in the 17 selected XBF resources decoded completely. Global fonts, resolved theme colors and native geometry remain unverified. The report and property offsets remain in the ignored local reference cache; no Microsoft assets are distributed.
+
+Public pan reproduction found that starting a middle-button or Alt drag focused the canvas while retaining the text draft. Continued typing then committed it and switched tools. Pan now prevents its default pointer focus/autoscroll and retains the existing focused element. It needs no restoration after release, cancellation or blur. All 21 focused checks passed, including selection replacement, continued typing, deliberate toolbar focus and single-operation history. Blur and capture-loss notifications are synthetic; no physical desktop focus was changed.
+
+Grayscale and palette TIFF import follows [TIFF 6.0](https://www.itu.int/itudoc/itu-t/com16/tiff-fx/docs/tiff6.pdf): single-channel unsigned 8-bit WhiteIsZero, BlackIsZero and palette images with a 768-SHORT ColorMap. Interpretation is normalized once into a lookup table; strip decompression, prediction and all orientations share the existing decoder. Palette entries retain their high eight bits in the RGBA8 engine, matching the independent decoder; higher precision and color management are not claimed. Six original Pillow 12.3/libtiff 4.7.1 fixtures and their generator are retained in test source, with encoded and decoded hashes. All 30 codec groups and 44 focused import checks passed. Open, Drop, Paste and malformed-file preservation use existing boundaries. The integrated browser suite passed 737 checks and the production build passed. Packaged checks remain pending.
+
+The latest bounded native-format inspection found no new `.paint` property type across 16 retained samples. The hidden-layer-named sample is byte-identical to the ordinary two-layer sample. Visibility names in backup code do not establish `.paint` serialization. Unknown properties remain rejected. Native Exif contains 96-DPI TIFF DOUBLE values, but metadata is still discarded and that limitation remains explicit.
 
 ### Version 0.2.13 curve construction, text focus and TIFF export
 

@@ -246,7 +246,8 @@ async function inflateStrip(input, expected) {
 }
 
 /**
- * Read one classic TIFF image: chunky RGB/RGBA8, strips, orientations 1-8,
+ * Read one classic TIFF image: chunky RGB/RGBA8 or single-channel grayscale/
+ * palette8, strips, orientations 1-8,
  * uncompressed/PackBits/TIFF-LZW/zlib-Deflate, predictor 1 or 2.
  * Optional trusted inflate(bytes, expectedBytes) must cap expansion and reject
  * trailing streams. Native stream chunk allocation is implementation-controlled.
@@ -269,7 +270,7 @@ export async function readTiff(input, { inflate } = {}) {
   // Unknown extensions can change pixel interpretation; accept only known image
   // tags and ancillary text/resolution/Exif pointers that this pixel-only API ignores.
   const allowed = new Set([254, 255, 256, 257, 258, 259, 262, 266, 269, 270, 271, 272, 273, 274, 277, 278, 279,
-    282, 283, 284, 285, 286, 287, 296, 297, 305, 306, 315, 316, 317, 338, 339, 34665, 34853]);
+    282, 283, 284, 285, 286, 287, 296, 297, 305, 306, 315, 316, 317, 320, 338, 339, 34665, 34853]);
   for (let index = 0; index < count; index++) {
     const entry = ifd + 2 + index * 12, tag = u16(entry), type = u16(entry + 2), values = u32(entry + 4);
     check(allowed.has(tag), `tag ${tag} is outside the supported pixel profile`);
@@ -290,13 +291,29 @@ export async function readTiff(input, { inflate } = {}) {
   assertDocumentBudget(width, height, 1);
   check(scalar(254, 0) === 0 && scalar(255, 1) === 1, 'reduced images, masks and page subfiles are not supported');
   if (fields.has(297)) check(values(297, 2)[0] === 0 && values(297, 2)[1] === 1, 'multiple TIFF pages are not supported');
-  const samples = scalar(277, 1);
-  check(scalar(262) === 2 && (samples === 3 || samples === 4), 'only RGB and RGBA images are supported');
+  const samples = scalar(277, 1), photometric = scalar(262);
+  check(photometric === 2 ? samples === 3 || samples === 4 : [0, 1, 3].includes(photometric) && samples === 1,
+    'only RGB/RGBA and single-channel grayscale/palette images are supported');
   check(values(258, samples).every(value => value === 8), 'only 8-bit channels are supported');
   check(values(339, samples, Array(samples).fill(1)).every(value => value === 1), 'only unsigned integer samples are supported');
   check(scalar(266, 1) === 1 && scalar(284, 1) === 1, 'reversed fill order and planar channels are not supported');
   const alpha = samples === 4 ? scalar(338) : 0;
   check(samples === 4 ? alpha === 1 || alpha === 2 : !fields.has(338), 'extra channels must declare associated or unassociated alpha');
+  // Normalize single-channel interpretation once, before any strip inflation.
+  // ColorMap contains separate 16-bit R/G/B tables. The RGBA8 engine retains
+  // their high bytes, matching Pillow's palette conversion, not higher precision.
+  let colorTable;
+  if (photometric === 3) check(fields.get(320)?.type === 3, 'palette ColorMap must contain SHORT values');
+  else check(!fields.has(320), 'ColorMap is only supported for palette images');
+  if (samples === 1) {
+    const palette = photometric === 3 ? values(320, 768) : null;
+    colorTable = new Uint8Array(256 * 4);
+    for (let index = 0; index < 256; index++) {
+      const gray = photometric === 0 ? 255 - index : index;
+      for (let channel = 0; channel < 3; channel++) colorTable[index * 4 + channel] = palette ? palette[channel * 256 + index] >>> 8 : gray;
+      colorTable[index * 4 + 3] = 255;
+    }
+  }
   const orientation = scalar(274, 1), predictor = scalar(317, 1), compression = scalar(259, 1);
   check(orientation >= 1 && orientation <= 8, 'invalid image orientation');
   check(predictor === 1 || predictor === 2, 'unsupported predictor');
@@ -339,6 +356,11 @@ export async function readTiff(input, { inflate } = {}) {
       else if (orientation === 7) { ox = height - 1 - y; oy = width - 1 - x; }
       else if (orientation === 8) { ox = y; oy = width - 1 - x; }
       const source = (row * width + x) * samples, target = (oy * outputWidth + ox) * 4;
+      if (colorTable) {
+        const color = decoded[source] * 4;
+        for (let channel = 0; channel < 4; channel++) rgba[target + channel] = colorTable[color + channel];
+        continue;
+      }
       const a = samples === 4 ? decoded[source + 3] : 255;
       for (let channel = 0; channel < 3; channel++) rgba[target + channel] = alpha === 1 ?
         (a === 0 ? 0 : Math.min(255, Math.round(decoded[source + channel] * 255 / a))) : decoded[source + channel];

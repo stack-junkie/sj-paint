@@ -2,6 +2,13 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.14] - Unreleased
+
+- Preserve custom-palette button identity and keyboard focus across color activation, dialogs and drawing previews. Expose text-formatting pressed states to assistive technology.
+- Keep text selection and deliberate toolbar focus during viewport panning, including release and cancellation, so continued typing stays in the draft.
+- Align tool-button and icon dimensions, text-control spacing and status metric text with decoded Paint resource definitions, retaining independently drawn artwork.
+- Open 8-bit grayscale and palette TIFF images through the existing validated strip decoder, including supported compression, horizontal prediction and all eight orientations. Reject malformed palettes and unsupported channel variants before replacing the drawing.
+
 ## [0.2.13] - Unreleased
 
 - Keep the initial curve segment straight and preserve Shift-constrained endpoints when the pointer is released and control-point editing begins.
