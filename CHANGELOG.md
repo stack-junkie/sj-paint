@@ -2,7 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.24] - Unreleased
+## [0.2.25] - Unreleased
+
+- Update held curves, lines, shapes and pending-shape resizing immediately when Shift changes, including without pointer movement. Preserve constrained geometry after mouse release.
+- Include geometry-derived resize cursors from the unpublished 0.2.24 checkpoint and correct test fixture tool restoration.
+
+## [0.2.24] - Consolidated into 0.2.25
 
 - Match selection and pending-shape resize cursors to each handle's screen direction, including rotated frames.
 - Preserve the active gesture cursor across redraws and restore hover/tool cursors through release, cancellation and capture loss.

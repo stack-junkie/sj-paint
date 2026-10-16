@@ -183,7 +183,7 @@ const beginPointer=safe(e=>{
   // survive every ending, including blur, without a later refocus side effect.
   if(pan){e.preventDefault();if(e.button===1)middlePanPointerId=e.pointerId;drag={kind:'pan',start:[e.clientX,e.clientY],scroll:[viewport.scrollLeft,viewport.scrollTop],suspendedDrag:drag};return;}
   overlay.focus({preventScroll:true});
-  if(pendingHit){drag={kind:'pending-shape',original:pendingShape,hit:pendingHit,start:p};return;}
+  if(pendingHit){drag={kind:'pending-shape',original:pendingShape,hit:pendingHit,start:p,current:p,shift:e.shiftKey};return;}
   if(textEditor){commitText();return;}
   if(!doc.activeLayer.visible&&!['select','lasso','zoom','picker'].includes(state.tool)){toast('Show the active layer before drawing.');return;}
   if(curve){curve.controls.push(p);if(curve.controls.length===2)finishPending();else changed();return;}
@@ -211,14 +211,27 @@ overlay.addEventListener('pointermove',safe(e=>{
   if(curve){curve.hover=p;changed();return;}
   if(!drag){updateCursor();return;}
   if(drag.kind==='stroke'){const samples=e.getCoalescedEvents?.();for(const q of samples?.length?samples:[e])stroke.move(...point(q),pressure(q));}
-  else if(drag.kind==='pending-shape')pendingShape=transformPendingShape(drag.original,drag.hit,drag.start,p,{constrain:e.shiftKey});
+  else if(drag.kind==='pending-shape')updateHeldShape(p,e.shiftKey);
   else if(drag.kind==='selection-transform')doc.updateSelectionTransform(p);
-  else if(drag.kind==='shape'){drag.current=p;drag.shift=e.shiftKey;shapePreview=[...drag.start,...p];}
+  else if(drag.kind==='shape')updateHeldShape(p,e.shiftKey);
   else if(drag.kind==='select'){drag.current=p;}
   else if(drag.kind==='lasso'){drag.points.push(p);}
   else if(drag.kind==='polygon'){drag.hover=p;}
   changed();
 }));
+function updateHeldShape(current,shift){
+  drag.current=current;drag.shift=shift;
+  if(drag.kind==='pending-shape')pendingShape=transformPendingShape(drag.original,drag.hit,drag.start,current,{constrain:shift});
+  else shapePreview=[...drag.start,...current];
+}
+const updateHeldModifier=safe(e=>{
+  if(e.key!=='Shift'||activePointerId===null||!['shape','pending-shape'].includes(drag?.kind)||document.querySelector('dialog[open]'))return;
+  const shift=e.shiftKey;if(drag.shift===shift)return;
+  updateHeldShape(drag.current,shift);changed();
+});
+document.addEventListener('keydown',updateHeldModifier);
+document.addEventListener('keyup',updateHeldModifier);
+
 overlay.addEventListener('pointerup',safe(e=>{
   if(e.pointerId!==activePointerId)return;activePointerId=null;
   if(!drag)return;const d=drag;

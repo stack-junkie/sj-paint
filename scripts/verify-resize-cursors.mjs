@@ -4,8 +4,9 @@ export async function verifyResizeCursorsDesktop(page, check) {
   const cursor = () => overlay.evaluate(el => getComputedStyle(el).cursor);
   const pixels = () => page.locator('#canvas').evaluate(el => el.toDataURL());
   const initial = await pixels();
+  const initialTool=await page.evaluate(()=>({tool:document.querySelector('[data-tool][aria-pressed="true"]')?.dataset.tool,label:document.querySelector('#tool-label').textContent}));
   if (await page.locator('[data-action="undo"]').isEnabled()) throw new Error('Cursor fixture requires a pristine document.');
-  const move = async ([x,y]) => { const b = await overlay.boundingBox(); const zoom = Number(await page.locator('#zoom-presets').inputValue()); await page.mouse.move(b.x+x*zoom,b.y+y*zoom); await frame(); };
+  const move = async ([x,y]) => { const b = await overlay.boundingBox(); const zoom = Number(await page.locator('#zoom-presets').inputValue()); await page.mouse.move(b.x+x*zoom,b.y+y*zoom,{steps:4}); await frame(); };
   const drag = async (start,end) => { await move(start); await page.mouse.down(); await move(end); await page.mouse.up(); await frame(); };
   const handles = [[80,100],[160,100],[240,100],[240,150],[240,200],[160,200],[80,200],[80,150]];
   const expected = ['nwse-resize','ns-resize','nesw-resize','ew-resize','nwse-resize','ns-resize','nesw-resize','ew-resize'];
@@ -25,7 +26,8 @@ export async function verifyResizeCursorsDesktop(page, check) {
       for (let i=0;i<handles.length;i++) {
         const [x,y]=handles[i],dx=x-160,dy=y-150;
         await move([160+(dx-dy)/Math.SQRT2,150+(dx+dy)/Math.SQRT2]);
-        check(`${tool} rotated handle ${i} uses its screen direction`,await cursor() === rotated[i],await cursor());
+        const actual=await cursor();
+        check(`${tool} rotated handle ${i} uses its screen direction`,actual === rotated[i],{actual,expected:rotated[i],overlay:await overlay.boundingBox(),zoom:await page.locator('#zoom-presets').inputValue(),tool:await page.locator('#tool-label').textContent()});
       }
       await page.keyboard.press('Escape'); await frame();
       await drag(handles[0],handles[4]); await move(handles[3]);
@@ -54,7 +56,8 @@ export async function verifyResizeCursorsDesktop(page, check) {
     await page.mouse.up(); await page.keyboard.press('Escape');
     await page.keyboard.press('Control+n');
     const discard=page.getByRole('button',{name:"Don't save",exact:true});if(await discard.isVisible())await discard.click();
-    await page.locator('[data-tool="pencil"]').click();await frame();
+    if(initialTool.tool)await page.locator(`[data-tool="${initialTool.tool}"]`).click();
+    else{await page.locator('[data-menu="brushes"]').click();await page.getByRole('menuitemradio',{name:initialTool.label,exact:true}).click();}await frame();
   }
 }
 export async function verifyResizeCursors(page,check) {
