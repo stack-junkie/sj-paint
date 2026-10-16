@@ -5,6 +5,7 @@ export async function verifyFontCatalog(page, check) {
       window.paintDesktop = { listFonts: () => new Promise(resolve => { window.deliverFonts = resolve; }) };
     });
     const target = await context.newPage(); await target.goto(page.url()); await target.locator('#overlay').waitFor();
+    const frame = () => target.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
     await target.locator('[data-tool="text"]').click();
     const requested = await target.evaluate(() => typeof window.deliverFonts === 'function');
     check('Text requests the desktop installed-font catalog', requested);
@@ -25,13 +26,13 @@ export async function verifyFontCatalog(page, check) {
     await target.locator('.text-editor').focus(); await target.keyboard.type('p');
     check('typing after a catalog update replaces the retained selection', await target.locator('.text-editor').inputValue() === 'Dpft');
     const blank = await target.locator('#canvas').evaluate(el => el.toDataURL());
-    await target.locator('[data-action="commit-text"]').click();
+    await target.locator('[data-action="commit-text"]').click(); await frame();
     const painted = await target.locator('#canvas').evaluate(el => el.toDataURL());
-    await target.locator('#overlay').focus(); await target.keyboard.press('Control+z');
+    await target.locator('#overlay').focus(); await target.keyboard.press('Control+z'); await frame();
     check('font selection and continued typing undo as one text edit', painted !== blank && await target.locator('#canvas').evaluate((el, expected) => el.toDataURL() === expected, blank));
-    await target.keyboard.press('Control+y');
+    await target.keyboard.press('Control+y'); await frame();
     check('Redo restores text using the selected family', await target.locator('#canvas').evaluate((el, expected) => el.toDataURL() === expected, painted));
-    await target.keyboard.press('Control+z'); await target.keyboard.press('Control+n');
+    await target.keyboard.press('Control+z'); await frame(); await target.keyboard.press('Control+n'); await frame();
     await target.reload(); await target.locator('#overlay').waitFor(); await target.locator('[data-tool="text"]').click();
     await target.locator('#font').focus(); await target.locator('#font').selectOption('Georgia');
     await target.evaluate(() => window.deliverFonts({ ok: true, families: ['Segoe UI'] }));
