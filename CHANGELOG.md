@@ -2,7 +2,13 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.21] - Unreleased
+## [0.2.22] - Unreleased
+
+- Discover installed Windows and Linux font families through bounded, read-only desktop queries, reusing one catalog per app lifetime and preserving the standard list on failure.
+- Keep live text selection and the current font when discovery finishes; defer list replacement while the font picker owns keyboard focus.
+- Preserve literal font names containing commas or quotes in CSS. Browser font discovery uses only previously granted local-font permission and never prompts when choosing Text.
+
+## [0.2.21] - 2026-10-16
 
 - Add RGB and HSV channel editing with a color-model selector, synchronized hex input and dialog-local color ownership.
 - Reject empty, malformed and out-of-range color values before accepting the dialog. Preserve exact color bytes when switching representations and retain hue through gray and black edits.

@@ -1,6 +1,7 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('paintDesktop', Object.freeze({
+  listFonts: () => ipcRenderer.invoke('paint:list-fonts'),
   localAiStatus: () => ipcRenderer.invoke('paint:local-ai-status'),
   localAiProbe: request => ipcRenderer.invoke('paint:local-ai-probe', request),
   localAiRun: request => ipcRenderer.invoke('paint:local-ai-run', request),

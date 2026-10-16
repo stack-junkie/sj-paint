@@ -5,6 +5,7 @@ const { randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 const { writeFileAtomically } = require('./atomic-write.cjs');
 const { FileTargets } = require('./file-targets.cjs');
+const { createFontCatalog } = require('./font-catalog.cjs');
 const { createLocalAiService } = require('./local-ai-service.cjs');
 const PROJECT = require('../src/project-format.json');
 
@@ -18,6 +19,7 @@ let mainWindow;
 let dialogBusy = false;
 let closeRequest = null;
 const fileTargets = new FileTargets();
+const fontCatalog = createFontCatalog();
 const localAi = createLocalAiService();
 
 function authorized(event) {
@@ -92,6 +94,10 @@ async function saveFile(request, format, options, bytes) {
 }
 
 function registerHandlers() {
+  handle('list-fonts', request => {
+    if (request !== undefined) throw new Error('Invalid font request.');
+    return fontCatalog.load();
+  });
   handle('local-ai-status', () => localAi.status());
   handle('local-ai-probe', request => localAi.probe(request));
   handle('local-ai-run', request => localAi.run(request));
@@ -220,6 +226,7 @@ function createWindow() {
     owner.webContents.send('paint:close-requested', closeRequest.requestId);
   });
   owner.on('closed', () => {
+    void fontCatalog.cancel();
     const operation = localAi.status().value.active;
     if (operation) void localAi.cancel({ id: operation.id });
     fileTargets.clear(); closeRequest = null; mainWindow = null;
@@ -244,6 +251,12 @@ app.whenReady().then(() => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+let fontExitCancellation = null;
+app.on('before-quit', event => {
+  if (!fontCatalog.active) return;
+  event.preventDefault();
+  if (!fontExitCancellation) fontExitCancellation = fontCatalog.cancel().then(() => { fontExitCancellation = null; app.quit(); });
+});
 let aiExitCancellation = null;
 app.on('before-quit', event => {
   const state = localAi.status().value;
