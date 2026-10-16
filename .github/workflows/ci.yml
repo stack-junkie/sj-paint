@@ -51,6 +51,38 @@ jobs:
       - name: Verify Linux app-drawer installation
         if: runner.os == 'Linux'
         run: python3 scripts/verify-install-linux.py
+      - name: Verify packaged Linux app
+        if: runner.os == 'Linux'
+        env:
+          SJ_PAINT_TEST_CLIPBOARD: '1'
+        run: |
+          xvfb-run -a sh -eu -c '
+            ./release/linux-unpacked/sj-paint --no-sandbox --disable-gpu --inspect=127.0.0.1:9231 --remote-debugging-port=9229 >output/linux-launch.log 2>&1 &
+            app_pid=$!
+            trap "kill $app_pid 2>/dev/null || true" EXIT
+            ready=false
+            for attempt in $(seq 1 120); do
+              if curl -fsS http://127.0.0.1:9229/json/list >/dev/null 2>&1 && curl -fsS http://127.0.0.1:9231/json/list >/dev/null 2>&1; then
+                ready=true
+                break
+              fi
+              kill -0 "$app_pid"
+              sleep 0.25
+            done
+            test "$ready" = true
+            npm run test:linux
+          '
+      - name: Archive verified Linux app
+        if: runner.os == 'Linux'
+        run: npm run archive:linux
+      - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
+        if: runner.os == 'Linux'
+        with:
+          name: linux-portable
+          path: |
+            release/sj-paint-*-linux-x64.tar.gz
+            release/sj-paint-*-linux-x64.tar.gz.sha256
+          if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()
         with:
