@@ -1,6 +1,10 @@
 const { contextBridge, ipcRenderer } = require('electron');
 
 contextBridge.exposeInMainWorld('paintDesktop', Object.freeze({
+  localAiStatus: () => ipcRenderer.invoke('paint:local-ai-status'),
+  localAiProbe: request => ipcRenderer.invoke('paint:local-ai-probe', request),
+  localAiRun: request => ipcRenderer.invoke('paint:local-ai-run', request),
+  localAiCancel: request => ipcRenderer.invoke('paint:local-ai-cancel', request),
   openImage: (request) => ipcRenderer.invoke('paint:open-image', request),
   saveImage: (request) => ipcRenderer.invoke('paint:save-image', request),
   openProject: () => ipcRenderer.invoke('paint:open-project'),

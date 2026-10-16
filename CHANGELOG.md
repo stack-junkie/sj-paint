@@ -2,6 +2,11 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.17] - Unreleased
+
+- Add optional offline background-removal previews using an externally configured U2NetP model and existing Python/ONNX Runtime. Apply changes only the active layer as one undoable edit; cancellation, document changes and invalid results cannot overwrite newer work.
+- Keep local inference in a bounded hidden process with exact model verification, typed IPC, cancellation ownership and cleanup deadlines. Model weights and runtimes are not bundled or downloaded by the application.
+
 ## [0.2.16] - Unreleased
 
 - Match decoded selection-menu labels and checked states, add selection-scoped Delete, and keep menu keyboard Delete from clearing an unselected layer.

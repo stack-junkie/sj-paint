@@ -5,6 +5,7 @@ const { randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
 const { writeFileAtomically } = require('./atomic-write.cjs');
 const { FileTargets } = require('./file-targets.cjs');
+const { createLocalAiService } = require('./local-ai-service.cjs');
 const PROJECT = require('../src/project-format.json');
 
 app.setName(PROJECT.productName);
@@ -17,6 +18,7 @@ let mainWindow;
 let dialogBusy = false;
 let closeRequest = null;
 const fileTargets = new FileTargets();
+const localAi = createLocalAiService();
 
 function authorized(event) {
   if (!mainWindow || event.sender !== mainWindow.webContents ||
@@ -90,6 +92,10 @@ async function saveFile(request, format, options, bytes) {
 }
 
 function registerHandlers() {
+  handle('local-ai-status', () => localAi.status());
+  handle('local-ai-probe', request => localAi.probe(request));
+  handle('local-ai-run', request => localAi.run(request));
+  handle('local-ai-cancel', request => localAi.cancel(request));
   handle('open-image', (request) => withDialog(async () => {
     const owner = mainWindow;
     if (request !== undefined && (!request || typeof request.allowProjects !== 'boolean')) throw new Error('Invalid open request.');
@@ -192,6 +198,11 @@ function createWindow() {
   mainWindow.webContents.on('will-navigate', (event) => event.preventDefault());
   mainWindow.webContents.on('will-attach-webview', (event) => event.preventDefault());
   const owner = mainWindow;
+  owner.webContents.on('render-process-gone', () => {
+    if (owner !== mainWindow) return;
+    const operation = localAi.status().value.active;
+    if (operation) void localAi.cancel({ id: operation.id });
+  });
   let closeIntent = false;
   owner.on('close', () => { closeIntent = true; });
   owner.webContents.on('will-prevent-unload', () => {
@@ -208,7 +219,11 @@ function createWindow() {
     closeRequest = { owner, requestId: randomUUID(), finalizing: false };
     owner.webContents.send('paint:close-requested', closeRequest.requestId);
   });
-  owner.on('closed', () => { fileTargets.clear(); closeRequest = null; mainWindow = null; });
+  owner.on('closed', () => {
+    const operation = localAi.status().value.active;
+    if (operation) void localAi.cancel({ id: operation.id });
+    fileTargets.clear(); closeRequest = null; mainWindow = null;
+  });
   mainWindow.loadFile(entry);
 }
 
@@ -229,3 +244,14 @@ app.whenReady().then(() => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
+let aiExitCancellation = null;
+app.on('before-quit', event => {
+  const state = localAi.status().value;
+  if (!state.active) return;
+  event.preventDefault();
+  if (!aiExitCancellation) aiExitCancellation = localAi.cancel({ id: state.active.id }).then(result => {
+    aiExitCancellation = null;
+    if (result.ok) app.quit();
+    else console.error('Local worker cleanup is unresolved; application exit remains blocked.');
+  });
+});

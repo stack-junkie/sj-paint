@@ -2,8 +2,8 @@
 
 Stack Junkie Paint (SJ Paint) is a Microsoft Paint-inspired drawing app for Windows and Linux, with brushes, shapes, selections, text and layers. Windows is the primary desktop platform; a browser edition is available too.
 
-Version: 0.2.16
-<!-- sj-paint-version: 0.2.16 -->
+Version: 0.2.17
+<!-- sj-paint-version: 0.2.17 -->
 
 SJ Paint is an independent implementation whose baseline goal is to match Microsoft Paint's appearance, features and behavior 1:1. That baseline is unfinished. Project-specific features come after the baseline is completed and verified. It is not a Microsoft product. The [parity ledger](PARITY.md) records implemented features, missing behavior and verification limits.
 
@@ -13,16 +13,16 @@ SJ Paint is an independent implementation whose baseline goal is to match Micros
 
 ### Windows
 
-Download the [v0.2.16 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.16/sj-paint-0.2.16-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
+Download the [v0.2.17 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.17/sj-paint-0.2.17-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
 
 The Windows executable is currently unsigned; it has no Authenticode signature.
 
 ### Linux
 
-Download the [v0.2.16 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.16/sj-paint-0.2.16-linux-x64.tar.gz), then run:
+Download the [v0.2.17 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.17/sj-paint-0.2.17-linux-x64.tar.gz), then run:
 
 ```sh
-tar -xzf sj-paint-0.2.16-linux-x64.tar.gz
+tar -xzf sj-paint-0.2.17-linux-x64.tar.gz
 ./sj-paint/run-paint.sh
 ```
 
@@ -34,7 +34,7 @@ To install a copy for your user and add SJ Paint to the Linux application menu:
 
 The installer copies the app to `~/.local/opt/sj-paint`, creates `~/.local/share/applications/io.stackjunkie.sjpaint.desktop`, and installs icons under `~/.local/share/icons/hicolor/`. It does not require a system-wide installation.
 
-Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.16). Use a normal desktop user.
+Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.17). Use a normal desktop user.
 
 Linux needs Electron's GTK, NSS, X11 and ALSA system libraries. Ubuntu 22.04 package names include `libgtk-3-0`, `libnss3`, `libatk-bridge2.0-0`, `libxdamage1` and `libasound2`; names vary by distribution. Normal startup keeps Chromium sandboxing enabled and does not add `--no-sandbox`.
 
@@ -155,3 +155,11 @@ npm run build
 See [CONTRIBUTING.md](CONTRIBUTING.md) for development and reporting guidance, [SECURITY.md](SECURITY.md) for private vulnerability reports, and [ATTRIBUTION.md](ATTRIBUTION.md) for reference and dependency notices.
 
 Released under the [MIT license](LICENSE).
+
+## Optional local background removal
+
+The desktop edition can preview background removal on the active layer, then Apply it as one undoable edit. Cancel or editing/replacing the drawing discards the result. The browser edition has no inference backend. This independent local model does not establish Microsoft Paint output equivalence; check thin lines and fine edges before applying.
+
+Use an existing Python installation with ONNX Runtime, NumPy and Pillow, plus the separately acquired U2NetP ONNX model with SHA-256 `309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8`. Set `SJ_PAINT_PYTHON` to the absolute Python executable path and `SJ_PAINT_U2NETP_MODEL` to the absolute model path in the environment used to launch SJ Paint. The app installs and downloads nothing. Do not select an untrusted Python executable.
+
+The verified Windows setup uses Python 3.12.10, ONNX Runtime 1.24.4, NumPy 2.4.3 and Pillow 12.3.0. Inference runs on CPU with two threads and supports PNG inputs up to 16 million pixels and 64 MiB. Uniform images are rejected because this model can amplify weak predictions into noise. Existing transparency is multiplied by the foreground mask; other layers and document background remain unchanged. Linux inference with a separately configured runtime remains unverified. See `PARITY.md` for measured cost, quality and remaining AI operations.

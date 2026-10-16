@@ -3,6 +3,7 @@ import PROJECT from './project-format.json' with { type: 'json' };
 import { VERSION } from './version.js';
 import { bindCanvasResize } from './canvas-resize.js';
 import { PaintDocument } from './engine.js';
+import { removeBackground } from './background-removal.js';
 import { drawShape } from './shapes.js';
 import { createCurve, paintCurve as paintCurveDraft } from './curve.js';
 import { createPendingShape, paintPendingShape, hitPendingShape, transformPendingShape } from './pending-shape.js';
@@ -28,7 +29,7 @@ $('#app').innerHTML=`
   <nav class="menubar" aria-label="Main menu"><button data-menu="file">File</button><button data-menu="edit">Edit</button><button data-menu="view">View</button><span class="divider"></span>${btn('save','Save (Ctrl+S)','save')}${btn('undo','Undo (Ctrl+Z)')}${btn('redo','Redo (Ctrl+Y)')}<span class="grow"></span>${btn('settings','Settings')}</nav>
   <section class="toolbar" aria-label="Drawing tools">
     <div class="toolgroup selection-group"><div class="group-content"><div class="split"><button data-tool="select" class="large" title="Rectangular selection" aria-label="Rectangular selection">${icon('select',26)}</button><button data-menu="selection" class="split-arrow" title="Selection options" aria-label="Selection options">⌄</button></div></div><span class="group-label">Selection</span></div>
-    <div class="toolgroup image-group"><div class="group-content image-tools">${btn('crop','Crop','crop')}${btn('rotate-menu','Rotate','rotate')}${btn('flip-menu','Flip','flip')}${btn('resize','Resize and skew','resize')}</div><span class="group-label">Image</span></div>
+    <div class="toolgroup image-group"><div class="group-content image-tools">${btn('crop','Crop','crop')}${btn('rotate-menu','Rotate','rotate')}${btn('flip-menu','Flip','flip')}${btn('resize','Resize and skew','resize')}${btn('remove-background','Remove background','remove-background')}</div><span class="group-label">Image</span></div>
     <div class="toolgroup"><div class="group-content tool-grid">${toolBtn('pencil','Pencil')}${toolBtn('fill','Fill with color')}${toolBtn('text','Text')}${toolBtn('eraser','Eraser')}${toolBtn('picker','Color picker')}${toolBtn('zoom','Magnifier')}</div><span class="group-label">Tools</span></div>
     <div class="toolgroup brush-group"><div class="group-content"><button class="large brush-selector" data-menu="brushes" title="Brushes" aria-label="Brushes">${icon('brush',30)}<span>⌄</span></button></div><span class="group-label">Brushes</span></div>
     <div class="toolgroup shapes-group"><div class="group-content shapes-content"><div class="shape-grid">${SHAPES.map(s=>toolBtn(s,label(s))).join('')}</div><div class="shape-settings"><label title="Shape outline">${icon('pencil',15)}<select id="outline" aria-label="Shape outline"><option value="none">No outline</option><option value="solid" selected>Solid outline</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil brush</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor brush</option></select></label><label title="Shape fill">${icon('fill',15)}<select id="shape-fill" aria-label="Shape fill"><option value="none">No fill</option><option value="solid">Solid fill</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil brush</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor brush</option></select></label></div></div><span class="group-label">Shapes</span></div>
@@ -416,6 +417,7 @@ async function resizeDialog(){
   const v=await pending;if(v){doc.resize(Math.round(+v.width*(v.unit==='percent'?w/100:1)),Math.round(+v.height*(v.unit==='percent'?h/100:1)),{scale:!!v.scale,skewX:+v.skewX,skewY:+v.skewY});fit();}
 }
 const actions={
+  'remove-background':()=>removeBackground(doc),
   new:async()=>{if(await canDiscard()){doc.newDocument(1152,648);state.name='Untitled';state.project=false;state.format='png';fit();}},
   open:()=>withFileOperation(()=>openDocument(()=>openImageFile({allowProjects:true}))),
   'open-project':()=>withFileOperation(()=>openDocument(openProjectFile)),
@@ -499,7 +501,7 @@ document.addEventListener('click',safe(async e=>{
 }));
 document.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-color]');if(t){e.preventDefault();const focus=takeTextFocus(t);state.secondary=t.dataset.color;updateToolState();styleText();updatePendingStyle();restoreTextFocus(focus);}});
 document.addEventListener('keydown',safe(async e=>{
-  if($('#dialog').open)return;
+  if(document.querySelector('dialog[open]'))return;
   if(e.key==='Escape'&&!$('#menu').hidden){e.preventDefault();closeMenu();return;}
   if(!$('#menu').hidden&&$('#menu').contains(e.target)&&menuAnchor?.dataset.menu==='selection'&&e.key==='Delete'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
     e.preventDefault();if(doc.selection){closeMenu();await executeAction('delete-selection',e);}return;

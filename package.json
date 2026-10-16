@@ -1,6 +1,6 @@
 {
   "name": "sj-paint",
-  "version": "0.2.16",
+  "version": "0.2.17",
   "private": true,
   "type": "module",
   "description": "Stack Junkie Paint: an independent Microsoft Paint-inspired editor for Windows and Linux.",
@@ -23,7 +23,8 @@
     "package:windows": "npm run build && electron-builder --win dir --x64",
     "archive:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/archive-windows.ps1",
     "test:desktop": "node scripts/verify-desktop.mjs",
-    "test:windows": "node scripts/test-windows.mjs"
+    "test:windows": "node scripts/test-windows.mjs",
+    "test:local-ai": "node --test electron/local-ai.test.cjs electron/local-ai-service.test.cjs"
   },
   "devDependencies": {
     "electron": "44.7.2",

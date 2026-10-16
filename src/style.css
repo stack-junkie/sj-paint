@@ -28,3 +28,6 @@
 #text-align{display:flex;gap:0}#text-align svg{width:16px;height:16px}
 
 .menu button>span{display:flex;align-items:center;gap:8px}.menu [aria-checked="false"]>span>svg{visibility:hidden}.menu .brush-preview{width:120px;height:40px;flex-shrink:0}
+
+.background-removal-dialog{max-width:min(620px,90vw)}.background-removal-dialog footer{display:flex;justify-content:flex-end;gap:8px}.background-preview{max-height:55vh;overflow:auto;background:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 0/16px 16px}.background-preview canvas{display:block;max-width:100%;height:auto}.background-removal-dialog p{max-width:55ch}
+.image-tools{grid-template-columns:repeat(3,32px)}.image-tools [data-action="remove-background"]{grid-column:3;grid-row:1 / span 2;align-self:center}

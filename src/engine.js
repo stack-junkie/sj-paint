@@ -45,6 +45,16 @@ const copy = canvas => {
   context(result).drawImage(canvas, 0, 0);
   return result;
 };
+export function maskedCanvas(source, mask) {
+  if (!(mask instanceof Uint8Array) || mask.length !== source.width * source.height) {
+    throw new Error('The background mask does not match this layer.');
+  }
+  const image = context(source).getImageData(0, 0, source.width, source.height);
+  for (let i = 0; i < mask.length; i++) image.data[i * 4 + 3] = Math.round(image.data[i * 4 + 3] * mask[i] / 255);
+  const result = createCanvas(source.width, source.height);
+  context(result).putImageData(image, 0, 0);
+  return result;
+}
 function makeSelection({ canvas, mask, layerId, transform = translation(0, 0) }) {
   const selected = { canvas, mask, layerId, transform: matrix(transform) };
   // Compatibility views for existing integrations. Geometry has one canonical owner.
@@ -611,6 +621,14 @@ export class PaintDocument extends EventTarget {
     this._edit('Clear', () => {
       context(this.activeLayer.canvas).clearRect(0, 0, this.width, this.height);
     });
+  }
+
+  applyLayerMask(target, mask) {
+    if (!this.matchesEditTarget(target) || this.selection || this._transaction) {
+      throw new Error('Background removal canceled because the drawing changed.');
+    }
+    const canvas = maskedCanvas(this.activeLayer.canvas, mask);
+    this._edit('Remove background', () => { this.activeLayer.canvas = canvas; });
   }
 
   invertColors() {

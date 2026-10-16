@@ -1,4 +1,5 @@
 import { chromium } from 'playwright-core';
+import { verifyBackgroundRemoval } from './verify-background-removal.mjs';
 import { verifyInteractions } from './verify-interactions.mjs';
 import { verifyCanvasEngine } from './verify-canvas-engine.mjs';
 import { verifyGestureCancellation } from './verify-gesture-cancellation.mjs';
@@ -73,6 +74,7 @@ try{
  await verifyTextControls(page,check);
  await verifySelectionMenu(page,check);
  await verifyPrintLayout(page,check);
+ await verifyBackgroundRemoval(page,check);
  await verifyCurveConstruction(page,check);
  await verifyStrikethrough(page,check);
  await verifyKeyboardCommit(page,check);

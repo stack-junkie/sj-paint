@@ -17,3 +17,7 @@ The desktop application is built with [Electron](https://www.electronjs.org/), w
 Dependencies retain their own licenses. Packaged distributions include `LICENSE.electron.txt` and `LICENSES.chromium.html`; retain those notices when redistributing the app. The dependency versions are recorded in `package-lock.json`.
 
 Project source code is provided under the [MIT license](LICENSE).
+
+## Optional local background-removal model
+
+The independent worker implements the published U-2-Net/rembg preprocessing recipe. [U-2-Net](https://github.com/xuebinqin/U-2-Net) is by Xuebin Qin and contributors (Apache-2.0). The separately acquired U2NetP ONNX conversion is distributed by [rembg](https://github.com/danielgatis/rembg) (adapter code MIT). Reviewed release metadata did not provide a separate per-weight license notice. SJ Paint does not bundle or redistribute model weights, Python, ONNX Runtime, NumPy or Pillow. Model identity, acquisition provenance and evaluation limits are recorded in `PARITY.md`.

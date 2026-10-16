@@ -1,4 +1,5 @@
 const paths = {
+  'remove-background':'M3 3h18v18H3zM8 17v-4a4 4 0 0 1 8 0v4M12 9a2 2 0 1 0 0-4 2 2 0 0 0 0 4M2 22 22 2',
   'align-left':'M3 5h18M3 10h12M3 15h18M3 20h12','align-center':'M3 5h18M6 10h12M3 15h18M6 20h12','align-right':'M3 5h18M9 10h12M3 15h18M9 20h12',
   select:'M3 3h18v18H3z',crop:'M7 2v15h15M2 7h15v15',rotate:'M4 10a8 8 0 1 1 1 8M4 4v6h6',flip:'M11 3v18M8 5 2 19h6zm6 0 6 14h-6z',resize:'M3 9V3h6m6 0h6v6m0 6v6h-6M9 21H3v-6M3 3l7 7m11 11-7-7',
   pencil:'m4 16 12-12 4 4L8 20l-5 1zm10-10 4 4',fill:'m8 3 10 10-7 7-10-10 7-7zm-5 9h14m3 3s-3 4-3 5a3 3 0 0 0 6 0c0-1-3-5-3-5',text:'M4 4h16M12 4v17M8 21h8',eraser:'m3 13 10-10 9 9-9 9H9zm5-5 9 9M13 21h9',picker:'m14 3 7 7m-8-2 4 4M3 21l2-6 9-9 4 4-9 9z',zoom:'M10 4a6 6 0 1 0 0 12 6 6 0 0 0 0-12m5 11 6 6M7 10h6m-3-3v6',brush:'M8 3h8l-1 11H9zM9 14h6l-1 7h-4zM10 3v7m3-7v7',
