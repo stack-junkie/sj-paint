@@ -47,13 +47,23 @@ Microsoft documents a mixture of device-specific local models and account-backed
 | Drawing behavior | Brush rasterization, textures, selection and transform edge cases, text metrics and all command shortcuts are not proven identical to the reference. |
 | Visual fidelity | Icons are newly drawn and rendering is independently implemented. Fonts depend on the host platform. Pixel-perfect layout and control behavior have not been established. |
 | Advanced editing | Ordinary shapes remain editable with a free-rotation handle until committed. Committed text and shapes become pixels. Post-commit vector/text re-editing is not implemented. Curve/polygon editing still uses its earlier construction workflow. |
-| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export is uncompressed RGBA. TIFF import covers classic RGB/RGBA8 strips and orientations 1 through 8; multipage, tiled, planar, palette/grayscale, higher bit depth and color-profile variants are rejected. Full metadata preservation and color-managed workflows are not established. |
+| Image formats | GIF has a fixed palette, binary transparency and one frame. TIFF export uses LZW/predictor-2 RGBA. TIFF import covers classic RGB/RGBA8 strips and orientations 1 through 8; multipage, tiled, planar, palette/grayscale, higher bit depth and color-profile variants are rejected. Full metadata preservation and color-managed workflows are not established. |
 | Platform integration | The Linux installer passed GIO menu registration, eligibility and fixture-launch checks. Actual menu presentation in each desktop shell remains unverified. Physical printing, native chooser interaction, Wayland, complete accessibility support and ARM compatibility also remain unverified. |
 | Resource limits | The editor enforces its own document, history and encoded-file bounds. Their equivalence to Microsoft Paint limits is unknown. |
 
 Implemented controls and passing checks do not close these gaps. Baseline acceptance still requires reference-based verification of appearance and behavior, including features that are missing or currently uncertain. Project-specific feature development follows the completed baseline.
 
 ## Verification history
+
+### Version 0.2.13 curve construction, text focus and TIFF export
+
+Headless pointer reproduction found that an initial diagonal curve changed 4,689 RGBA channel values on release. Holding Shift changed 6,507 values and discarded the constrained endpoint. One curve geometry owner now creates the initial straight segment and carries its constrained endpoint into control-point editing. The public browser and desktop helper entrypoints passed 44 checks in headless Chrome, including cancellation, history and layered previews. This is source-runtime verification, not new native Paint observation.
+
+Text reproduction also found that the browser's default pointer action focused the canvas after creating a text box. After explicitly focusing and typing a draft, clicking Bold then typing P committed the draft and selected Pencil. Text creation now prevents that default focus action. Pointer formatting captures and restores the same text session's selection; keyboard navigation retains toolbar focus. Nineteen focused public-control checks passed, including colors, keyboard Redo and one-step text history. The complete source browser suite passed 678 checks, the TIFF codec passed 24 groups, and seven native filesystem tests passed. The Windows package built successfully; packaged verification remains pending.
+
+TIFF encoding now shares the decoder module and writes bounded row-aligned LZW/predictor-2 strips. Eighty-two independently decoded files matched exact RGBA hashes in Pillow 12.3.0/libtiff 4.7.1. Explicit uncompressed encoding remains byte-compatible with the old exporter. The actual save path uses the same encoder cooperatively; a 2-megapixel noisy input produced identical 11,477,856-byte output, while event-loop heartbeats progressed during encoding. One shared-host measurement reduced the longest heartbeat gap from 923 ms to 29 ms; total encode time increased from 923 ms to 1,218 ms. Snapshot readback, final allocation, Blob conversion and native IPC still have synchronous work. Noise can expand under LZW. CPU samples are coarse; process-family peak memory, agent token cost and native reopening of these new exports are unmeasured. Measurements and independent evidence are retained under local output/tiff-export-evidence.
+
+Full Paint parity remains open. Local-first AI evaluation was selected, with acquisition approval still required. Background reference isolation probes have not established safe Paint activation; no reference process was launched. Existing references continue to support independently useful fixes.
 
 ### Version 0.2.12 draft state, Fit and remaining decoded shortcuts
 

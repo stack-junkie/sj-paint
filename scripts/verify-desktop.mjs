@@ -3,6 +3,8 @@ import { verifyKeyboardDesktop } from './verify-keyboard-desktop.mjs';
 import { verifyResourceShortcutsDesktop } from './verify-resource-shortcuts-desktop.mjs';
 import { verifyDraftAffordancesDesktop } from './verify-draft-affordances-desktop.mjs';
 import { verifyTextDesktop } from './verify-text-desktop.mjs';
+import { verifyTextFocusDesktop } from './verify-text-focus.mjs';
+import { verifyCurveConstructionDesktop } from './verify-curve-construction.mjs';
 import { verifyTiffDesktop } from './verify-tiff-desktop.mjs';
 import { verifyDrawingAdmissionDesktop } from './verify-drawing-admission-desktop.mjs';
 import { verifyHeldLayerPreviewDesktop } from './verify-held-layer-preview.mjs';
@@ -191,6 +193,8 @@ try {
   await verifyResourceShortcutsDesktop(page, check);
   await verifyDraftAffordancesDesktop(page, check);
   await verifyTextDesktop(page, check);
+  await verifyTextFocusDesktop(page, check);
+  await verifyCurveConstructionDesktop(page, check);
   await verifyDrawingAdmissionDesktop(page, check);
   await verifyHeldLayerPreviewDesktop(page, check);
   const command = async (menu, action) => {

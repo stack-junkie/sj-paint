@@ -3,8 +3,8 @@ import assert from 'node:assert/strict';
 import { readFile } from 'node:fs/promises';
 import { createHash } from 'node:crypto';
 import { deflateSync, inflateSync } from 'node:zlib';
-import { readTiff } from '../src/tiff.js';
-import { exportTiff } from '../src/files.js';
+import { readTiff, writeTiff, writeTiffAsync } from '../src/tiff.js';
+import { exportTiff, exportTiffAsync, saveImageFile } from '../src/files.js';
 import { readPaint } from '../src/paint-format.js';
 
 const pixels = Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 0, 0, 0, 255, 128, 1, 2, 3, 4, 5, 6, 7, 8, 255, 255, 255, 255]);
@@ -107,6 +107,135 @@ test('existing SJ TIFF exporter round-trips exact unassociated-alpha bytes', asy
   const canvas = { width: 3, height: 2, getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray(pixels) }) }) };
   const blob = exportTiff(canvas);
   assert.deepEqual(await readTiff(await blob.arrayBuffer()), { width: 3, height: 2, rgba: pixels });
+});
+
+test('default TIFF export uses LZW and horizontal prediction, with explicit uncompressed compatibility', async () => {
+  const canvas = { width: 3, height: 2, getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray(pixels) }) }) };
+  for (const compression of ['lzw', 'none']) {
+    const bytes = new Uint8Array(await exportTiff(canvas, { compression }).arrayBuffer());
+    const view = new DataView(bytes.buffer);
+    assert.equal(view.getUint16(fieldOffset(bytes, 259) + 8, true), compression === 'lzw' ? 5 : 1);
+    if (compression === 'lzw') assert.equal(view.getUint16(fieldOffset(bytes, 317) + 8, true), 2);
+    else assert.equal(digest(bytes), '64bebe9261c60a100139ad45cec77528819b6707a03a9709c53b2d3350455cde',
+      'explicit uncompressed output retains the prior exporter bytes');
+    assert.deepEqual(await readTiff(bytes), { width: 3, height: 2, rgba: pixels });
+  }
+  const bytes = new Uint8Array(await exportTiff(canvas).arrayBuffer());
+  assert.equal(new DataView(bytes.buffer).getUint16(fieldOffset(bytes, 259) + 8, true), 5);
+});
+
+function noise(length) {
+  let state = 0x713b6a49;
+  return Uint8Array.from({ length }, () => {
+    state ^= state << 13; state ^= state >>> 17; state ^= state << 5;
+    return state >>> 24;
+  });
+}
+
+test('actual TIFF save yields while encoding and keeps its captured pixels and target', async () => {
+  const width = 1024, height = 2048, original = noise(width * height * 4), current = original.slice();
+  const originalWindow = globalThis.window, OriginalBlob = globalThis.Blob;
+  let ticks = 0, ticksBeforeBlob = 0, snapshotReads = 0, request;
+  const canvas = { width, height, getContext: () => ({ getImageData: () => {
+    snapshotReads++; return { data: new Uint8ClampedArray(current) };
+  } }) };
+  globalThis.Blob = class extends OriginalBlob {
+    constructor(parts, options) {
+      if (options?.type === 'image/tiff') ticksBeforeBlob = ticks;
+      super(parts, options);
+    }
+  };
+  globalThis.window = { paintDesktop: { saveImage: value => { request = value; return { name: 'saved.tiff' }; } } };
+  const timer = setInterval(() => { ticks++; if (ticks === 1) current.fill(0); }, 1);
+  try {
+    assert.deepEqual(await saveImageFile(canvas, 'tiff', 'snapshot.png', { target: 'original-target' }), { name: 'saved.tiff' });
+    assert.ok(ticksBeforeBlob > 1, 'event-loop tasks must run during encoding, before Blob/IPC conversion');
+    assert.equal(snapshotReads, 1); assert.equal(request.target, 'original-target');
+    assert.equal(request.suggestedName, 'snapshot.tiff'); assert.equal(request.format, 'tiff');
+    assert.deepEqual((await readTiff(Uint8Array.from(request.bytes))).rgba, original);
+    assert.ok(current.every(value => value === 0), 'intervening edits actually occurred');
+  } finally {
+    clearInterval(timer); globalThis.Blob = OriginalBlob;
+    if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow;
+  }
+});
+
+test('TIFF encoder preserves noisy and repetitive RGBA at dictionary boundaries and resets', async () => {
+  // Sweep near each early-width boundary, including final-code/EOI transitions.
+  for (const center of [64, 192, 448, 1024]) for (let width = center - 8; width <= center + 8; width++) {
+    const rgba = noise(width * 4), bytes = writeTiff({ width, height: 1, rgba });
+    assert.deepEqual((await readTiff(bytes)).rgba, rgba, `noisy ${width} pixel row`);
+  }
+  for (const width of [1, 257, 16384]) for (const repeated of [false, true]) {
+    const rgba = repeated ? new Uint8Array(width * 4).fill(65) : noise(width * 4);
+    assert.deepEqual((await readTiff(writeTiff({ width, height: 1, rgba }))).rgba, rgba);
+  }
+});
+
+test('TIFF encoder uses bounded whole-row strips including a short last strip', async () => {
+  const width = 257, height = 130, rgba = noise(width * height * 4), before = rgba.slice();
+  const bytes = writeTiff({ width, height, rgba }), view = new DataView(bytes.buffer);
+  assert.equal(view.getUint32(fieldOffset(bytes, 278) + 8, true), 63);
+  assert.equal(view.getUint32(fieldOffset(bytes, 273) + 4, true), 3);
+  const offsets = view.getUint32(fieldOffset(bytes, 273) + 8, true);
+  const lengths = view.getUint32(fieldOffset(bytes, 279) + 8, true);
+  for (let index = 0; index < 3; index++) {
+    const start = view.getUint32(offsets + index * 4, true), length = view.getUint32(lengths + index * 4, true);
+    const end = index === 2 ? bytes.length : view.getUint32(offsets + (index + 1) * 4, true);
+    assert.equal(start + length, end);
+    assert.equal(bytes[start], 128, 'every MSB-first strip starts with clear code 256');
+  }
+  assert.deepEqual(await readTiff(bytes), { width, height, rgba });
+  assert.deepEqual(rgba, before, 'prediction must not change caller pixels');
+  assert.deepEqual(writeTiff({ width, height, rgba }), bytes, 'encoding is deterministic');
+  const padded = new Uint8Array(rgba.length + 11); padded.set(rgba, 7);
+  assert.deepEqual(writeTiff({ width, height, rgba: padded.subarray(7, 7 + rgba.length) }), bytes);
+});
+
+test('cooperative TIFF export is byte-identical to synchronous export', async () => {
+  for (const [width, height] of [[3, 2], [257, 130], [16384, 2]]) {
+    const padded = noise(width * height * 4 + 11), rgba = padded.subarray(7, 7 + width * height * 4), original = padded.slice();
+    for (const compression of ['lzw', 'none']) {
+      const options = { compression }, image = { width, height, rgba };
+      assert.deepEqual(await writeTiffAsync(image, options), writeTiff(image, options));
+      const canvas = { width, height, getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray(rgba) }) }) };
+      assert.deepEqual(await (await exportTiffAsync(canvas, options)).arrayBuffer(), await exportTiff(canvas, options).arrayBuffer());
+      assert.deepEqual(padded, original);
+    }
+  }
+});
+
+test('cooperative TIFF save propagates codec and destination failures without retrying', async () => {
+  await assert.rejects(writeTiffAsync({ width: 3, height: 2, rgba: pixels }, { compression: 'zip' }), /compression/);
+  const originalWindow = globalThis.window; let writes = 0;
+  const failure = new Error('destination unavailable');
+  globalThis.window = { paintDesktop: { saveImage: () => { writes++; throw failure; } } };
+  try {
+    const invalid = { width: 3, height: 2, getContext: () => ({ getImageData: () => ({ data: pixels.subarray(1) }) }) };
+    await assert.rejects(saveImageFile(invalid, 'tiff'), /pixel length/);
+    assert.equal(writes, 0, 'failed encoding never reaches the save destination');
+    const valid = { width: 3, height: 2, getContext: () => ({ getImageData: () => ({ data: pixels }) }) };
+    await assert.rejects(saveImageFile(valid, 'tiff'), error => error === failure);
+    assert.equal(writes, 1);
+  } finally {
+    if (originalWindow === undefined) delete globalThis.window; else globalThis.window = originalWindow;
+  }
+});
+
+test('TIFF encoder rejects invalid dimensions, buffers and unsupported options', () => {
+  const valid = { width: 3, height: 2, rgba: pixels };
+  for (const width of [0, -1, 1.5, NaN, 16385]) assert.throws(() => writeTiff({ ...valid, width }), /dimensions/);
+  assert.throws(() => writeTiff({ ...valid, width: 16384, height: 16384 }), /dimensions/);
+  assert.throws(() => writeTiff({ ...valid, rgba: pixels.subarray(1) }), /pixel length/);
+  assert.throws(() => writeTiff(valid, { compression: 'zip' }), /compression/);
+});
+
+test('TIFF encoder enforces the encoded budget for uncompressed and expanding cooperative LZW output', async () => {
+  const width = 4096, height = 4096, rgba = new Uint8Array(width * height * 4);
+  assert.throws(() => writeTiff({ width, height, rgba }, { compression: 'none' }), /file limit/);
+  const strip = noise(65536);
+  for (let offset = 0; offset < rgba.length; offset += strip.length) rgba.set(strip, offset);
+  await assert.rejects(writeTiffAsync({ width, height, rgba }), /file limit/);
 });
 
 test('RGB expands alpha and all eight orientations map asymmetric pixels correctly', async () => {

@@ -10,7 +10,7 @@ export async function tiffImportFixture() {
     const color = x < 20 ? [20, 80, 190, 255] : x < 45 && y < 35 ? [179, 79, 39, 128] : [0, 0, 0, 0];
     rgba.set(color, (y * width + x) * 4);
   }
-  const bytes = new Uint8Array(await exportTiff({ width, height, getContext: () => ({ getImageData: () => ({ data: rgba }) }) }).arrayBuffer());
+  const bytes = new Uint8Array(await exportTiff({ width, height, getContext: () => ({ getImageData: () => ({ data: rgba }) }) }, { compression: 'none' }).arrayBuffer());
   return { width, height, rgba, bytes };
 }
 

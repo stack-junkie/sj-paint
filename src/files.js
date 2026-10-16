@@ -1,7 +1,7 @@
 import { PAINT_LIMITS, assertDocumentBudget } from './engine.js';
 import PROJECT from './project-format.json' with { type: 'json' };
 import { readPaint, writePaint } from './paint-format.js';
-import { readTiff } from './tiff.js';
+import { readTiff, writeTiff, writeTiffAsync } from './tiff.js';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const MAX_SIDE = PAINT_LIMITS.maxDimension;
@@ -243,50 +243,20 @@ export function exportGif(canvas) {
   return new Blob([bytes.subarray(0, offset)], { type: MIME.gif });
 }
 
-export function exportTiff(canvas) {
+export function exportTiff(canvas, options) {
   dimensions(canvas.width, canvas.height);
   const { width, height } = canvas;
-  const entryCount = 14;
-  const bitsOffset = 8 + 2 + entryCount * 12 + 4;
-  const resolutionOffset = bitsOffset + 8;
-  const pixelOffset = resolutionOffset + 16;
-  const pixelBytes = width * height * 4;
-  if (pixelOffset + pixelBytes > MAX_BYTES) throw new Error('The TIFF exceeds the 64 MiB file limit.');
-  const header = new Uint8Array(pixelOffset);
-  const view = new DataView(header.buffer);
-  header.set([0x49, 0x49, 42, 0]);
-  view.setUint32(4, 8, true);
-  view.setUint16(8, entryCount, true);
-  let offset = 10;
-  const tag = (id, type, count, value) => {
-    view.setUint16(offset, id, true);
-    view.setUint16(offset + 2, type, true);
-    view.setUint32(offset + 4, count, true);
-    if (type === 3 && count === 1) view.setUint16(offset + 8, value, true);
-    else view.setUint32(offset + 8, value, true);
-    offset += 12;
-  };
-  tag(256, 4, 1, width);
-  tag(257, 4, 1, height);
-  tag(258, 3, 4, bitsOffset);
-  tag(259, 3, 1, 1); // No compression.
-  tag(262, 3, 1, 2); // RGB photometric interpretation.
-  tag(273, 4, 1, pixelOffset);
-  tag(277, 3, 1, 4);
-  tag(278, 4, 1, height);
-  tag(279, 4, 1, pixelBytes);
-  tag(282, 5, 1, resolutionOffset);
-  tag(283, 5, 1, resolutionOffset + 8);
-  tag(284, 3, 1, 1); // Interleaved RGBA samples.
-  tag(296, 3, 1, 2); // Resolution in inches.
-  tag(338, 3, 1, 2); // Unassociated alpha matches canvas ImageData.
-  for (let channel = 0; channel < 4; channel++) view.setUint16(bitsOffset + channel * 2, 8, true);
-  view.setUint32(resolutionOffset, 96, true);
-  view.setUint32(resolutionOffset + 4, 1, true);
-  view.setUint32(resolutionOffset + 8, 96, true);
-  view.setUint32(resolutionOffset + 12, 1, true);
   const rgba = canvas.getContext('2d').getImageData(0, 0, width, height).data;
-  return new Blob([header, rgba], { type: MIME.tiff });
+  return new Blob([writeTiff({ width, height, rgba }, options)], { type: MIME.tiff });
+}
+
+export async function exportTiffAsync(canvas, options) {
+  dimensions(canvas.width, canvas.height);
+  const { width, height } = canvas;
+  // Own one pixel snapshot before the first yield. Later canvas edits cannot
+  // change this save, and the codec does not make another full-document copy.
+  const rgba = canvas.getContext('2d').getImageData(0, 0, width, height).data;
+  return new Blob([await writeTiffAsync({ width, height, rgba }, options)], { type: MIME.tiff });
 }
 
 export async function saveImageFile(canvas, format = 'png', name = 'Untitled', { target } = {}) {
@@ -295,7 +265,7 @@ export async function saveImageFile(canvas, format = 'png', name = 'Untitled', {
   if (format === 'tif') format = 'tiff';
   if (!Object.hasOwn(MIME, format)) throw new Error('Supported exports are PNG, JPEG, GIF, TIFF, WebP and BMP.');
   const blob = format === 'bmp' ? exportBmp(canvas) : format === 'gif' ? exportGif(canvas) :
-    format === 'tiff' ? exportTiff(canvas) :
+    format === 'tiff' ? await exportTiffAsync(canvas) :
     await canvasBlob(format === 'jpeg' ? flattenedCanvas(canvas) : canvas, MIME[format]);
   const suggestedName = filename(name, format === 'jpeg' ? 'jpg' : format);
   if (window.paintDesktop) {

@@ -4,6 +4,7 @@ import { VERSION } from './version.js';
 import { bindCanvasResize } from './canvas-resize.js';
 import { PaintDocument } from './engine.js';
 import { drawShape } from './shapes.js';
+import { createCurve, paintCurve as paintCurveDraft } from './curve.js';
 import { createPendingShape, paintPendingShape, hitPendingShape, transformPendingShape } from './pending-shape.js';
 import { createStroke, BRUSHES } from './brushes.js';
 import { createEraserStroke, eraserFootprint } from './eraser.js';
@@ -156,7 +157,7 @@ const beginPointer=safe(e=>{
   if(!doc.activeLayer.visible&&!['select','lasso','zoom','picker'].includes(state.tool)){toast('Show the active layer before drawing.');return;}
   if(curve){curve.controls.push(p);if(curve.controls.length===2)finishPending();else changed();return;}
   if(state.tool==='polygon'){if(!polygon.length){doc.deselect();doc.begin('Polygon');}polygon.push(p);drag={kind:'polygon',hover:p};changed();return;}
-  if(state.tool==='text'){doc.deselect();startText(p);return;}
+  if(state.tool==='text'){e.preventDefault();doc.deselect();startText(p);return;}
   if(state.tool==='zoom'){setZoom(state.zoom*(secondary?.5:2));return;}
   if(state.tool==='picker'){const c=doc.composite().getContext('2d').getImageData(Math.max(0,Math.min(doc.width-1,Math.floor(p[0]))),Math.max(0,Math.min(doc.height-1,Math.floor(p[1]))),1,1).data;state[secondary?'secondary':'primary']='#'+[...c].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');updateToolState();return;}
   if(state.tool==='fill'){doc.deselect();doc.fill(Math.floor(p[0]),Math.floor(p[1]),(secondary?state.secondary:state.primary)+Math.round(state.opacity*255).toString(16).padStart(2,'0'),Math.round(state.tolerance*2.55));return;}
@@ -193,7 +194,7 @@ overlay.addEventListener('pointerup',safe(e=>{
   if(d.kind==='pan'){drag=d.suspendedDrag;changed();return;}
   if(d.kind==='polygon')return;
   if(d.kind==='stroke'){if(state.tool==='eraser')stroke.move(...point(e));stroke.end();stroke=null;doc.commit();}
-  if(d.kind==='shape'){if(d.start[0]===d.current[0]&&d.start[1]===d.current[1])doc.cancel();else if(state.tool==='curve'){curve={start:d.start,end:d.current,controls:[]};}else{pendingShape=createPendingShape(state.tool,d.start,d.current,shapeOptions());}shapePreview=null;}
+  if(d.kind==='shape'){if(d.start[0]===d.current[0]&&d.start[1]===d.current[1])doc.cancel();else if(state.tool==='curve'){curve=createCurve(d.start,d.current,{constrain:d.shift});}else{pendingShape=createPendingShape(state.tool,d.start,d.current,shapeOptions());}shapePreview=null;}
   if(d.kind==='select'){const r=box(d.start,d.current);if(d.start[0]!==d.current[0]||d.start[1]!==d.current[1])doc.selectRect(r.x,r.y,r.width,r.height);}
   if(d.kind==='lasso'&&d.points.length>2)doc.selectPolygon(d.points);
   if(d.kind==='selection-transform')doc.commit();
@@ -203,14 +204,16 @@ for(const type of ['pointercancel','lostpointercapture'])overlay.addEventListene
 window.addEventListener('blur',()=>{if(activePointerId!==null)cancelPointerInteraction();});
 overlay.addEventListener('dblclick',()=>{if(state.tool==='polygon')finishPending();});
 function paintDrawingDraft(c){
-  if(shapePreview)drawShape(c,state.tool,...shapePreview,shapeOptions());
+  if(shapePreview){
+    if(state.tool==='curve')paintCurveDraft(c,createCurve(shapePreview.slice(0,2),shapePreview.slice(2),{constrain:shapeOptions().constrain}),shapeOptions());
+    else drawShape(c,state.tool,...shapePreview,shapeOptions());
+  }
   if(pendingShape)paintPendingShape(c,pendingShape);
   if(curve)paintCurve(c);
   if(polygon.length)paintPolygon(c,true);
 }
 function paintCurve(c){
-  const controls=[...curve.controls];if(controls.length<2&&curve.hover)controls.push(curve.hover);
-  drawShape(c,controls.length?'curve':'line',...curve.start,...curve.end,{...shapeOptions(),constrain:false,controlPoints:controls.map(([x,y])=>({x,y}))});
+  paintCurveDraft(c,curve,shapeOptions());
 }
 function paintPolygon(c,preview=false){
   const points=preview&&drag?.hover?[...polygon,drag.hover]:polygon;
@@ -229,6 +232,27 @@ function startText(p){
   const t=document.createElement('textarea');t.className='text-editor';t.setAttribute('aria-label','Text on canvas');t.spellcheck=false;t.style.left=`${p[0]*state.zoom}px`;t.style.top=`${p[1]*state.zoom}px`;t.style.width=`${Math.min(400,doc.width-p[0])*state.zoom}px`;t.style.minHeight=`${100*state.zoom}px`;t.addEventListener('input',changed);stage.append(t);textEditor={el:t,x:p[0],y:p[1]};styleText();t.focus();
 }
 function styleText(){if(!textEditor)return;Object.assign(textEditor.el.style,{fontFamily:state.font,fontSize:`${state.fontSize*state.zoom}px`,fontWeight:state.bold?'bold':'normal',fontStyle:state.italic?'italic':'normal',textDecoration:[state.underline?'underline':'',state.strikethrough?'line-through':''].filter(Boolean).join(' ')||'none',color:state.primary,background:state.textBackground?state.secondary:'transparent',textAlign:state.align,lineHeight:'1.2'});}
+// A pointer-operated formatting control returns typing to its text session.
+// Keyboard navigation keeps focus on the chosen control. Capture before the
+// browser moves focus, and never restore into a replacement text session.
+let textPointerFocus=null;
+const textStyleActions=new Set(['bold','italic','underline','strikethrough','colors','primary','secondary']);
+function restoreTextFocus(owner){
+  if(!owner||owner.session!==textEditor||!owner.session.el.isConnected||$('#dialog').open)return;
+  const el=owner.session.el;el.focus({preventScroll:true});el.setSelectionRange(owner.start,owner.end,owner.direction);
+}
+function takeTextFocus(control){
+  const owner=textPointerFocus?.control===control?textPointerFocus:null;
+  textPointerFocus=null;return owner;
+}
+document.addEventListener('pointerdown',e=>{
+  let control=e.target.closest('button,#font,#text-align,#text-background');
+  if(!control&&e.target.closest('#text-controls label'))control=e.target.closest('label').querySelector('#text-background');
+  const relevant=control&&(control.dataset.color||textStyleActions.has(control.dataset.action)||['font','text-align','text-background'].includes(control.id));
+  textPointerFocus=relevant&&textEditor?{control,session:textEditor,start:textEditor.el.selectionStart,end:textEditor.el.selectionEnd,direction:textEditor.el.selectionDirection}:null;
+},true);
+document.addEventListener('keydown',()=>{textPointerFocus=null;},true);
+document.addEventListener('pointercancel',()=>{textPointerFocus=null;},true);
 function commitText(){
   if(!textEditor)return;const {el,x,y}=textEditor;
   if(!el.value.trim()){el.remove();textEditor=null;doc.cancel();return;}
@@ -263,7 +287,7 @@ function changeSize(value){if(activePointerId!==null&&!pendingShape)cancelPointe
 $('#size').addEventListener('input',e=>changeSize(e.target.value));$('#size-number').addEventListener('change',e=>changeSize(e.target.value));
 $('#opacity').addEventListener('input',e=>{state.opacity=+e.target.value/100;$('#opacity-value').value=e.target.value+'%';updatePendingStyle();});$('#tolerance').addEventListener('input',e=>{state.tolerance=+e.target.value;$('#tolerance-value').value=e.target.value+'%';});
 $('#outline').addEventListener('change',e=>{state.outline=e.target.value;updatePendingStyle();});$('#shape-fill').addEventListener('change',e=>{state.fillStyle=e.target.value;updatePendingStyle();});
-$('#font').addEventListener('change',e=>{state.font=e.target.value;styleText();});$('#font-size').addEventListener('change',e=>{state.fontSize=Math.max(6,Math.min(500,+e.target.value||24));styleText();});$('#text-align').addEventListener('change',e=>{state.align=e.target.value;styleText();});$('#text-background').addEventListener('change',e=>{state.textBackground=e.target.checked;styleText();});
+$('#font').addEventListener('change',e=>{state.font=e.target.value;styleText();restoreTextFocus(takeTextFocus(e.target));});$('#font-size').addEventListener('change',e=>{state.fontSize=Math.max(6,Math.min(500,+e.target.value||24));styleText();});$('#text-align').addEventListener('change',e=>{state.align=e.target.value;styleText();restoreTextFocus(takeTextFocus(e.target));});$('#text-background').addEventListener('change',e=>{state.textBackground=e.target.checked;styleText();restoreTextFocus(takeTextFocus(e.target));});
 $('#layer-opacity').addEventListener('change',e=>{if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.setLayer(doc.activeLayerId,{opacity:+e.target.value/100});});
 $('#layer-list').addEventListener('dblclick',safe(async e=>{const row=e.target.closest('[data-layer]');if(row){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===row.dataset.layer);const values=await dialog('Rename layer',`<label>Name<input name="name" value="${esc(l.name)}" required maxlength="100"></label>`);if(values)doc.setLayer(l.id,{name:values.name});}}));
 
@@ -432,12 +456,12 @@ document.addEventListener('click',safe(async e=>{
   if(t.dataset.tool){chooseTool(t.dataset.tool);return;}
   if(t.dataset.menu){showMenu(t.dataset.menu,t);return;}
   if(t.dataset.command){const cmd=t.dataset.command;closeMenu();if(cmd.startsWith('tool:'))chooseTool(cmd.slice(5));else await executeAction(cmd,e);return;}
-  if(t.dataset.color){state.primary=t.dataset.color;updateToolState();styleText();updatePendingStyle();return;}
+  if(t.dataset.color){const focus=takeTextFocus(t);state.primary=t.dataset.color;updateToolState();styleText();updatePendingStyle();restoreTextFocus(focus);return;}
   if(t.dataset.visible){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===t.dataset.visible);doc.setLayer(l.id,{visible:!l.visible});return;}
   if(t.dataset.layerSelect||t.dataset.layer){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.selectLayer(t.dataset.layerSelect||t.dataset.layer);return;}
-  if(t.dataset.action){const a=t.dataset.action;if(!['commit-text','bold','italic','underline','strikethrough','colors','primary','secondary','redo'].includes(a))commitText();await executeAction(a,{...e,currentTarget:t,target:t});}
+  if(t.dataset.action){const a=t.dataset.action,focus=textStyleActions.has(a)?takeTextFocus(t):null;if(!['commit-text','redo'].includes(a)&&!textStyleActions.has(a))commitText();try{await executeAction(a,{...e,currentTarget:t,target:t});}finally{restoreTextFocus(focus);}}
 }));
-document.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-color]');if(t){e.preventDefault();state.secondary=t.dataset.color;updateToolState();styleText();updatePendingStyle();}});
+document.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-color]');if(t){e.preventDefault();const focus=takeTextFocus(t);state.secondary=t.dataset.color;updateToolState();styleText();updatePendingStyle();restoreTextFocus(focus);}});
 document.addEventListener('keydown',safe(async e=>{
   if($('#dialog').open)return;
   if(e.key==='Escape'&&!$('#menu').hidden){e.preventDefault();closeMenu();return;}

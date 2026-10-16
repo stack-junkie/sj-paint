@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.13] - Unreleased
+
+- Keep the initial curve segment straight and preserve Shift-constrained endpoints when the pointer is released and control-point editing begins.
+- Focus newly created text immediately and preserve the text selection after pointer-operated formatting, palette and color-dialog actions, while retaining deliberate keyboard toolbar focus.
+- Save TIFF with lossless LZW compression and horizontal prediction, preserving alpha and yielding between bounded strips so encoding does not monopolize the UI thread.
+
 ## [0.2.12] - 2026-10-15
 
 - Enable Undo and show unsaved work for unfinished curves and polygons using the same pending-drawing state as close protection.

@@ -15,6 +15,8 @@ import { verifyTiffImport } from './verify-tiff-import.mjs';
 import { verifyKeyboardControls } from './verify-keyboard-controls.mjs';
 import { verifyTextLayout } from './verify-text-layout.mjs';
 import { verifyTextInteractions } from './verify-text-interactions.mjs';
+import { verifyTextFocus } from './verify-text-focus.mjs';
+import { verifyCurveConstruction } from './verify-curve-construction.mjs';
 import { verifyDrawingAdmission } from './verify-drawing-admission.mjs';
 import { verifyHeldLayerPreview } from './verify-held-layer-preview.mjs';
 import { verifyEraser } from './verify-eraser.mjs';
@@ -60,6 +62,8 @@ try{
  await verifyKeyboardControls(page,check);
  await verifyTextLayout(page,check);
  await verifyTextInteractions(page,check);
+ await verifyTextFocus(page,check);
+ await verifyCurveConstruction(page,check);
  await verifyStrikethrough(page,check);
  await verifyKeyboardCommit(page,check);
  await verifyResourceShortcuts(page,check);

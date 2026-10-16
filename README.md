@@ -2,8 +2,8 @@
 
 Stack Junkie Paint (SJ Paint) is a Microsoft Paint-inspired drawing app for Windows and Linux, with brushes, shapes, selections, text and layers. Windows is the primary desktop platform; a browser edition is available too.
 
-Version: 0.2.12
-<!-- sj-paint-version: 0.2.12 -->
+Version: 0.2.13
+<!-- sj-paint-version: 0.2.13 -->
 
 SJ Paint is an independent implementation whose baseline goal is to match Microsoft Paint's appearance, features and behavior 1:1. That baseline is unfinished. Project-specific features come after the baseline is completed and verified. It is not a Microsoft product. The [parity ledger](PARITY.md) records implemented features, missing behavior and verification limits.
 
@@ -13,16 +13,16 @@ SJ Paint is an independent implementation whose baseline goal is to match Micros
 
 ### Windows
 
-Download the [v0.2.12 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.12/sj-paint-0.2.12-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
+Download the [v0.2.13 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.13/sj-paint-0.2.13-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
 
 The Windows executable is currently unsigned; it has no Authenticode signature.
 
 ### Linux
 
-Download the [v0.2.12 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.12/sj-paint-0.2.12-linux-x64.tar.gz), then run:
+Download the [v0.2.13 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.2.13/sj-paint-0.2.13-linux-x64.tar.gz), then run:
 
 ```sh
-tar -xzf sj-paint-0.2.12-linux-x64.tar.gz
+tar -xzf sj-paint-0.2.13-linux-x64.tar.gz
 ./sj-paint/run-paint.sh
 ```
 
@@ -34,7 +34,7 @@ To install a copy for your user and add SJ Paint to the Linux application menu:
 
 The installer copies the app to `~/.local/opt/sj-paint`, creates `~/.local/share/applications/io.stackjunkie.sjpaint.desktop`, and installs icons under `~/.local/share/icons/hicolor/`. It does not require a system-wide installation.
 
-Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.12). Use a normal desktop user.
+Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.2.13). Use a normal desktop user.
 
 Linux needs Electron's GTK, NSS, X11 and ALSA system libraries. Ubuntu 22.04 package names include `libgtk-3-0`, `libnss3`, `libatk-bridge2.0-0`, `libxdamage1` and `libasound2`; names vary by distribution. Normal startup keeps Chromium sandboxing enabled and does not add `--no-sandbox`.
 
@@ -43,7 +43,7 @@ Linux needs Electron's GTK, NSS, X11 and ALSA system libraries. Ubuntu 22.04 pac
 - Pencil, brush, eraser, calligraphy, airbrush, oil, crayon, marker, natural pencil and watercolor tools.
 - 23 shapes, curves and polygons, with outline and fill controls.
 - Fill tolerance, color picker, palette and custom colors, tool sizes and opacity.
-- Multiline text with font, size, bold, italic, underline, alignment and background controls.
+- Multiline text with font, size, bold, italic, underline, strikethrough, alignment and background controls.
 - Rectangular and free-form selections, inverse selection, transparency, move, resize, crop, copy, cut and paste.
 - Image rotation, flips, resize, skew, color inversion and canvas resizing.
 - Layer creation, duplication, reordering, naming, visibility, opacity, merging and transparent backgrounds.
@@ -95,7 +95,7 @@ The output is under `release/`, including the portable archive and its `.sha256`
 | WebP | Yes | Yes | Preserves transparency. |
 | BMP | Yes | Yes | Saves an uncompressed 24-bit bitmap, flattened against white. |
 | GIF | One frame | One frame | Fixed palette, no dithering or animation. Alpha below 128 becomes transparent; other pixels become opaque. |
-| TIFF | No | Yes | Single-page, uncompressed 8-bit RGBA with unassociated alpha and 96 DPI tags. |
+| TIFF | Supported variants | Yes | Classic RGB/RGBA8 strips with uncompressed, PackBits, LZW or Deflate data. Saves lossless LZW/predictor-2 RGBA with unassociated alpha and 96 DPI tags. |
 | `.sjpaint` | Yes | Yes | SJ Paint's layered project format. |
 | `.linuxpaint` | Yes | As `.sjpaint` | Legacy projects from Paint for Linux. |
 | Microsoft `.paint` | Tested variant | Tested variant | Full-canvas visible BGRA layers, pixel alpha and separate background. Unsupported variants are rejected. |

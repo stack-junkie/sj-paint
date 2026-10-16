@@ -60,6 +60,7 @@ export async function verifyTextInteractions(page, check) {
       d.activeLayer.canvas.getContext('2d').fillRect(200, 200, 5, 5); d.commit(); d.undo();
     });
     await type('Draft'); await page.locator('[data-action="bold"]').click();
+    await page.locator('[data-action="bold"]').focus();
     const beforeRedo = await snapshot(); await page.keyboard.press('Control+y');
     const afterRedo = await snapshot();
     check('Ctrl+Y from a focused text-style button preserves the draft transaction and prior redo',
