@@ -198,6 +198,7 @@ try {
     await page.locator(`[data-command="${action}"]`).click();
   };
   const pixels = () => page.locator('#canvas').evaluate(canvas => canvas.toDataURL());
+  const rendered = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const waitPixels = expected => page.waitForFunction(value => document.querySelector('#canvas').toDataURL() === value, expected, { polling: 100 });
   const waitTitle = prefix => page.waitForFunction(value => document.querySelector('#title').textContent.startsWith(value), prefix, { polling: 100 });
   const saveProject = async () => {
@@ -212,6 +213,9 @@ try {
   await page.mouse.down();
   await page.mouse.move(box.x + 250, box.y + 180, { steps: 20 });
   await page.mouse.up();
+  // Dirty now includes a held stroke. Wait for the release render before
+  // capturing the pixels that Undo/Redo must restore.
+  await rendered();
   await page.waitForFunction(() => document.title.includes('•'), null, { polling: 100 });
   const painted = await pixels();
   await page.getByRole('button', { name: 'Undo (Ctrl+Z)', exact: true }).click();
@@ -310,6 +314,7 @@ try {
   await page.mouse.down();
   await page.mouse.move(closeBox.x + 65, closeBox.y + 35, { steps: 8 });
   await page.mouse.up();
+  await rendered();
   await page.waitForFunction(() => document.title.includes('•'));
   const closePixels = await pixels();
   const closeFile = await main('__sjPaintVerification.file');
