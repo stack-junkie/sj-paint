@@ -71,6 +71,14 @@ The completed EfficientSAM evaluation took 65.226 s elapsed and 104.719 s CPU. F
 
 ## Verification history
 
+### Version 0.2.20 shape-style menus
+
+Outline and Fill now use selectable menu items with independent previews, following the complete ShapesToolbar.xbf item order and `LargeIconSelectableMenuFlyoutItemStyle` declarations. Source SHA-256: `207f68ab402af81e7f1cf855e175a36f1645e59924ab14f4562ce8d5c5ea4ae8`. Samples use SJ Paint's existing shape renderer, not Microsoft assets. Their chosen 80 by 40 logical-unit size is an implementation choice; exact native preview dimensions, pixels and focus behavior remain unverified.
+
+A public-control check first failed because the menu buttons were absent. Focused checks cover resource labels/order, one checked style, deterministic previews, keyboard navigation/activation, focus return, pending styling, cancellation and exact commit/Undo/Redo pixels. The existing menu owner handles focus; the existing pending-shape owner handles style edits. The final menu helper passed 35 checks. Related curve, pending-shape and held-layer workflows passed another 63 checks before the placement correction. An 800 by 360 window reproduced two existing accessibility defects: shape controls were hidden below width 1000, and menu bottom extended to 402.5. The controls now remain in the scrolling toolbar and the shared menu placement clamps to the viewport. First outline opening measured 17.9 ms; repeated openings measured 4.7 to 5.1 ms, with Fill 4.3 to 4.9 ms. This covers synchronous menu creation/layout only; CPU and process-family memory remain unmeasured. Packaged acceptance is pending.
+
+The owner deferred all remaining AI work until the end because of host load. Unpublished object-selection changes and verified downloads are preserved in the original checkout. This non-AI checkpoint starts from published 0.2.19 and does not include those changes.
+
 ### Version 0.2.19 View state and dialog accessibility
 
 Pinned MenuBar.xbf consumers establish Rulers, Gridlines and Status bar as toggle menu items. SJ Paint now derives their checkbox state from the presentation-state owner and adds the missing Status bar visibility control. Default visible retains established SJ behavior; native persistence/default/focus behavior remains unobserved. The shared dialog producer now names every invocation from its own current heading. This fixes a reproduced SJ accessibility omission, not an independently observed Microsoft screen-reader difference. Focused public regressions were added before implementation: View reproduced seven failures and shared dialog names six failures.

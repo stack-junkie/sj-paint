@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // The shared checks use only public controls and displayed canvases. They also
 // run in the packaged renderer, which deliberately does not expose paintApp.
 async function verifyConstruction(page, check, prefix) {
@@ -59,7 +60,7 @@ async function verifyConstruction(page, check, prefix) {
   try {
     await page.locator('#zoom-presets').selectOption({ label: '100%' });
     await page.locator('[data-tool="curve"]').click(); await page.locator('[data-color="#000000"]').click();
-    await page.locator('#outline').selectOption('solid'); await page.locator('#shape-fill').selectOption('none');
+    await chooseShapeStyle(page, 'outline', 'solid'); await chooseShapeStyle(page, 'fillStyle', 'none');
     await page.locator('#size-number').fill('6'); await page.locator('#size-number').press('Tab'); await frame();
     owned = true;
     for (const shift of [false, true]) {
@@ -101,11 +102,11 @@ async function verifyConstruction(page, check, prefix) {
     await page.locator('#layer-opacity').focus(); await page.keyboard.press('Home');
     for (let i = 0; i < 25; i++) await page.keyboard.press('ArrowRight');
     await page.locator('[data-action="add-layer"]').click();
-    await page.locator('[data-tool="rectangle"]').click(); await page.locator('#outline').selectOption('none');
-    await page.locator('#shape-fill').selectOption('solid'); await page.locator('[data-color="#3f48cc"]').click({ button: 'right' });
+    await page.locator('[data-tool="rectangle"]').click(); await chooseShapeStyle(page, 'outline', 'none');
+    await chooseShapeStyle(page, 'fillStyle', 'solid'); await page.locator('[data-color="#3f48cc"]').click({ button: 'right' });
     await move(100, 1); await page.mouse.down(); await move(120, 179); await page.mouse.up();
-    await page.locator('[data-tool="curve"]').click(); await page.locator('#outline').selectOption('solid');
-    await page.locator('#shape-fill').selectOption('none'); await page.locator(`[data-layer-select="${lower}"]`).click();
+    await page.locator('[data-tool="curve"]').click(); await chooseShapeStyle(page, 'outline', 'solid');
+    await chooseShapeStyle(page, 'fillStyle', 'none'); await page.locator(`[data-layer-select="${lower}"]`).click();
     const layerBaseline = await snapshot();
     await move(20, 40); await page.mouse.down(); await move(180, 140); const held = await snapshot();
     const sample = held.samples[4];
@@ -129,7 +130,7 @@ async function verifyConstruction(page, check, prefix) {
     else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitemradio', { name: initial.label, exact: true }).click(); }
     await page.locator(`[data-color="${initial.primary}"]`).click(); await page.locator(`[data-color="${initial.secondary}"]`).click({ button: 'right' });
     await page.locator('#size-number').fill(initial.size); await page.locator('#size-number').press('Tab');
-    await page.locator('#outline').selectOption(initial.outline); await page.locator('#shape-fill').selectOption(initial.fill);
+    await chooseShapeStyle(page, 'outline', initial.outline); await chooseShapeStyle(page, 'fillStyle', initial.fill);
     await page.locator('#zoom-presets').selectOption(initial.zoom);
     if (await page.locator('#layers-panel').isVisible() !== initial.layers) await page.locator('.layers-group [data-action="layers"]').click();
     await frame(); await page.locator('#viewport').evaluate((element, scroll) => { [element.scrollLeft, element.scrollTop] = scroll; }, initial.scroll);

@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // Packaged app coverage uses public UI and rendered pixels, without paintApp.
 export async function verifySelectionRotationDesktop(page, check) {
   const pixels = () => page.locator('#canvas').evaluate(canvas => canvas.toDataURL());
@@ -23,8 +24,8 @@ export async function verifySelectionRotationDesktop(page, check) {
   const blank = await pixels();
   await page.locator('[data-tool="rectangle"]').click();
   await page.locator('[data-color="#ed1c24"]').click();
-  await page.locator('#outline').selectOption('solid');
-  await page.locator('#shape-fill').selectOption('none');
+  await chooseShapeStyle(page, 'outline', 'solid');
+  await chooseShapeStyle(page, 'fillStyle', 'none');
   await drag(110, 110, 210, 170);
   await page.locator('[data-tool="select"]').click();
   await page.waitForFunction(value => document.querySelector('#canvas').toDataURL() !== value, blank, { polling: 100 });

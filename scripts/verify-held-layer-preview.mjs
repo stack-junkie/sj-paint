@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // Pixel checks of the actual displayed canvas plus overlay. Fixtures alone use
 // the engine; all draft creation, release, acceptance and cancellation use UI.
 export async function verifyHeldLayerPreview(page, check) {
@@ -42,8 +43,8 @@ export async function verifyHeldLayerPreview(page, check) {
     await target.locator(`[data-tool="${tool}"]`).click();
     await target.locator('[data-color="#ed1c24"]').click();
     await target.locator('[data-color="#ed1c24"]').click({button:'right'});
-    await target.locator('#outline').selectOption(tool==='curve'?'solid':'none');
-    await target.locator('#shape-fill').selectOption(tool==='curve'?'none':'solid');
+    await chooseShapeStyle(target, 'outline', tool==='curve'?'solid':'none');
+    await chooseShapeStyle(target, 'fillStyle', tool==='curve'?'none':'solid');
     await target.locator('#size-number').fill('12');await target.locator('#size-number').press('Tab');await frame();
     return documentState();
   };
@@ -110,7 +111,7 @@ export async function verifyHeldLayerPreviewDesktop(page,check) {
   let owned=false;
   try {
     await page.locator('#zoom-presets').selectOption({label:'100%'});await frame();
-    await page.locator('#outline').selectOption('none');await page.locator('#shape-fill').selectOption('solid');
+    await chooseShapeStyle(page, 'outline', 'none');await chooseShapeStyle(page, 'fillStyle', 'solid');
     owned=true;await rectangle(40,40,60,140,'#22b14c');
     if(!await page.locator('#layers-panel').isVisible())await page.locator('.layers-group [data-action="layers"]').click();
     const lower=await page.locator('#layer-list [data-layer-select]').getAttribute('data-layer-select');
@@ -139,7 +140,7 @@ export async function verifyHeldLayerPreviewDesktop(page,check) {
     else{await page.locator('[data-menu="brushes"]').click();await page.getByRole('menuitemradio',{name:initial.label,exact:true}).click();}
     await page.locator(`[data-color="${initial.primary}"]`).click();await page.locator(`[data-color="${initial.secondary}"]`).click({button:'right'});
     await page.locator('#size-number').fill(initial.size);await page.locator('#size-number').press('Tab');
-    await page.locator('#outline').selectOption(initial.outline);await page.locator('#shape-fill').selectOption(initial.fill);
+    await chooseShapeStyle(page, 'outline', initial.outline);await chooseShapeStyle(page, 'fillStyle', initial.fill);
     await page.locator('#zoom-presets').selectOption(initial.zoom);
     if(await page.locator('#layers-panel').isVisible()!==initial.layers)await page.locator('.layers-group [data-action="layers"]').click();await frame();
   }

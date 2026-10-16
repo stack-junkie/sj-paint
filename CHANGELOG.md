@@ -2,6 +2,12 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.2.20] - Unreleased
+
+- Replace plain Outline and Fill dropdowns with selectable menus and independently rendered style previews, using the pinned Paint resource order and labels.
+- Keep shape-style controls available in narrow windows and clamp shared menu placement inside short viewports.
+- Preserve pending shapes and curve construction while changing styles, with menu keyboard navigation, focus return and existing cancellation/history behavior.
+
 ## [0.2.19] - Unreleased
 
 - Expose checked Rulers and Gridlines states and a Status bar toggle in View, preserving pending drawings and keyboard zoom.

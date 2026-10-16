@@ -32,7 +32,7 @@ $('#app').innerHTML=`
     <div class="toolgroup image-group"><div class="group-content image-tools">${btn('crop','Crop','crop')}${btn('rotate-menu','Rotate','rotate')}${btn('flip-menu','Flip','flip')}${btn('resize','Resize and skew','resize')}${btn('remove-background','Remove background','remove-background')}</div><span class="group-label">Image</span></div>
     <div class="toolgroup"><div class="group-content tool-grid">${toolBtn('pencil','Pencil')}${toolBtn('fill','Fill with color')}${toolBtn('text','Text')}${toolBtn('eraser','Eraser')}${toolBtn('picker','Color picker')}${toolBtn('zoom','Magnifier')}</div><span class="group-label">Tools</span></div>
     <div class="toolgroup brush-group"><div class="group-content"><button class="large brush-selector" data-menu="brushes" title="Brushes" aria-label="Brushes">${icon('brush',30)}<span>⌄</span></button></div><span class="group-label">Brushes</span></div>
-    <div class="toolgroup shapes-group"><div class="group-content shapes-content"><div class="shape-grid">${SHAPES.map(s=>toolBtn(s,label(s))).join('')}</div><div class="shape-settings"><label title="Shape outline">${icon('pencil',15)}<select id="outline" aria-label="Shape outline"><option value="none">No outline</option><option value="solid" selected>Solid outline</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil brush</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor brush</option></select></label><label title="Shape fill">${icon('fill',15)}<select id="shape-fill" aria-label="Shape fill"><option value="none">No fill</option><option value="solid">Solid fill</option><option value="crayon">Crayon</option><option value="marker">Marker</option><option value="oil">Oil brush</option><option value="natural-pencil">Natural pencil</option><option value="watercolor">Watercolor brush</option></select></label></div></div><span class="group-label">Shapes</span></div>
+    <div class="toolgroup shapes-group"><div class="group-content shapes-content"><div class="shape-grid">${SHAPES.map(s=>toolBtn(s,label(s))).join('')}</div><div class="shape-settings"><button id="outline" data-menu="outline" aria-label="Shape outline" title="Shape outline">${icon('pencil',15)}<span>Outline</span><span aria-hidden="true">⌄</span></button><button id="shape-fill" data-menu="fillStyle" aria-label="Shape fill" title="Shape fill">${icon('fill',15)}<span>Fill</span><span aria-hidden="true">⌄</span></button></div></div><span class="group-label">Shapes</span></div>
     <div class="toolgroup colors-group"><div class="group-content"><div class="primary-colors"><button id="primary" data-action="primary" title="Color 1" aria-label="Color 1"></button><button id="secondary" data-action="secondary" title="Color 2" aria-label="Color 2"></button></div><div><div class="palette">${colors.map(c=>`<button data-color="${c}" style="--swatch:${c}" title="${c}" aria-label="Color ${c}"></button>`).join('')}</div><div class="custom-palette" id="custom-colors"></div></div><button data-action="colors" class="color-wheel" title="Edit colors" aria-label="Edit colors"></button></div><span class="group-label">Colors</span></div>
     <div class="toolgroup layers-group"><div class="group-content">${btn('layers','Layers','layers','class="large"')}</div><span class="group-label">Layers</span></div>
     <button class="collapse-tools" data-action="collapse" title="Collapse toolbar" aria-label="Collapse toolbar">⌃</button>
@@ -120,6 +120,7 @@ function renderLayers(){
   $('#layer-opacity').value=Math.round((doc.activeLayer?.opacity??1)*100);$('#background-swatch').style.background=doc.background||'repeating-conic-gradient(#bbb 0 25%,white 0 50%) 0 / 8px 8px';
 }
 function updateToolState(){
+  $('#outline').value=state.outline;$('#shape-fill').value=state.fillStyle;
   document.querySelectorAll('[data-tool]').forEach(el=>{const active=el.dataset.tool===state.tool;el.classList.toggle('active',active);el.setAttribute('aria-pressed',String(active));});
   $('.brush-selector').classList.toggle('active',BRUSHES.some(b=>b.id===state.tool));
   $('#primary').style.background=state.primary;$('#secondary').style.background=state.secondary;
@@ -308,7 +309,7 @@ $('#zoom-slider').addEventListener('input',e=>setZoom(2**+e.target.value));$('#z
 function changeSize(value){if(activePointerId!==null&&!pendingShape)cancelPointerInteraction();state.size=Math.round(Math.max(1,Math.min(500,Number(value)||1)));if(state.tool==='eraser')state.eraserSize=state.size;$('#size').value=$('#size-number').value=state.size;updatePendingStyle();}
 $('#size').addEventListener('input',e=>changeSize(e.target.value));$('#size-number').addEventListener('change',e=>changeSize(e.target.value));
 $('#opacity').addEventListener('input',e=>{state.opacity=+e.target.value/100;$('#opacity-value').value=e.target.value+'%';updatePendingStyle();});$('#tolerance').addEventListener('input',e=>{state.tolerance=+e.target.value;$('#tolerance-value').value=e.target.value+'%';});
-$('#outline').addEventListener('change',e=>{state.outline=e.target.value;updatePendingStyle();});$('#shape-fill').addEventListener('change',e=>{state.fillStyle=e.target.value;updatePendingStyle();});
+
 $('#font').addEventListener('change',e=>{state.font=e.target.value;styleText();restoreTextFocus(takeTextFocus(e.target));});$('#font-size').addEventListener('change',e=>{state.fontSize=Math.max(6,Math.min(500,+e.target.value||24));e.target.value=state.fontSize;styleText();});$('#text-background').addEventListener('change',e=>{state.textBackground=e.target.checked;styleText();restoreTextFocus(takeTextFocus(e.target));});
 $('#layer-opacity').addEventListener('change',e=>{if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.setLayer(doc.activeLayerId,{opacity:+e.target.value/100});});
 $('#layer-list').addEventListener('dblclick',safe(async e=>{const row=e.target.closest('[data-layer]');if(row){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===row.dataset.layer);const values=await dialog('Rename layer',`<label>Name<input name="name" value="${esc(l.name)}" required maxlength="100"></label>`);if(values)doc.setLayer(l.id,{name:values.name});}}));
@@ -453,7 +454,11 @@ const actions={
   properties:async()=>{const v=await dialog('Image properties',`<p>${esc(state.name)}<br>${doc.layers.length} layer${doc.layers.length===1?'':'s'}</p><div class="two-columns"><label>Width (pixels)<input name="width" type="number" min="1" max="16384" value="${doc.width}" required></label><label>Height (pixels)<input name="height" type="number" min="1" max="16384" value="${doc.height}" required></label></div><p class="hint">Changes canvas dimensions without scaling the image.</p>`);if(v){doc.resize(+v.width,+v.height,{scale:false,target:'document'});fit();}},
   settings:async()=>{const v=await dialog('Settings',`<label>App theme<select name="theme"><option value="dark" ${state.theme==='dark'?'selected':''}>Dark</option><option value="light" ${state.theme==='light'?'selected':''}>Light</option></select></label><p>${PROJECT.productName} (${PROJECT.shortName})<br>Version ${VERSION}</p><p class="hint">An independent editor for Windows and Linux, built toward Microsoft Paint parity before adding its own features. Projects use .${PROJECT.extension}; older .linuxpaint projects remain readable. Paint .paint projects support full-canvas visible layers; unsupported variants are rejected. Cloud AI services are not connected.</p>`);if(v){state.theme=v.theme;document.documentElement.dataset.theme=v.theme;localStorage.setItem('paint-theme',v.theme);}},
 };
+// Serialized Paint menu order; labels and preview choices share this inventory.
+const shapeStyles=[['none','No'],['solid','Solid'],['crayon','Crayon'],['marker','Marker'],['oil','Oil brush'],['natural-pencil','Natural pencil'],['watercolor','Watercolor brush']];
+const styleMenuEntries=kind=>shapeStyles.map(([value,title])=>[value==='none'||value==='solid'?`${title} ${kind==='outline'?'outline':'fill'}`:title,`${kind}:${value}`]);
 const menus={
+  outline:styleMenuEntries('outline'),fillStyle:styleMenuEntries('fillStyle'),
   file:[['New','new','Ctrl+N'],['Open','open','Ctrl+O'],['Open project','open-project'],null,['Save','save','Ctrl+S'],['Save as','save-as','Ctrl+Shift+S'],['Save as project','save-project'],null,['Print','print','Ctrl+P'],['Image properties','properties','Ctrl+E']],
   edit:[['Undo','undo','Ctrl+Z'],['Redo','redo','Ctrl+Y'],null,['Cut','cut','Ctrl+X'],['Copy','copy','Ctrl+C'],['Copy visible layers','copy-all','Ctrl+Shift+C'],['Paste','paste','Ctrl+V'],['Paste from file','paste-from'],null,['Select all','select-all','Ctrl+A'],['Delete','delete','Delete'],['Invert colors','invert-colors','Ctrl+I']],
   view:[['Zoom in','zoom-in','Ctrl+PageUp'],['Zoom out','zoom-out','Ctrl+PageDown'],['100%','zoom-100'],['Fit to window','fit','Ctrl+1'],['Full screen','fullscreen','F11'],null,['Gridlines','grid'],['Rulers','rulers'],['Status bar','status-bar'],['Layers','layers'],['Collapse toolbar','collapse','Ctrl+F1']],
@@ -474,17 +479,25 @@ function showMenu(name,anchor){
   m.innerHTML=entries.map(item=>{
     if(!item)return '<hr role="separator">';
     const [title,command,shortcut]=item,tool=command.startsWith('tool:')?command.slice(5):null;
-    const checked=tool?state.tool===tool:(toggleStates[command]??null);
-    const role=tool?'menuitemradio':checked!==null?'menuitemcheckbox':'menuitem';
+    const shapeStyle=name==='outline'||name==='fillStyle';
+    const checked=tool?state.tool===tool:shapeStyle?state[name]===command.split(':')[1]:(toggleStates[command]??null);
+    const role=tool||shapeStyle?'menuitemradio':checked!==null?'menuitemcheckbox':'menuitem';
     const disabled=command==='delete-selection'&&!doc.selection;
-    return `<button type="button" role="${role}" data-command="${command}"${checked!==null?` aria-checked="${checked}"`:''}${disabled?' disabled':''}><span>${checked!==null?icon('check',14):''}${esc(title)}</span>${name==='brushes'?'<canvas class="brush-preview" width="120" height="40" aria-hidden="true"></canvas>':`<kbd>${shortcut||''}</kbd>`}</button>`;
+    return `<button type="button" role="${role}" data-command="${command}"${checked!==null?` aria-checked="${checked}"`:''}${disabled?' disabled':''}><span>${checked!==null?icon('check',14):''}${esc(title)}</span>${shapeStyle?'<canvas class="shape-style-preview" width="80" height="40" aria-hidden="true"></canvas>':name==='brushes'?'<canvas class="brush-preview" width="120" height="40" aria-hidden="true"></canvas>':`<kbd>${shortcut||''}</kbd>`}</button>`;
   }).join('');
   if(name==='brushes')for(const preview of m.querySelectorAll('.brush-preview')){
     const tool=preview.parentElement.dataset.command.slice(5),context=preview.getContext('2d');
     const sample=createStroke(context,tool,{color:getComputedStyle(m).color,size:8,opacity:1,seed:`preview:${tool}`});
     for(let x=8;x<=112;x+=2)sample.move(x,20+8*Math.sin(x/25),1);sample.end();
   }
-  const r=anchor.getBoundingClientRect();m.hidden=false;m.style.left=Math.min(r.left,innerWidth-m.offsetWidth-10)+'px';m.style.top=r.bottom+4+'px';m.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
+  if(name==='outline'||name==='fillStyle')for(const preview of m.querySelectorAll('.shape-style-preview')){
+    const style=preview.parentElement.dataset.command.split(':')[1],context=preview.getContext('2d'),color=getComputedStyle(m).color;
+    if(style==='none'){
+      context.strokeStyle=color;context.lineWidth=1;context.setLineDash([3,3]);context.strokeRect(12.5,7.5,55,25);context.setLineDash([]);
+      context.beginPath();context.moveTo(14,31);context.lineTo(66,9);context.stroke();
+    }else drawShape(context,'rectangle',14,8,66,32,{stroke:color,fill:color,lineWidth:5,outline:name==='outline'?style:'none',fillStyle:name==='fillStyle'?style:'none'});
+  }
+  const r=anchor.getBoundingClientRect();m.hidden=false;m.style.left=Math.max(10,Math.min(r.left,innerWidth-m.offsetWidth-10))+'px';m.style.top=Math.max(10,Math.min(r.bottom+4,innerHeight-m.offsetHeight-10))+'px';m.querySelector('button:not(:disabled)')?.focus({preventScroll:true});
 }
 function closeMenu(){const menu=$('#menu'),anchor=menuAnchor,restore=menu.contains(document.activeElement);menu.hidden=true;menuAnchor=null;if(anchor){anchor.setAttribute('aria-expanded','false');if(restore&&anchor.isConnected)anchor.focus({preventScroll:true});}}
 $('#menu').setAttribute('role','menu');
@@ -495,7 +508,7 @@ document.addEventListener('click',safe(async e=>{
   const t=e.target.closest('button,[data-layer]');if(!t)return;
   if(t.dataset.tool){chooseTool(t.dataset.tool);return;}
   if(t.dataset.menu){showMenu(t.dataset.menu,t);return;}
-  if(t.dataset.command){const cmd=t.dataset.command;closeMenu();if(cmd.startsWith('tool:'))chooseTool(cmd.slice(5));else await executeAction(cmd,e);return;}
+  if(t.dataset.command){const cmd=t.dataset.command;closeMenu();if(cmd.startsWith('tool:'))chooseTool(cmd.slice(5));else if(cmd.startsWith('outline:')||cmd.startsWith('fillStyle:')){const [kind,value]=cmd.split(':');state[kind]=value;updateToolState();updatePendingStyle();}else await executeAction(cmd,e);return;}
   if(t.dataset.textAlign){const focus=takeTextFocus(t);state.align=t.dataset.textAlign;updateToolState();styleText();restoreTextFocus(focus);return;}
   if(t.dataset.color){const focus=takeTextFocus(t);state.primary=t.dataset.color;updateToolState();styleText();updatePendingStyle();restoreTextFocus(focus);return;}
   if(t.dataset.visible){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===t.dataset.visible);doc.setLayer(l.id,{visible:!l.visible});return;}

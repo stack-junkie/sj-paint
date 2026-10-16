@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 import { readFile } from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 
@@ -37,8 +38,8 @@ export async function verifyPendingShapes(page, check) {
     await page.locator('[data-tool="rectangle"]').click();
     await page.locator('[data-color="#000000"]').click();
     await page.locator('[data-color="#ffffff"]').click({ button: 'right' });
-    await page.locator('#outline').selectOption('solid');
-    await page.locator('#shape-fill').selectOption('none');
+    await chooseShapeStyle(page, 'outline', 'solid');
+    await chooseShapeStyle(page, 'fillStyle', 'none');
     await page.locator('#size-number').fill('5');
     await page.locator('#size-number').press('Tab');
   };
@@ -69,14 +70,14 @@ export async function verifyPendingShapes(page, check) {
   await waitPixel('#canvas', 80, 60, [237, 28, 36, 255]);
   check('primary palette changes update the pending outline', (await snapshot()).png === blank.png);
   await page.locator('[data-color="#fff200"]').click({ button: 'right' });
-  await page.locator('#shape-fill').selectOption('solid');
+  await chooseShapeStyle(page, 'fillStyle', 'solid');
   await waitPixel('#canvas', 100, 100, [255, 242, 0, 255]);
   check('secondary palette and fill changes update pending interior pixels', (await snapshot()).png === blank.png);
   await page.locator('#size-number').fill('13');
   await page.locator('#size-number').press('Tab');
   await waitPixel('#canvas', 100, 65, [237, 28, 36, 255]);
   check('line size changes update the pending shape thickness', (await snapshot()).png === blank.png);
-  await page.locator('#outline').selectOption('none');
+  await chooseShapeStyle(page, 'outline', 'none');
   await waitPixel('#canvas', 100, 65, [255, 242, 0, 255]);
   check('outline changes preserve editable fill without stamping a layer', (await snapshot()).png === blank.png);
   await page.keyboard.press('Escape');
@@ -87,7 +88,7 @@ export async function verifyPendingShapes(page, check) {
   await reset();
   const transformBefore = await snapshot();
   await page.locator('[data-color="#fff200"]').click({ button: 'right' });
-  await page.locator('#shape-fill').selectOption('solid');
+  await chooseShapeStyle(page, 'fillStyle', 'solid');
   await create();
   await drag(100, 100, 120, 110);
   await waitPixel('#canvas', 80, 100, [255, 242, 0, 255]);

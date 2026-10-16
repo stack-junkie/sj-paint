@@ -1,3 +1,5 @@
+import { verifyShapeStyleMenu } from './verify-shape-style-menu.mjs';
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 import { verifyViewState } from './verify-view-state.mjs';
 import { verifyDialogAccessibility } from './verify-dialog-accessibility.mjs';
 import { chromium } from 'playwright-core';
@@ -75,6 +77,7 @@ try{
  await verifyTextPanFocus(page,check);
  await verifyTextControls(page,check);
  await verifySelectionMenu(page,check);
+ await verifyShapeStyleMenu(page,check);
  await verifyViewState(page,check);
  await verifyDialogAccessibility(page,check);
  await verifyPrintLayout(page,check);
@@ -101,7 +104,7 @@ try{
  await page.getByRole('button',{name:'Redo (Ctrl+Y)',exact:true}).click();
  check('redo restores stroke',await page.evaluate(()=>paintApp.doc.canUndo),null);
  await page.getByRole('button',{name:'Rectangle',exact:true}).click();
- await page.locator('#shape-fill').selectOption('solid');
+ await chooseShapeStyle(page, 'fillStyle', 'solid');
  await page.locator('[data-color="#ed1c24"]').click();
  await page.locator('[data-color="#fff200"]').click({button:'right'});
  await page.mouse.move(r.x+300,r.y+120);await page.mouse.down();await page.mouse.move(r.x+470,r.y+250,{steps:8});await page.mouse.up();

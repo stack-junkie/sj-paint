@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // Public keyboard, pointer and dialog paths. Storage restoration followed by a
 // reload restores the palette owner's in-memory state as well as its persistence.
 export async function verifyPaletteFocusDesktop(page, check) {
@@ -98,7 +99,7 @@ export async function verifyPaletteFocusDesktop(page, check) {
     else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitemradio', { name: initial.label, exact: true }).click(); }
     await page.locator(`[data-color="${initial.primary}"]`).first().click(); await page.locator(`[data-color="${initial.secondary}"]`).first().click({ button: 'right' });
     await page.locator('#size-number').fill(initial.size); await page.locator('#size-number').press('Tab');
-    await page.locator('#outline').selectOption(initial.outline); await page.locator('#shape-fill').selectOption(initial.fill);
+    await chooseShapeStyle(page, 'outline', initial.outline); await chooseShapeStyle(page, 'fillStyle', initial.fill);
     if (await page.locator('#layers-panel').isVisible() !== initial.layers) await page.locator('.layers-group [data-action="layers"]').click();
     const hasZoom = await page.locator('#zoom-presets option').evaluateAll((options, value) => options.some(option => option.value === value), initial.zoom);
     if (hasZoom) await page.locator('#zoom-presets').selectOption(initial.zoom);

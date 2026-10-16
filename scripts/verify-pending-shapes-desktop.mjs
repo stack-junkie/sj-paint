@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // Packaged-renderer coverage through public UI only. No development API,
 // inspector calls, system clipboard access, or native dialogs are required.
 export async function verifyPendingShapesDesktop(page, check) {
@@ -28,8 +29,8 @@ export async function verifyPendingShapesDesktop(page, check) {
   }, null, { polling: 100 });
   await page.locator('[data-tool="rectangle"]').click();
   await page.locator('[data-color="#000000"]').click();
-  await page.locator('#outline').selectOption('solid');
-  await page.locator('#shape-fill').selectOption('none');
+  await chooseShapeStyle(page, 'outline', 'solid');
+  await chooseShapeStyle(page, 'fillStyle', 'none');
   const blank = await pixels();
   await drag(40, 60, 160, 140);
   await waitPixel(80, 60, [0, 0, 0, 255]);

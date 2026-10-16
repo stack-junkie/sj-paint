@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // Ctrl+Space is advertised by the native control-point help resource. These
 // checks establish SJ Paint's public behavior, not native timing or raster parity.
 export async function verifyKeyboardCommit(page, check) {
@@ -66,7 +67,7 @@ export async function verifyKeyboardCommit(page, check) {
 
     const baseline = await fixture(false);
     await page.locator('[data-tool="rectangle"]').click();
-    await page.locator('#outline').selectOption('solid'); await page.locator('#shape-fill').selectOption('none');
+    await chooseShapeStyle(page, 'outline', 'solid'); await chooseShapeStyle(page, 'fillStyle', 'none');
     await drag(40, 60, 160, 140); const preview = await snapshot();
     check('ordinary shape remains a pending preview before keyboard commitment',
       preview.controls && preview.transaction && preview.layer === baseline.layer && preview.display !== baseline.display);

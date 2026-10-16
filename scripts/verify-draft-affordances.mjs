@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // Public drawing and text drafts must expose consistent cancellation and dirty
 // affordances as other pending artwork. This is an SJ Paint correctness check.
 export async function verifyDraftAffordances(page, check) {
@@ -29,7 +30,7 @@ export async function verifyDraftAffordances(page, check) {
     });
     await page.waitForFunction(() => document.querySelector('#overlay').width === 300 &&
       Math.abs(document.querySelector('#overlay').getBoundingClientRect().width - 300) < 0.02);
-    await page.locator('#outline').selectOption('solid'); await page.locator('#shape-fill').selectOption('none');
+    await chooseShapeStyle(page, 'outline', 'solid'); await chooseShapeStyle(page, 'fillStyle', 'none');
     await frame(); return snapshot();
   };
   const unchanged = (actual, baseline) => actual.project === baseline.project && actual.revision === baseline.revision &&

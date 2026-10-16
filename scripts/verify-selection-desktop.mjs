@@ -1,3 +1,4 @@
+import { chooseShapeStyle } from './shape-style-controls.mjs';
 // Public renderer controls and pixels only, including in packaged builds.
 // This fixture leaves the initial blank canvas and brush tool restored.
 export async function verifySelectionDesktop(page, check) {
@@ -25,8 +26,8 @@ export async function verifySelectionDesktop(page, check) {
   const blank = await pixels();
   await page.locator('[data-tool="rectangle"]').click();
   await page.locator('[data-color="#ed1c24"]').click();
-  await page.locator('#outline').selectOption('solid');
-  await page.locator('#shape-fill').selectOption('none');
+  await chooseShapeStyle(page, 'outline', 'solid');
+  await chooseShapeStyle(page, 'fillStyle', 'none');
   await drag(30, 30, 70, 60);
   await page.locator('[data-tool="select"]').click();
   await page.waitForFunction(value => document.querySelector('#canvas').toDataURL() !== value, blank, { polling: 100 });
