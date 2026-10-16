@@ -24,7 +24,7 @@ export async function verifyPaletteFocusDesktop(page, check) {
         document.querySelector('[data-action="undo"]').disabled && document.querySelector('[data-action="redo"]').disabled &&
         !document.querySelector('.text-editor') && document.querySelector('#opacity').value === '100' && document.querySelector('#tolerance').value === '0' &&
         document.querySelector('#font').value === 'Arial' && document.querySelector('#font-size').value === '24' &&
-        document.querySelector('#text-align').value === 'left' && !document.querySelector('#text-background').checked &&
+        document.querySelector('[data-text-align][aria-pressed="true"]').dataset.textAlign === 'left' && !document.querySelector('#text-background').checked &&
         ['bold', 'italic', 'underline', 'strikethrough'].every(name => !document.querySelector(`[data-action="${name}"]`).classList.contains('active')) };
   });
   if (!initial.clean) throw new Error('Palette focus checks require a pristine default document, full drawing opacity and default text settings.');

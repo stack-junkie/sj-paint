@@ -3,7 +3,7 @@
 export async function verifyStrikethrough(page, check) {
   const styles = ['bold', 'italic', 'underline', 'strikethrough'];
   const initial = await page.evaluate(styles => ({ project: paintApp.doc.serialize(), state: { ...paintApp.state },
-    controls: Object.fromEntries(['font', 'font-size', 'text-align', 'text-background', 'size', 'size-number'].map(id => {
+    controls: Object.fromEntries(['font', 'font-size', 'text-background', 'size', 'size-number'].map(id => {
       const el = document.getElementById(id); return [id, { value: el.value, checked: el.checked }];
     })), styles: Object.fromEntries(styles.map(action =>
       [action, document.querySelector(`[data-action="${action}"]`).className])) }), styles);
@@ -16,7 +16,7 @@ export async function verifyStrikethrough(page, check) {
         bold: false, italic: false, underline: false, strikethrough: false, textBackground: false, align: 'left' });
       for (const action of styles) document.querySelector(`[data-action="${action}"]`).classList.remove('active');
       document.querySelector('#font').value = 'Arial'; document.querySelector('#font-size').value = '32';
-      document.querySelector('#text-align').value = 'left'; document.querySelector('#text-background').checked = false;
+      document.querySelector('#text-background').checked = false;
       paintApp.setZoom(1);
     }, styles);
     await page.waitForFunction(() => document.querySelector('#overlay').width === 300 &&

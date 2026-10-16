@@ -18,6 +18,7 @@ import { verifyTextInteractions } from './verify-text-interactions.mjs';
 import { verifyTextFocus } from './verify-text-focus.mjs';
 import { verifyPaletteFocus } from './verify-palette-focus.mjs';
 import { verifyTextPanFocus } from './verify-text-pan-focus.mjs';
+import { verifyTextControls } from './verify-text-controls.mjs';
 import { verifyCurveConstruction } from './verify-curve-construction.mjs';
 import { verifyDrawingAdmission } from './verify-drawing-admission.mjs';
 import { verifyHeldLayerPreview } from './verify-held-layer-preview.mjs';
@@ -67,6 +68,7 @@ try{
  await verifyTextFocus(page,check);
  await verifyPaletteFocus(page,check);
  await verifyTextPanFocus(page,check);
+ await verifyTextControls(page,check);
  await verifyCurveConstruction(page,check);
  await verifyStrikethrough(page,check);
  await verifyKeyboardCommit(page,check);

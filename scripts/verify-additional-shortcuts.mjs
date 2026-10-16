@@ -7,7 +7,7 @@ export async function verifyAdditionalShortcuts(page, check) {
   const commands = ['Control+Shift+n', 'Control+r', 'Control+g', 'Control+t', 'Control+0'];
   const initial = await page.evaluate(() => ({
     project: paintApp.doc.serialize(), state: { ...paintApp.state }, collapsed: document.body.classList.contains('collapsed'),
-    controls: Object.fromEntries(['size', 'size-number', 'font', 'font-size', 'text-align', 'text-background'].map(id => {
+    controls: Object.fromEntries(['size', 'size-number', 'font', 'font-size', 'text-background'].map(id => {
       const element = document.getElementById(id); return [id, { value: element.value, checked: element.checked }];
     })),
   }));

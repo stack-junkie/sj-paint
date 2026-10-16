@@ -247,8 +247,8 @@ async function inflateStrip(input, expected) {
 
 /**
  * Read one classic TIFF image: chunky RGB/RGBA8 or single-channel grayscale/
- * palette8, strips, orientations 1-8,
- * uncompressed/PackBits/TIFF-LZW/zlib-Deflate, predictor 1 or 2.
+ * palette at 1/2/4/8 bits, strips, orientations 1-8,
+ * uncompressed/PackBits/TIFF-LZW/zlib-Deflate. Predictor 2 requires 8-bit samples.
  * Optional trusted inflate(bytes, expectedBytes) must cap expansion and reject
  * trailing streams. Native stream chunk allocation is implementation-controlled.
  */
@@ -294,7 +294,12 @@ export async function readTiff(input, { inflate } = {}) {
   const samples = scalar(277, 1), photometric = scalar(262);
   check(photometric === 2 ? samples === 3 || samples === 4 : [0, 1, 3].includes(photometric) && samples === 1,
     'only RGB/RGBA and single-channel grayscale/palette images are supported');
-  check(values(258, samples).every(value => value === 8), 'only 8-bit channels are supported');
+  const depths = values(258, samples, Array(samples).fill(1)), bits = depths[0];
+  check(samples === 1 ? [1, 2, 4, 8].includes(bits) : depths.every(value => value === 8),
+    'only 1/2/4/8-bit grayscale/palette and 8-bit RGB/RGBA channels are supported');
+  // TIFF pads each packed scanline separately, including the last row of a strip.
+  // This layout owns both expansion limits and sample addressing below.
+  const rowBytes = Math.ceil(width * samples * bits / 8), levels = 2 ** bits;
   check(values(339, samples, Array(samples).fill(1)).every(value => value === 1), 'only unsigned integer samples are supported');
   check(scalar(266, 1) === 1 && scalar(284, 1) === 1, 'reversed fill order and planar channels are not supported');
   const alpha = samples === 4 ? scalar(338) : 0;
@@ -306,32 +311,33 @@ export async function readTiff(input, { inflate } = {}) {
   if (photometric === 3) check(fields.get(320)?.type === 3, 'palette ColorMap must contain SHORT values');
   else check(!fields.has(320), 'ColorMap is only supported for palette images');
   if (samples === 1) {
-    const palette = photometric === 3 ? values(320, 768) : null;
-    colorTable = new Uint8Array(256 * 4);
-    for (let index = 0; index < 256; index++) {
-      const gray = photometric === 0 ? 255 - index : index;
-      for (let channel = 0; channel < 3; channel++) colorTable[index * 4 + channel] = palette ? palette[channel * 256 + index] >>> 8 : gray;
+    const palette = photometric === 3 ? values(320, 3 * levels) : null;
+    colorTable = new Uint8Array(levels * 4);
+    for (let index = 0; index < levels; index++) {
+      const gray = (photometric === 0 ? levels - 1 - index : index) * 255 / (levels - 1);
+      for (let channel = 0; channel < 3; channel++) colorTable[index * 4 + channel] = palette ? palette[channel * levels + index] >>> 8 : gray;
       colorTable[index * 4 + 3] = 255;
     }
   }
   const orientation = scalar(274, 1), predictor = scalar(317, 1), compression = scalar(259, 1);
   check(orientation >= 1 && orientation <= 8, 'invalid image orientation');
   check(predictor === 1 || predictor === 2, 'unsupported predictor');
+  check(bits === 8 || predictor === 1, 'packed samples require predictor 1');
   check([1, 5, 8, 32946, 32773].includes(compression), `compression ${compression} is not supported`);
   const rowsPerStrip = scalar(278, 0xffffffff); check(rowsPerStrip > 0, 'zero rows per strip');
   const stripCount = Math.ceil(height / rowsPerStrip), offsets = values(273, stripCount), lengths = values(279, stripCount);
   for (let index = 0; index < stripCount; index++) {
     check(lengths[index] > 0, 'empty image strip'); range(offsets[index], lengths[index]);
-    const expected = width * Math.min(rowsPerStrip, height - index * rowsPerStrip) * samples;
+    const expected = rowBytes * Math.min(rowsPerStrip, height - index * rowsPerStrip);
     if (compression === 1) check(lengths[index] === expected, 'uncompressed strip length does not match dimensions');
   }
   const spans = offsets.map((offset, index) => [offset, offset + lengths[index]]).sort((a, b) => a[0] - b[0]);
   for (let index = 1; index < spans.length; index++) check(spans[index][0] >= spans[index - 1][1], 'overlapping image strips');
-  // All tags, file ranges, dimensions and strip counts are validated before allocation.
+  // All tags, file ranges, dimensions and strip counts are validated before pixel allocation.
   const outputWidth = orientation >= 5 ? height : width, outputHeight = orientation >= 5 ? width : height;
   const rgba = new Uint8Array(width * height * 4);
   for (let index = 0; index < stripCount; index++) {
-    const rows = Math.min(rowsPerStrip, height - index * rowsPerStrip), expected = width * rows * samples;
+    const rows = Math.min(rowsPerStrip, height - index * rowsPerStrip), expected = rowBytes * rows;
     const encoded = bytes.subarray(offsets[index], offsets[index] + lengths[index]);
     let decoded;
     if (compression === 1) decoded = predictor === 2 ? encoded.slice() : encoded;
@@ -341,7 +347,7 @@ export async function readTiff(input, { inflate } = {}) {
     check(decoded.length === expected, 'decoded strip length does not match dimensions');
     if (predictor === 2) {
       for (let row = 0; row < rows; row++) {
-        const start = row * width * samples, end = start + width * samples;
+        const start = row * rowBytes, end = start + rowBytes;
         for (let pos = start + samples; pos < end; pos++) decoded[pos] = (decoded[pos] + decoded[pos - samples]) & 255;
       }
     }
@@ -355,12 +361,14 @@ export async function readTiff(input, { inflate } = {}) {
       else if (orientation === 6) { ox = height - 1 - y; oy = x; }
       else if (orientation === 7) { ox = height - 1 - y; oy = width - 1 - x; }
       else if (orientation === 8) { ox = y; oy = width - 1 - x; }
-      const source = (row * width + x) * samples, target = (oy * outputWidth + ox) * 4;
+      const target = (oy * outputWidth + ox) * 4;
       if (colorTable) {
-        const color = decoded[source] * 4;
+        const bit = x * bits, source = row * rowBytes + (bit >>> 3);
+        const color = ((decoded[source] >>> (8 - bits - (bit & 7))) & (levels - 1)) * 4;
         for (let channel = 0; channel < 4; channel++) rgba[target + channel] = colorTable[color + channel];
         continue;
       }
+      const source = row * rowBytes + x * samples;
       const a = samples === 4 ? decoded[source + 3] : 255;
       for (let channel = 0; channel < 3; channel++) rgba[target + channel] = alpha === 1 ?
         (a === 0 ? 0 : Math.min(255, Math.round(decoded[source + channel] * 255 / a))) : decoded[source + channel];

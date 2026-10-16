@@ -36,7 +36,7 @@ $('#app').innerHTML=`
     <div class="toolgroup layers-group"><div class="group-content">${btn('layers','Layers','layers','class="large"')}</div><span class="group-label">Layers</span></div>
     <button class="collapse-tools" data-action="collapse" title="Collapse toolbar" aria-label="Collapse toolbar">⌃</button>
   </section>
-  <div class="contextbar"><span id="tool-label">Brush</span><label>Size <input id="size" type="range" min="1" max="500" value="5"><input id="size-number" type="number" min="1" max="500" value="5" aria-label="Size in pixels"><span>px</span></label><label id="opacity-control">Opacity <input id="opacity" type="range" min="1" max="100" value="100"><output id="opacity-value">100%</output></label><label id="tolerance-control" hidden>Tolerance <input id="tolerance" type="range" min="0" max="100" value="0"><output id="tolerance-value">0%</output></label><div id="text-controls" hidden><select id="font" aria-label="Font"><option>Arial</option><option>Verdana</option><option>Georgia</option><option>Times New Roman</option><option>Courier New</option><option>Trebuchet MS</option><option>serif</option><option>sans-serif</option><option>monospace</option></select><input id="font-size" type="number" min="6" max="500" value="24" aria-label="Font size"><button data-action="bold" title="Bold"><b>B</b></button><button data-action="italic" title="Italic"><i>I</i></button><button data-action="underline" title="Underline"><u>U</u></button><button data-action="strikethrough" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button><select id="text-align" aria-label="Text alignment"><option value="left">Left</option><option value="center">Center</option><option value="right">Right</option></select><label><input id="text-background" type="checkbox">Opaque</label>${btn('commit-text','Apply text','check')}</div></div>
+  <div class="contextbar"><span id="tool-label">Brush</span><label>Size <input id="size" type="range" min="1" max="500" value="5"><input id="size-number" type="number" min="1" max="500" value="5" aria-label="Size in pixels"><span>px</span></label><label id="opacity-control">Opacity <input id="opacity" type="range" min="1" max="100" value="100"><output id="opacity-value">100%</output></label><label id="tolerance-control" hidden>Tolerance <input id="tolerance" type="range" min="0" max="100" value="0"><output id="tolerance-value">0%</output></label><div id="text-controls" hidden><select id="font" aria-label="Font family"><option>Arial</option><option>Verdana</option><option>Georgia</option><option>Times New Roman</option><option>Courier New</option><option>Trebuchet MS</option><option>serif</option><option>sans-serif</option><option>monospace</option></select><input id="font-size" type="number" min="6" max="500" step="any" value="24" list="font-size-options" aria-label="Font size"><datalist id="font-size-options">${[8,9,10,11,12,14,16,18,20,22,24,26,28,36,48,72,96,128,172,256].map(size=>`<option value="${size}"></option>`).join('')}</datalist><button data-action="bold" title="Bold"><b>B</b></button><button data-action="italic" title="Italic"><i>I</i></button><button data-action="underline" title="Underline"><u>U</u></button><button data-action="strikethrough" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button><div id="text-align" role="group" aria-label="Text alignment">${['left','center','right'].map(align=>`<button type="button" data-text-align="${align}" title="${label(align)} align" aria-label="${label(align)} align">${icon(`align-${align}`,16)}</button>`).join('')}</div><label><input id="text-background" type="checkbox">Background fill</label>${btn('commit-text','Apply text','check')}</div></div>
   <main class="workspace"><div class="viewport" id="viewport"><div class="canvas-stage" id="stage"><canvas id="canvas" aria-label="Drawing canvas"></canvas><canvas id="overlay" aria-label="Drawing interaction surface" tabindex="0"></canvas><div id="canvas-resize-preview" aria-hidden="true" hidden></div>${['nw','n','ne','w','e','sw','s','se'].map(edge=>`<div class="resize-handle" data-handle="${edge}" title="Resize canvas" aria-label="Resize canvas ${edge}"></div>`).join('')}</div></div><aside class="layers-panel" id="layers-panel" hidden><div class="panel-title"><strong>Layers</strong>${btn('layers','Close layers','close')}</div><div class="layer-actions">${btn('add-layer','Add layer','plus')}${btn('duplicate-layer','Duplicate layer','duplicate')}${btn('merge-layer','Merge down','merge')}${btn('delete-layer','Delete layer','trash')}</div><div id="layer-list"></div><div class="layer-controls">${btn('layer-up','Move layer up','up')}${btn('layer-down','Move layer down','down')}<label>Opacity <input type="range" min="0" max="100" id="layer-opacity" value="100"></label></div><button class="background-control" data-action="background"><span id="background-swatch"></span><span>Background</span></button></aside></main>
   <footer class="statusbar"><span id="coordinates">${icon('pencil',14)}<span>Ready</span></span><span id="selection-size"></span><span id="dimensions"></span><span id="document-state"></span><span class="grow"></span>${btn('fit','Fit to window','fit')}<select id="zoom-presets" aria-label="Zoom"><option value=".125">12.5%</option><option value=".25">25%</option><option value=".5">50%</option><option value=".75">75%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="4">400%</option><option value="8">800%</option></select>${btn('zoom-out','Zoom out','minus')}<input id="zoom-slider" type="range" min="-3" max="3" step=".05" value="0" aria-label="Zoom slider">${btn('zoom-in','Zoom in','plus')}</footer>
   <div id="menu" class="menu" hidden></div><div id="toast" role="status" hidden></div><dialog id="dialog"></dialog>`;
@@ -127,6 +127,7 @@ function updateToolState(){
     else{button.dataset.action='colors';delete button.dataset.color;}
   }
   for(const action of ['bold','italic','underline','strikethrough']){const button=$(`[data-action="${action}"]`);button.classList.toggle('active',state[action]);button.setAttribute('aria-pressed',String(state[action]));}
+  document.querySelectorAll('[data-text-align]').forEach(button=>{const active=button.dataset.textAlign===state.align;button.classList.toggle('active',active);button.setAttribute('aria-pressed',String(active));});
   $('#tool-label').textContent=BRUSHES.find(b=>b.id===state.tool)?.label||label(state.tool);
   $('#opacity-control').hidden=['select','lasso','picker','zoom','text','eraser'].includes(state.tool);
   $('#tolerance-control').hidden=state.tool!=='fill';$('#text-controls').hidden=state.tool!=='text';
@@ -153,6 +154,12 @@ new ResizeObserver(renderEraserCursor).observe(viewport);
 window.addEventListener('resize',renderEraserCursor);
 overlay.addEventListener('pointerenter',e=>{hoverClient=[e.clientX,e.clientY];renderEraserCursor();});
 overlay.addEventListener('pointerleave',()=>{hoverClient=null;renderEraserCursor();});
+// Chromium can paste the primary selection into a focused editor on middle
+// release even when pointerdown was canceled. Own that release through pan
+// cancellation and capture loss, including releases outside the canvas.
+let middlePanPointerId=null;
+document.addEventListener('pointerdown',e=>{if(e.pointerId===middlePanPointerId)middlePanPointerId=null;},true);
+document.addEventListener('pointerup',e=>{if(e.button===1&&e.pointerId===middlePanPointerId){middlePanPointerId=null;e.preventDefault();}},true);
 const beginPointer=safe(e=>{
   if(e.button>2||activePointerId!==null||canvasResize.candidate)return;
   if(e.currentTarget===selectionRotation)e.preventDefault();
@@ -163,7 +170,7 @@ const beginPointer=safe(e=>{
   // Panning changes the viewport, not the editing focus. Suppress the pointer's
   // default focus/autoscroll so text selections and deliberate toolbar focus
   // survive every ending, including blur, without a later refocus side effect.
-  if(pan){e.preventDefault();drag={kind:'pan',start:[e.clientX,e.clientY],scroll:[viewport.scrollLeft,viewport.scrollTop],suspendedDrag:drag};return;}
+  if(pan){e.preventDefault();if(e.button===1)middlePanPointerId=e.pointerId;drag={kind:'pan',start:[e.clientX,e.clientY],scroll:[viewport.scrollLeft,viewport.scrollTop],suspendedDrag:drag};return;}
   overlay.focus({preventScroll:true});
   if(pendingHit){drag={kind:'pending-shape',original:pendingShape,hit:pendingHit,start:p};return;}
   if(textEditor){commitText();return;}
@@ -259,9 +266,9 @@ function takeTextFocus(control){
   textPointerFocus=null;return owner;
 }
 document.addEventListener('pointerdown',e=>{
-  let control=e.target.closest('button,#font,#text-align,#text-background');
+  let control=e.target.closest('button,#font,#text-background');
   if(!control&&e.target.closest('#text-controls label'))control=e.target.closest('label').querySelector('#text-background');
-  const relevant=control&&(control.dataset.color||textStyleActions.has(control.dataset.action)||['font','text-align','text-background'].includes(control.id));
+  const relevant=control&&(control.dataset.color||control.dataset.textAlign||textStyleActions.has(control.dataset.action)||['font','text-background'].includes(control.id));
   textPointerFocus=relevant&&textEditor?{control,session:textEditor,start:textEditor.el.selectionStart,end:textEditor.el.selectionEnd,direction:textEditor.el.selectionDirection}:null;
 },true);
 document.addEventListener('keydown',()=>{textPointerFocus=null;},true);
@@ -300,7 +307,7 @@ function changeSize(value){if(activePointerId!==null&&!pendingShape)cancelPointe
 $('#size').addEventListener('input',e=>changeSize(e.target.value));$('#size-number').addEventListener('change',e=>changeSize(e.target.value));
 $('#opacity').addEventListener('input',e=>{state.opacity=+e.target.value/100;$('#opacity-value').value=e.target.value+'%';updatePendingStyle();});$('#tolerance').addEventListener('input',e=>{state.tolerance=+e.target.value;$('#tolerance-value').value=e.target.value+'%';});
 $('#outline').addEventListener('change',e=>{state.outline=e.target.value;updatePendingStyle();});$('#shape-fill').addEventListener('change',e=>{state.fillStyle=e.target.value;updatePendingStyle();});
-$('#font').addEventListener('change',e=>{state.font=e.target.value;styleText();restoreTextFocus(takeTextFocus(e.target));});$('#font-size').addEventListener('change',e=>{state.fontSize=Math.max(6,Math.min(500,+e.target.value||24));styleText();});$('#text-align').addEventListener('change',e=>{state.align=e.target.value;styleText();restoreTextFocus(takeTextFocus(e.target));});$('#text-background').addEventListener('change',e=>{state.textBackground=e.target.checked;styleText();restoreTextFocus(takeTextFocus(e.target));});
+$('#font').addEventListener('change',e=>{state.font=e.target.value;styleText();restoreTextFocus(takeTextFocus(e.target));});$('#font-size').addEventListener('change',e=>{state.fontSize=Math.max(6,Math.min(500,+e.target.value||24));e.target.value=state.fontSize;styleText();});$('#text-background').addEventListener('change',e=>{state.textBackground=e.target.checked;styleText();restoreTextFocus(takeTextFocus(e.target));});
 $('#layer-opacity').addEventListener('change',e=>{if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.setLayer(doc.activeLayerId,{opacity:+e.target.value/100});});
 $('#layer-list').addEventListener('dblclick',safe(async e=>{const row=e.target.closest('[data-layer]');if(row){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===row.dataset.layer);const values=await dialog('Rename layer',`<label>Name<input name="name" value="${esc(l.name)}" required maxlength="100"></label>`);if(values)doc.setLayer(l.id,{name:values.name});}}));
 
@@ -469,6 +476,7 @@ document.addEventListener('click',safe(async e=>{
   if(t.dataset.tool){chooseTool(t.dataset.tool);return;}
   if(t.dataset.menu){showMenu(t.dataset.menu,t);return;}
   if(t.dataset.command){const cmd=t.dataset.command;closeMenu();if(cmd.startsWith('tool:'))chooseTool(cmd.slice(5));else await executeAction(cmd,e);return;}
+  if(t.dataset.textAlign){const focus=takeTextFocus(t);state.align=t.dataset.textAlign;updateToolState();styleText();restoreTextFocus(focus);return;}
   if(t.dataset.color){const focus=takeTextFocus(t);state.primary=t.dataset.color;updateToolState();styleText();updatePendingStyle();restoreTextFocus(focus);return;}
   if(t.dataset.visible){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===t.dataset.visible);doc.setLayer(l.id,{visible:!l.visible});return;}
   if(t.dataset.layerSelect||t.dataset.layer){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.selectLayer(t.dataset.layerSelect||t.dataset.layer);return;}

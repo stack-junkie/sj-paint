@@ -2,7 +2,7 @@
 // checks establish SJ Paint's public behavior, not native timing or raster parity.
 export async function verifyKeyboardCommit(page, check) {
   const initial = await page.evaluate(() => ({ project: paintApp.doc.serialize(), state: { ...paintApp.state },
-    controls: Object.fromEntries(['outline', 'shape-fill', 'size', 'size-number', 'font', 'font-size', 'text-align', 'text-background'].map(id => {
+    controls: Object.fromEntries(['outline', 'shape-fill', 'size', 'size-number', 'font', 'font-size', 'text-background'].map(id => {
       const el = document.getElementById(id); return [id, { value: el.value, checked: el.checked }];
     })) }));
   const frame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));

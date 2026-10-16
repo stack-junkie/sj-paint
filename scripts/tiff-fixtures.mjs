@@ -3,8 +3,8 @@ import { createHash } from 'node:crypto';
 
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 
-// These original fixtures and expected pixels come from Pillow, independently
-// of the application codec. Keep their generation recipe and provenance in-tree.
+// These original fixtures use either Pillow or a specification-based Python
+// producer. Expected pixels always come from Pillow, independently of this codec.
 export async function singleChannelTiffFixtures() {
   const document = JSON.parse(await readFile(new URL('./fixtures/tiff-single-channel.json', import.meta.url), 'utf8'));
   return document.fixtures.map(({ encodedBase64, rgbaBase64, ...fixture }) => {
@@ -34,5 +34,7 @@ export async function malformedSingleChannelTiffFixtures() {
     { name: 'palette-short-colormap.tiff', bytes: change('palette-raw', 320, 4, 767) },
     { name: 'palette-truncated-colormap.tiff', bytes: change('palette-raw', 320, 8, 'past-end') },
     { name: 'gray-unsupported-depth.tiff', bytes: change('gray-black-packbits', 258, 8, 16) },
+    { name: 'packed-palette-short-colormap.tiff', bytes: change('packed-4-palette-raw', 320, 4, 47) },
+    { name: 'packed-unsupported-predictor.tiff', bytes: change('packed-2-black-raw', 317, 8, 2) },
   ];
 }

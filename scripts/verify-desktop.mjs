@@ -6,6 +6,7 @@ import { verifyTextDesktop } from './verify-text-desktop.mjs';
 import { verifyTextFocusDesktop } from './verify-text-focus.mjs';
 import { verifyPaletteFocusDesktop } from './verify-palette-focus.mjs';
 import { verifyTextPanFocusDesktop } from './verify-text-pan-focus.mjs';
+import { verifyTextControlsDesktop } from './verify-text-controls.mjs';
 import { verifyCurveConstructionDesktop } from './verify-curve-construction.mjs';
 import { verifyTiffDesktop } from './verify-tiff-desktop.mjs';
 import { verifyDrawingAdmissionDesktop } from './verify-drawing-admission-desktop.mjs';
@@ -186,6 +187,7 @@ try {
   fixturesOwned = true;
   await verifyPaletteFocusDesktop(page, check);
   await verifyTextPanFocusDesktop(page, check);
+  await verifyTextControlsDesktop(page, check);
   await verifyInteractions(page, check);
   await verifyPendingShapesDesktop(page, check);
   await verifySelectionDesktop(page, check);

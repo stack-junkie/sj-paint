@@ -24,3 +24,5 @@
 .layer-select{flex:1;min-width:0;justify-content:flex-start;padding:0;gap:8px}.layer-select:focus-visible{outline:2px solid var(--accent);outline-offset:2px}
 
 @media(min-width:810px){#font{width:190px}}
+
+#text-align{display:flex;gap:0}#text-align svg{width:16px;height:16px}

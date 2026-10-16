@@ -7,7 +7,7 @@ export async function verifyTextDesktop(page, check) {
   const initial = await page.evaluate(() => ({ width: document.querySelector('#canvas').width,
     height: document.querySelector('#canvas').height,
     font: document.querySelector('#font').value, fontSize: document.querySelector('#font-size').value,
-    align: document.querySelector('#text-align').value, background: document.querySelector('#text-background').checked,
+    align: document.querySelector('[data-text-align][aria-pressed="true"]').dataset.textAlign, background: document.querySelector('#text-background').checked,
     styles: Object.fromEntries(['bold', 'italic', 'underline'].map(action =>
       [action, document.querySelector(`[data-action="${action}"]`).classList.contains('active')])) }));
   check('desktop text fixture starts with a blank history', await page.locator('[data-action="undo"]').isDisabled());
@@ -40,7 +40,7 @@ export async function verifyTextDesktop(page, check) {
       null, { polling: 100 });
     await page.locator('[data-tool="text"]').click(); await page.locator('[data-color="#000000"]').click();
     await page.locator('#font').selectOption('Arial'); await page.locator('#font-size').fill('24'); await page.locator('#font-size').press('Tab');
-    await page.locator('#text-align').selectOption('left'); await page.locator('#text-background').uncheck();
+    await page.locator('[data-text-align="left"]').click(); await page.locator('#text-background').uncheck();
     for (const action of ['bold', 'italic', 'underline']) if (await page.locator(`[data-action="${action}"]`).evaluate(el => el.classList.contains('active')))
       await page.locator(`[data-action="${action}"]`).click();
     const smallBlank = await pixels();
@@ -88,7 +88,7 @@ export async function verifyTextDesktop(page, check) {
     await waitPixels(blank);
     await page.locator('[data-tool="text"]').click();
     await page.locator('#font').selectOption(initial.font); await page.locator('#font-size').fill(initial.fontSize); await page.locator('#font-size').press('Tab');
-    await page.locator('#text-align').selectOption(initial.align); await page.locator('#text-background').setChecked(initial.background);
+    await page.locator(`[data-text-align="${initial.align}"]`).click(); await page.locator('#text-background').setChecked(initial.background);
     for (const [action, active] of Object.entries(initial.styles)) if (await page.locator(`[data-action="${action}"]`).evaluate(el => el.classList.contains('active')) !== active)
       await page.locator(`[data-action="${action}"]`).click();
     await page.locator('[data-menu="brushes"]').click(); await page.locator('[data-command="tool:brush"]').click();

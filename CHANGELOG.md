@@ -2,14 +2,21 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.14] - Unreleased
+## [0.2.15] - Unreleased
+
+- Cancel the browser default for a middle-button pan release, including release after cancellation or outside the canvas, so Linux selection-paste cannot overwrite a live text selection.
+
+- Keep the displayed font size consistent with the accepted rendering value, including clamped and fractional input. Add resource-backed size presets, three alignment buttons and the Background fill label while preserving draft selection and keyboard focus.
+- Import packed 1/2/4-bit grayscale and palette TIFF strips through the shared decoder, with padded-row bounds, explicit predictor limits and independent fixture validation.
+
+## [0.2.14] - Included in 0.2.15
 
 - Preserve custom-palette button identity and keyboard focus across color activation, dialogs and drawing previews. Expose text-formatting pressed states to assistive technology.
 - Keep text selection and deliberate toolbar focus during viewport panning, including release and cancellation, so continued typing stays in the draft.
 - Align tool-button and icon dimensions, text-control spacing and status metric text with decoded Paint resource definitions, retaining independently drawn artwork.
 - Open 8-bit grayscale and palette TIFF images through the existing validated strip decoder, including supported compression, horizontal prediction and all eight orientations. Reject malformed palettes and unsupported channel variants before replacing the drawing.
 
-## [0.2.13] - Unreleased
+## [0.2.13] - 2026-10-16
 
 - Keep the initial curve segment straight and preserve Shift-constrained endpoints when the pointer is released and control-point editing begins.
 - Focus newly created text immediately and preserve the text selection after pointer-operated formatting, palette and color-dialog actions, while retaining deliberate keyboard toolbar focus.

@@ -2,7 +2,7 @@
 // These checks establish editing robustness, not complete native text parity.
 export async function verifyTextInteractions(page, check) {
   const initial = await page.evaluate(() => ({ project: paintApp.doc.serialize(), state: { ...paintApp.state },
-    controls: Object.fromEntries(['font', 'font-size', 'text-align', 'text-background', 'size', 'size-number'].map(id => {
+    controls: Object.fromEntries(['font', 'font-size', 'text-background', 'size', 'size-number'].map(id => {
       const el = document.getElementById(id); return [id, { value: el.value, checked: el.checked }];
     })), styles: Object.fromEntries(['bold', 'italic', 'underline'].map(action =>
       [action, document.querySelector(`[data-action="${action}"]`).className])) }));

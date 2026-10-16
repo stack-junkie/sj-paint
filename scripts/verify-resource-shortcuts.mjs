@@ -12,7 +12,7 @@ export async function verifyResourceShortcuts(page, check) {
       read: async () => { window[key].reads++; return []; },
     } });
     return { project: paintApp.doc.serialize(), state: { ...paintApp.state },
-      controls: Object.fromEntries(['size', 'size-number', 'font', 'font-size', 'text-align', 'text-background'].map(id => {
+      controls: Object.fromEntries(['size', 'size-number', 'font', 'font-size', 'text-background'].map(id => {
         const element = document.getElementById(id); return [id, { value: element.value, checked: element.checked }];
       })) };
   }, key);

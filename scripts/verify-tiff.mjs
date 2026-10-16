@@ -40,10 +40,11 @@ function literalPackBits(bytes) {
 }
 
 function fixture({ width = 3, height = 2, samples = 4, raw = pixels, little = true, compression = 1,
-  predictor = 1, orientation = 1, rowsPerStrip = height, alpha = 2, photometric = 2, overrides = [], stripData } = {}) {
+  predictor = 1, orientation = 1, rowsPerStrip = height, alpha = 2, photometric = 2, bits = 8, overrides = [], stripData } = {}) {
   const strips = [];
+  const rowBytes = Math.ceil(width * samples * bits / 8);
   for (let row = 0; row < height; row += rowsPerStrip) {
-    const rows = Math.min(rowsPerStrip, height - row), data = raw.slice(row * width * samples, (row + rows) * width * samples);
+    const rows = Math.min(rowsPerStrip, height - row), data = raw.slice(row * rowBytes, (row + rows) * rowBytes);
     if (predictor === 2) for (let y = 0; y < rows; y++) {
       const start = y * width * samples;
       for (let pos = start + width * samples - 1; pos >= start + samples; pos--) data[pos] = (data[pos] - data[pos - samples]) & 255;
@@ -52,7 +53,7 @@ function fixture({ width = 3, height = 2, samples = 4, raw = pixels, little = tr
       compression === 32773 ? literalPackBits(data) : [8, 32946].includes(compression) ? new Uint8Array(deflateSync(data)) : data);
   }
   const tags = new Map([
-    [256, [4, [width]]], [257, [4, [height]]], [258, [3, Array(samples).fill(8)]], [259, [3, [compression]]],
+    [256, [4, [width]]], [257, [4, [height]]], [258, [3, Array(samples).fill(bits)]], [259, [3, [compression]]],
     [262, [3, [photometric]]], [273, [4, Array(strips.length).fill(0)]], [274, [3, [orientation]]], [277, [3, [samples]]],
     [278, [4, [rowsPerStrip]]], [279, [4, strips.map(strip => strip.length)]], [284, [3, [1]]], [317, [3, [predictor]]],
   ]);
@@ -115,6 +116,64 @@ test('8-bit grayscale imports both polarities with opaque alpha', async () => {
   }
 });
 
+test('packed samples honor row padding, both byte orders, polarity and exact palette entries across codecs', async () => {
+  for (const bits of [1, 2, 4]) {
+    const width = 7, height = 5, levels = 2 ** bits, rowBytes = Math.ceil(width * bits / 8);
+    const indexes = Array.from({ length: width * height }, (_, i) => i % levels);
+    const raw = new Uint8Array(rowBytes * height).fill(255); // Unused row bits must be ignored.
+    for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) {
+      const shift = 8 - bits - x * bits % 8, offset = y * rowBytes + Math.floor(x * bits / 8);
+      raw[offset] = (raw[offset] & ~((levels - 1) << shift)) | indexes[y * width + x] << shift;
+    }
+    const palette = Array.from({ length: levels * 3 }, (_, i) => ((i * 43) & 255) * 256 + 127);
+    for (const photometric of [0, 1, 3]) for (const little of [true, false]) for (const compression of [1, 5, 8, 32946, 32773]) {
+      const expected = Uint8Array.from(indexes.flatMap(index => photometric === 3 ?
+        [palette[index] >>> 8, palette[levels + index] >>> 8, palette[levels * 2 + index] >>> 8, 255] :
+        Array(3).fill((photometric === 0 ? levels - 1 - index : index) * 255 / (levels - 1)).concat(255)));
+      const overrides = photometric === 3 ? [[320, [3, palette]]] : [];
+      const encoded = fixture({ width, height, bits, samples: 1, raw, photometric, little, compression, rowsPerStrip: 2, overrides });
+      const before = encoded.slice();
+      assert.deepEqual(await readTiff(encoded, { inflate: boundedZlib }), { width, height, rgba: expected });
+      assert.deepEqual(encoded, before);
+    }
+  }
+});
+
+test('packed grayscale defaults to one bit and shares all orientation mappings', async () => {
+  const grids = [[0, 1, 0, 1, 0, 1], [0, 1, 0, 1, 0, 1], [1, 0, 1, 0, 1, 0], [1, 0, 1, 0, 1, 0],
+    [0, 1, 1, 0, 0, 1], [1, 0, 0, 1, 1, 0], [1, 0, 0, 1, 1, 0], [0, 1, 1, 0, 0, 1]];
+  for (let orientation = 1; orientation <= 8; orientation++) {
+    const decoded = await readTiff(fixture({ bits: 1, samples: 1, photometric: 1, raw: Uint8Array.of(0x40, 0xa0), orientation,
+      overrides: [[258, null], [277, null]] }));
+    assert.equal(decoded.width, orientation >= 5 ? 2 : 3); assert.equal(decoded.height, orientation >= 5 ? 3 : 2);
+    assert.deepEqual([...decoded.rgba].filter((_, i) => i % 4 === 0), grids[orientation - 1].map(i => i * 255));
+  }
+});
+
+test('packed interpretation and malformed ColorMap fail before inflation; decompression uses padded row size', async () => {
+  let calls = 0;
+  for (const bits of [1, 2, 4]) {
+    const options = { bits, samples: 1, photometric: 1, raw: new Uint8Array(2 * Math.ceil(3 * bits / 8)), compression: 8 };
+    for (const overrides of [[[317, [3, [2]]]], [[266, [3, [2]]]], [[258, [3, [3]]]], [[338, [3, [2]]]]]) {
+      await assert.rejects(readTiff(fixture({ ...options, overrides }), { inflate: () => { calls++; throw new Error('unexpected inflation'); } }), /Unsupported or invalid TIFF/);
+    }
+    const count = 3 * 2 ** bits;
+    for (const field of [[3, Array(count - 1).fill(0)], [3, Array(count + 1).fill(0)], [4, Array(count).fill(0)]]) {
+      await assert.rejects(readTiff(fixture({ ...options, photometric: 3, overrides: [[320, field]] }),
+        { inflate: () => { calls++; throw new Error('unexpected inflation'); } }), /Unsupported or invalid TIFF/);
+    }
+    for (const compression of [1, 5, 8, 32773]) for (const delta of [-1, 1]) {
+      const stripData = data => {
+        const wrong = new Uint8Array(data.length + delta);
+        return compression === 5 ? literalLzw(wrong) : compression === 8 ? new Uint8Array(deflateSync(wrong)) :
+          compression === 32773 ? literalPackBits(wrong) : wrong;
+      };
+      await assert.rejects(readTiff(fixture({ ...options, compression, stripData }), { inflate: boundedZlib }));
+    }
+  }
+  assert.equal(calls, 0);
+});
+
 test('single-channel TIFF reuses strip codecs, predictor rows and both byte orders', async () => {
   const raw = Uint8Array.of(0, 17, 127, 128, 254, 255);
   const palette = Array.from({ length: 768 }, (_, index) => ((index * 37) & 255) * 256 + (index & 255));
@@ -158,7 +217,7 @@ test('single-channel interpretation rejects malformed or conflicting fields befo
     ...[[3, palette.slice(1)], [3, [...palette, 0]], [4, palette]].map(field => fixture({ samples: 1, raw, photometric: 3, compression: 8, overrides: [[320, field]] })),
     ...[0, 1, 2].map(photometric => fixture({ samples: photometric === 2 ? 4 : 1, photometric, compression: 8, overrides: [[320, [3, palette]]] })),
     ...[0, 1, 3].flatMap(photometric => [
-      fixture({ samples: 1, raw, photometric, compression: 8, overrides: [[258, [3, [4]]]] }),
+      fixture({ samples: 1, raw, photometric, compression: 8, overrides: [[258, [3, [16]]]] }),
       fixture({ samples: 1, raw, photometric, compression: 8, overrides: [[338, [3, [2]]]] }),
       fixture({ samples: 1, raw, photometric, compression: 8, overrides: [[339, [3, [2]]]] }),
       fixture({ samples: 2, raw: new Uint8Array(12), photometric, compression: 8 }),

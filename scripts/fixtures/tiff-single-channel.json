@@ -2,8 +2,8 @@
   "provenance": {
     "pillow": "12.3.0",
     "libtiff": "4.7.1",
-    "generatorSha256": "5e78ca565ffeeeea0f77b38dfbf9b618d79cc4a4bfe9e60b2adec2b8c244a6fc",
-    "description": "Original generated pixels, encoded and independently decoded by Pillow. TIFF ColorMap uses high-byte RGBA8 conversion; no color-management claim."
+    "generatorSha256": "0781bc4892f8988de7b367a899c04f99f933923c8a6295b1460e9ae9828d4d2d",
+    "description": "Original generated pixels. Encoder provenance is per fixture; every expected RGBA buffer is independently decoded by Pillow. TIFF ColorMap uses high-byte RGBA8 conversion; no color-management or Microsoft Paint parity claim."
   },
   "fixtures": [
     {
@@ -11,11 +11,14 @@
       "stored": {
         "width": 5,
         "height": 7,
+        "bits": 8,
+        "bitsTagPresent": true,
         "photometric": 1,
         "compression": 32773,
         "predictor": 1,
         "orientation": 1,
-        "strips": 4
+        "strips": 4,
+        "encoder": "Pillow"
       },
       "width": 5,
       "height": 7,
@@ -29,11 +32,14 @@
       "stored": {
         "width": 7,
         "height": 5,
+        "bits": 8,
+        "bitsTagPresent": true,
         "photometric": 0,
         "compression": 5,
         "predictor": 2,
         "orientation": 6,
-        "strips": 4
+        "strips": 4,
+        "encoder": "Pillow"
       },
       "width": 7,
       "height": 5,
@@ -47,11 +53,14 @@
       "stored": {
         "width": 7,
         "height": 5,
+        "bits": 8,
+        "bitsTagPresent": true,
         "photometric": 1,
         "compression": 8,
         "predictor": 2,
         "orientation": 8,
-        "strips": 4
+        "strips": 4,
+        "encoder": "Pillow"
       },
       "width": 7,
       "height": 5,
@@ -65,11 +74,14 @@
       "stored": {
         "width": 17,
         "height": 17,
+        "bits": 8,
+        "bitsTagPresent": true,
         "photometric": 3,
         "compression": 1,
         "predictor": 1,
         "orientation": 2,
-        "strips": 9
+        "strips": 9,
+        "encoder": "Pillow"
       },
       "width": 17,
       "height": 17,
@@ -83,11 +95,14 @@
       "stored": {
         "width": 7,
         "height": 5,
+        "bits": 8,
+        "bitsTagPresent": true,
         "photometric": 3,
         "compression": 5,
         "predictor": 2,
         "orientation": 5,
-        "strips": 4
+        "strips": 4,
+        "encoder": "Pillow"
       },
       "width": 7,
       "height": 5,
@@ -101,11 +116,14 @@
       "stored": {
         "width": 7,
         "height": 5,
+        "bits": 8,
+        "bitsTagPresent": true,
         "photometric": 3,
         "compression": 8,
         "predictor": 2,
         "orientation": 7,
-        "strips": 4
+        "strips": 4,
+        "encoder": "Pillow"
       },
       "width": 7,
       "height": 5,
@@ -113,6 +131,468 @@
       "rgbaSha256": "5301b079d4b79ceef8328d335ebad9f32aa54c835b77991f9e9a734d5fb0b1f8",
       "encodedBase64": "SUkqAEQAAAB4nGNQVVVV3QkiAAlvAeJ4nCtSVVVV1QYRAAsdAcZ4nHuiqqqqOhdEAAARywKqeJwLU1VVVQUAAyUA6wAMAAABAwABAAAABQAAAAEBAwABAAAABwAAAAIBAwABAAAACAAAAAMBAwABAAAACAAAAAYBAwABAAAAAwAAABEBBAAEAAAA4gAAABIBAwABAAAABwAAABYBAwABAAAAAgAAABcBAwAEAAAA2gAAABwBAwABAAAAAQAAAD0BAwABAAAAAgAAAEABAwAAAwAA8gAAAAAAAAAPAA8AEAANAAgAAAAXAAAAJgAAADYAAAAAAAABAAIAAwAEAAUABgAHAAgACQAKAAsADAANAA4ADwAQABEAEgATABQAFQAWABcAGAAZABoAGwAcAB0AHgAfACAAIQAiACMAJAAlACYAJwAoACkAKgArACwALQAuAC8AMAAxADIAMwA0ADUANgA3ADgAOQA6ADsAPAA9AD4APwBAAEEAQgBDAEQARQBGAEcASABJAEoASwBMAE0ATgBPAFAAUQBSAFMAVABVAFYAVwBYAFkAWgBbAFwAXQBeAF8AYABhAGIAYwBkAGUAZgBnAGgAaQBqAGsAbABtAG4AbwBwAHEAcgBzAHQAdQB2AHcAeAB5AHoAewB8AH0AfgB/AIAAgQCCAIMAhACFAIYAhwCIAIkAigCLAIwAjQCOAI8AkACRAJIAkwCUAJUAlgCXAJgAmQCaAJsAnACdAJ4AnwCgAKEAogCjAKQApQCmAKcAqACpAKoAqwCsAK0ArgCvALAAsQCyALMAtAC1ALYAtwC4ALkAugC7ALwAvQC+AL8AwADBAMIAwwDEAMUAxgDHAMgAyQDKAMsAzADNAM4AzwDQANEA0gDTANQA1QDWANcA2ADZANoA2wDcAN0A3gDfAOAA4QDiAOMA5ADlAOYA5wDoAOkA6gDrAOwA7QDuAO8A8ADxAPIA8wD0APUA9gD3APgA+QD6APsA/AD9AP4A/wD/AP4A/QD8APsA+gD5APgA9wD2APUA9ADzAPIA8QDwAO8A7gDtAOwA6wDqAOkA6ADnAOYA5QDkAOMA4gDhAOAA3wDeAN0A3ADbANoA2QDYANcA1gDVANQA0wDSANEA0ADPAM4AzQDMAMsAygDJAMgAxwDGAMUAxADDAMIAwQDAAL8AvgC9ALwAuwC6ALkAuAC3ALYAtQC0ALMAsgCxALAArwCuAK0ArACrAKoAqQCoAKcApgClAKQAowCiAKEAoACfAJ4AnQCcAJsAmgCZAJgAlwCWAJUAlACTAJIAkQCQAI8AjgCNAIwAiwCKAIkAiACHAIYAhQCEAIMAggCBAIAAfwB+AH0AfAB7AHoAeQB4AHcAdgB1AHQAcwByAHEAcABvAG4AbQBsAGsAagBpAGgAZwBmAGUAZABjAGIAYQBgAF8AXgBdAFwAWwBaAFkAWABXAFYAVQBUAFMAUgBRAFAATwBOAE0ATABLAEoASQBIAEcARgBFAEQAQwBCAEEAQAA/AD4APQA8ADsAOgA5ADgANwA2ADUANAAzADIAMQAwAC8ALgAtACwAKwAqACkAKAAnACYAJQAkACMAIgAhACAAHwAeAB0AHAAbABoAGQAYABcAFgAVABQAEwASABEAEAAPAA4ADQAMAAsACgAJAAgABwAGAAUABAADAAIAAQAAAAAADQAaACcANABBAE4AWwBoAHUAggCPAJwAqQC2AMMA0ADdAOoA9wAEABEAHgArADgARQBSAF8AbAB5AIYAkwCgAK0AugDHANQA4QDuAPsACAAVACIALwA8AEkAVgBjAHAAfQCKAJcApACxAL4AywDYAOUA8gD/AAwAGQAmADMAQABNAFoAZwB0AIEAjgCbAKgAtQDCAM8A3ADpAPYAAwAQAB0AKgA3AEQAUQBeAGsAeACFAJIAnwCsALkAxgDTAOAA7QD6AAcAFAAhAC4AOwBIAFUAYgBvAHwAiQCWAKMAsAC9AMoA1wDkAPEA/gALABgAJQAyAD8ATABZAGYAcwCAAI0AmgCnALQAwQDOANsA6AD1AAIADwAcACkANgBDAFAAXQBqAHcAhACRAJ4AqwC4AMUA0gDfAOwA+QAGABMAIAAtADoARwBUAGEAbgB7AIgAlQCiAK8AvADJANYA4wDwAP0ACgAXACQAMQA+AEsAWABlAHIAfwCMAJkApgCzAMAAzQDaAOcA9AABAA4AGwAoADUAQgBPAFwAaQB2AIMAkACdAKoAtwDEANEA3gDrAPgABQASAB8ALAA5AEYAUwBgAG0AegCHAJQAoQCuALsAyADVAOIA7wD8AAkAFgAjADAAPQBKAFcAZABxAH4AiwCYAKUAsgC/AMwA2QDmAPM=",
       "rgbaBase64": "6hXi/zHOff94hxj/v0Cz/wb5Tv9Nsun/lGuE/8U6Af8M85z/U6w3/5pl0v/hHm3/KNcI/2+Qo/+gXyD/5xi7/y7RVv91ivH/vEOM/wP8J/9KtcL/e4Q//8I92v8J9nX/UK8Q/5doq//eIUb/Jdrh/1apXv+dYvn/5BuU/yvUL/9yjcr/uUZl/wD/AP8="
+    },
+    {
+      "name": "packed-1-white-raw",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 0,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 3,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "33d989b3361bc2ad4abf2f31d508090f98afc913fe3d87dee5e341ccc3e45880",
+      "rgbaSha256": "ceb3ad475c3270ed78d6d19a301266fec1875a25f00c64ff62bcd656bfc6642d",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAAAQAAAAMBAwABAAAAAQAAAAYBAwABAAAAAAAAABEBBAADAAAAngAAABIBAwABAAAAAwAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAAAAAAC2AAAAuAAAALoAAAACAAAAAgAAAAEAAABVq1WrVQ==",
+      "rgbaBase64": "/////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8="
+    },
+    {
+      "name": "packed-1-white-deflate",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 0,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 2,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "0bb239d78562ab7352e501ccba40bfdc0a7c52cc3f8b318df2c427e317472de4",
+      "rgbaSha256": "ceb3ad475c3270ed78d6d19a301266fec1875a25f00c64ff62bcd656bfc6642d",
+      "encodedBase64": "TU0AKgAAAAgADAEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAEAAAEDAAMAAAABAAgAAAEGAAMAAAABAAAAAAERAAQAAAADAAAAngESAAMAAAABAAIAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAqgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAAAAAAAAAC2AAAAwAAAAMoAAAAKAAAACgAAAAl4nAtdDQABVwEBeJwLXQ0AAVcBAXicCwUAAFYAVg==",
+      "rgbaBase64": "/////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8="
+    },
+    {
+      "name": "packed-1-black-raw",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 4,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "d3f962dfe2fe8dcad7d5e9f49d6b56b7a2d21c472055c3887248ac73b0552e9d",
+      "rgbaSha256": "4bc0ad53d07fd450d944ece90ba80362439c3d7626d470217dfca337bb408f0e",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAAAQAAAAMBAwABAAAAAQAAAAYBAwABAAAAAQAAABEBBAADAAAAngAAABIBAwABAAAABAAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAAAAAAC2AAAAuAAAALoAAAACAAAAAgAAAAEAAABVq1WrVQ==",
+      "rgbaBase64": "AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP8="
+    },
+    {
+      "name": "packed-1-black-deflate",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 3,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "64249ce1e2b6204faa7285a57760345b47645fb49a35c2320086e8bbe1c4fd61",
+      "rgbaSha256": "4bc0ad53d07fd450d944ece90ba80362439c3d7626d470217dfca337bb408f0e",
+      "encodedBase64": "TU0AKgAAAAgADAEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAEAAAEDAAMAAAABAAgAAAEGAAMAAAABAAEAAAERAAQAAAADAAAAngESAAMAAAABAAMAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAqgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAAAAAAAAAC2AAAAwAAAAMoAAAAKAAAACgAAAAl4nAtdDQABVwEBeJwLXQ0AAVcBAXicCwUAAFYAVg==",
+      "rgbaBase64": "AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP8="
+    },
+    {
+      "name": "packed-1-palette-raw",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 3,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 6,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "5aa7cf7b62d4f7153cfbdc8e85a8c82ab4dfbaccb7754a162684ebc779181e22",
+      "rgbaSha256": "209caddcd2eb00565aa317122edfcd0e0800b76c66ee5deedd410484c51f5b81",
+      "encodedBase64": "SUkqAAgAAAANAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAAAQAAAAMBAwABAAAAAQAAAAYBAwABAAAAAwAAABEBBAADAAAAqgAAABIBAwABAAAABgAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAtgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAEABAwAGAAAAwgAAAAAAAADOAAAA0AAAANIAAAACAAAAAgAAAAEAAAB/AH8rf1Z/gX+sf9dVq1WrVQ==",
+      "rgbaBase64": "AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8="
+    },
+    {
+      "name": "packed-1-palette-deflate",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 3,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 5,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "b27c120bf6c4af7c45b4de0e5eec991954c60f6ce5b5839c5b0a4467db2d3166",
+      "rgbaSha256": "209caddcd2eb00565aa317122edfcd0e0800b76c66ee5deedd410484c51f5b81",
+      "encodedBase64": "TU0AKgAAAAgADQEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAEAAAEDAAMAAAABAAgAAAEGAAMAAAABAAMAAAERAAQAAAADAAAAqgESAAMAAAABAAUAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAtgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAFAAAMAAAAGAAAAwgAAAAAAAADOAAAA2AAAAOIAAAAKAAAACgAAAAkAfyt/Vn+Bf6x/1394nAtdDQABVwEBeJwLXQ0AAVcBAXicCwUAAFYAVg==",
+      "rgbaBase64": "AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8rgdf/AFas/yuB1/8AVqz/K4HX/wBWrP8="
+    },
+    {
+      "name": "packed-2-white-raw",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 2,
+        "bitsTagPresent": true,
+        "photometric": 0,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 4,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "e02b1867bee5adf082993c2751cb369aa76b2543e83ec38aabc0e8aadb7f4ea9",
+      "rgbaSha256": "69c330d9a97c04de8a21b580009e083a1e790f2182d38b0f7e88931ba723975d",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAAAgAAAAMBAwABAAAAAQAAAAYBAwABAAAAAAAAABEBBAADAAAAngAAABIBAwABAAAABAAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAAAAAAC2AAAAugAAAL4AAAAEAAAABAAAAAIAAAAbG8bHsbNsbxsb",
+      "rgbaBase64": "/////6qqqv9VVVX/AAAA//////+qqqr/VVVV/6qqqv9VVVX/AAAA//////+qqqr/VVVV/wAAAP9VVVX/AAAA//////+qqqr/VVVV/wAAAP//////AAAA//////+qqqr/VVVV/wAAAP//////qqqq//////+qqqr/VVVV/wAAAP//////qqqq/1VVVf8="
+    },
+    {
+      "name": "packed-2-white-deflate",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 2,
+        "bitsTagPresent": true,
+        "photometric": 0,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 3,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "8c0eff17ece1946338045a1c05239919221624325c12c4fffac20cb8688fd69b",
+      "rgbaSha256": "70c1feb4647eddf228a30d71cea40d856b080a99f6ff137e684489b56997a14d",
+      "encodedBase64": "TU0AKgAAAAgADAEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAIAAAEDAAMAAAABAAgAAAEGAAMAAAABAAAAAAERAAQAAAADAAAAngESAAMAAAABAAMAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAqgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAAAAAAAAAC2AAAAwgAAAM4AAAAMAAAADAAAAAp4nJOWPnYcAAMUAcR4nNu4OScfAAYoAkB4nJOWBgAAUwA3",
+      "rgbaBase64": "VVVV/6qqqv//////AAAA/1VVVf+qqqr//////wAAAP9VVVX/qqqq//////8AAAD/VVVV/6qqqv//////AAAA/1VVVf+qqqr//////wAAAP9VVVX/qqqq//////8AAAD/VVVV/6qqqv//////AAAA/1VVVf+qqqr//////wAAAP9VVVX/qqqq//////8="
+    },
+    {
+      "name": "packed-2-black-raw",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 2,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 5,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "b62018dbd20837a7cabbe8692a406b0299bfa4a8fcc02878b1da80a8243bbe56",
+      "rgbaSha256": "ed6bfce6b839f0742e45b3d6b7607df8dd8e8d537a5dcd4d73d09ec26140a9f4",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAAAgAAAAMBAwABAAAAAQAAAAYBAwABAAAAAQAAABEBBAADAAAAngAAABIBAwABAAAABQAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAAAAAAC2AAAAugAAAL4AAAAEAAAABAAAAAIAAAAbG8bHsbNsbxsb",
+      "rgbaBase64": "AAAA//////+qqqr/VVVV/wAAAP9VVVX/AAAA//////+qqqr/VVVV/6qqqv9VVVX/AAAA//////+qqqr//////6qqqv9VVVX/AAAA//////8AAAD//////6qqqv9VVVX/AAAA/1VVVf8AAAD//////6qqqv9VVVX/qqqq/1VVVf8AAAD//////6qqqv8="
+    },
+    {
+      "name": "packed-2-black-deflate",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 2,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 4,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "23663aacab092b617d4245450fd36998b32106a788ce2c93eef8cbb79e974166",
+      "rgbaSha256": "624da6e6da754806fe84ba9cc2b55c9c34feb58c2869d8d865ad4e2563cece20",
+      "encodedBase64": "TU0AKgAAAAgADAEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAIAAAEDAAMAAAABAAgAAAEGAAMAAAABAAEAAAERAAQAAAADAAAAngESAAMAAAABAAQAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAqgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAAAAAAAAAC2AAAAwgAAAM4AAAAMAAAADAAAAAp4nJOWPnYcAAMUAcR4nNu4OScfAAYoAkB4nJOWBgAAUwA3",
+      "rgbaBase64": "AAAA/1VVVf+qqqr//////wAAAP9VVVX/qqqq/1VVVf+qqqr//////wAAAP9VVVX/qqqq//////+qqqr//////wAAAP9VVVX/qqqq//////8AAAD//////wAAAP9VVVX/qqqq//////8AAAD/VVVV/wAAAP9VVVX/qqqq//////8AAAD/VVVV/6qqqv8="
+    },
+    {
+      "name": "packed-2-palette-raw",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 2,
+        "bitsTagPresent": true,
+        "photometric": 3,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 7,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "54ca7298f6a2ea2fc4f3553adf7fbafa7017a0f6fd9a37910f1383df2ac05ad8",
+      "rgbaSha256": "73bcd161bd1f368e14f65f027c5b00c421b8ec8b6e67c7e550bce957422cdbf0",
+      "encodedBase64": "SUkqAAgAAAANAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAAAgAAAAMBAwABAAAAAQAAAAYBAwABAAAAAwAAABEBBAADAAAAqgAAABIBAwABAAAABwAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAtgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAEABAwAMAAAAwgAAAAAAAADaAAAA3gAAAOIAAAAEAAAABAAAAAIAAAB/AH8rf1Z/gX+sf9d/An8tf1h/g3+uf9kbG8bHsbNsbxsb",
+      "rgbaBase64": "VgKu/4Et2f8ArFj/K9eD/1YCrv8r14P/VgKu/4Et2f8ArFj/K9eD/wCsWP8r14P/VgKu/4Et2f8ArFj/gS3Z/wCsWP8r14P/VgKu/4Et2f9WAq7/gS3Z/wCsWP8r14P/VgKu/yvXg/9WAq7/gS3Z/wCsWP8r14P/AKxY/yvXg/9WAq7/gS3Z/wCsWP8="
+    },
+    {
+      "name": "packed-2-palette-deflate",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 2,
+        "bitsTagPresent": true,
+        "photometric": 3,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 6,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "75e81f370ef5020cef3821b8f5f01b9354b0dc672d054869ecd08b4a3acf85a6",
+      "rgbaSha256": "38ded6b8b2c5c7a3971d2086bb2e60c9cd4775f26b30378354814bd9c962b90e",
+      "encodedBase64": "TU0AKgAAAAgADQEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAIAAAEDAAMAAAABAAgAAAEGAAMAAAABAAMAAAERAAQAAAADAAAAqgESAAMAAAABAAYAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAtgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAFAAAMAAAAMAAAAwgAAAAAAAADaAAAA5gAAAPIAAAAMAAAADAAAAAoAfyt/Vn+Bf6x/138Cfy1/WH+Df65/2X94nJOWPnYcAAMUAcR4nNu4OScfAAYoAkB4nJOWBgAAUwA3",
+      "rgbaBase64": "AKxY/yvXg/9WAq7/gS3Z/wCsWP8r14P/VgKu/4Et2f8ArFj/K9eD/1YCrv+BLdn/AKxY/yvXg/9WAq7/gS3Z/wCsWP8r14P/VgKu/4Et2f8ArFj/K9eD/1YCrv+BLdn/AKxY/yvXg/9WAq7/gS3Z/wCsWP8r14P/VgKu/4Et2f8ArFj/K9eD/1YCrv8="
+    },
+    {
+      "name": "packed-4-white-raw",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 4,
+        "bitsTagPresent": true,
+        "photometric": 0,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 6,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "491b85175376152eed25632fcc4fa53bedc2e89cc59f8c65582ad05a0dfc88f5",
+      "rgbaSha256": "4ce7f12be2f10647899b6e33eab80420dc7d4953f69f46d2cda1ffd249038acd",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAABAAAAAMBAwABAAAAAQAAAAYBAwABAAAAAAAAABEBBAADAAAAngAAABIBAwABAAAABgAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAAAAAAC2AAAAvgAAAMYAAAAIAAAACAAAAAQAAAABI0VveJq83+8BI09WeJq/ze8BLw==",
+      "rgbaBase64": "MzMz/6qqqv8RERH/iIiI//////8iIiL/mZmZ/wAAAP93d3f/7u7u/xEREf+IiIj//////2ZmZv/d3d3/AAAA/3d3d//u7u7/VVVV/8zMzP//////ZmZm/93d3f9ERET/u7u7/+7u7v9VVVX/zMzM/zMzM/+qqqr/3d3d/0RERP+7u7v/IiIi/5mZmf8="
+    },
+    {
+      "name": "packed-4-white-deflate",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 4,
+        "bitsTagPresent": true,
+        "photometric": 0,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 5,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "0a40c525217fddc54c2d93ff0f4d1eff19e04b86bc59d50f8c66476bc8111182",
+      "rgbaSha256": "d604d767199ef05ea1f3fefc5629bf6b1291bd4bcf1192572cc784246138825c",
+      "encodedBase64": "TU0AKgAAAAgADAEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAQAAAEDAAMAAAABAAgAAAEGAAMAAAABAAAAAAERAAQAAAADAAAAngESAAMAAAABAAUAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAqgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAAAAAAAAAC2AAAAxgAAANYAAAAQAAAAEAAAAAx4nGNUds2vmLXnPgAK0wOGeJx7z6jsH1Yxaz8ADpcDinicO/ueUR8ABjYB7Q==",
+      "rgbaBase64": "/////4iIiP8RERH/qqqq/zMzM//u7u7/d3d3/wAAAP+ZmZn/IiIi/93d3f9mZmb//////4iIiP8RERH/zMzM/1VVVf/u7u7/d3d3/wAAAP+7u7v/RERE/93d3f9mZmb//////6qqqv8zMzP/zMzM/1VVVf/u7u7/mZmZ/yIiIv+7u7v/RERE/93d3f8="
+    },
+    {
+      "name": "packed-4-black-raw",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 4,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 7,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "433c267e671f0d058a12fc3efa19f8913e0604e88f7acbb5bcc6f0a927353576",
+      "rgbaSha256": "518cbc2047a3ce14e1845c3c18849830de0fbd828a78ec4377f228a9b13d5029",
+      "encodedBase64": "SUkqAAgAAAAMAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAABAAAAAMBAwABAAAAAQAAAAYBAwABAAAAAQAAABEBBAADAAAAngAAABIBAwABAAAABwAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAqgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAAAAAAC2AAAAvgAAAMYAAAAIAAAACAAAAAQAAAABI0VveJq83+8BI09WeJq/ze8BLw==",
+      "rgbaBase64": "IiIi/7u7u/9ERET/3d3d/2ZmZv8RERH/qqqq/zMzM//MzMz/VVVV/wAAAP+ZmZn/IiIi/7u7u/9ERET//////4iIiP8RERH/qqqq/zMzM//u7u7/d3d3/wAAAP+ZmZn/IiIi/93d3f9mZmb//////4iIiP8RERH/zMzM/1VVVf/u7u7/d3d3/wAAAP8="
+    },
+    {
+      "name": "packed-4-black-deflate",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 4,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 6,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "4181f63672e6a8dc44cac6a7c928da0f594ceba1cf1b0d032f437d7cc8cc5287",
+      "rgbaSha256": "9c527661337cb774653007ba16c7978b634f4de08cbcbe8ce9fff3732088f7f5",
+      "encodedBase64": "TU0AKgAAAAgADAEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAQAAAEDAAMAAAABAAgAAAEGAAMAAAABAAEAAAERAAQAAAADAAAAngESAAMAAAABAAYAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAqgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAAAAAAAAAC2AAAAxgAAANYAAAAQAAAAEAAAAAx4nGNUds2vmLXnPgAK0wOGeJx7z6jsH1Yxaz8ADpcDinicO/ueUR8ABjYB7Q==",
+      "rgbaBase64": "zMzM/1VVVf/u7u7/d3d3/wAAAP/d3d3/ZmZm//////+IiIj/ERER/+7u7v93d3f/AAAA/5mZmf8iIiL//////4iIiP8RERH/qqqq/zMzM/8AAAD/mZmZ/yIiIv+7u7v/RERE/xEREf+qqqr/MzMz/8zMzP9VVVX/IiIi/7u7u/9ERET/3d3d/2ZmZv8="
+    },
+    {
+      "name": "packed-4-palette-raw",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 4,
+        "bitsTagPresent": true,
+        "photometric": 3,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 1,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "4cd326d2e284307b4b82956aa62c49aaad6d883004ba5679d0cc68e6f9d4cc4a",
+      "rgbaSha256": "2c43c29e8215a78b03d9f160e4d6d7dfd012dda18f517040c02e0264d7a4daf6",
+      "encodedBase64": "SUkqAAgAAAANAAABBAABAAAABwAAAAEBBAABAAAABQAAAAIBAwABAAAABAAAAAMBAwABAAAAAQAAAAYBAwABAAAAAwAAABEBBAADAAAAqgAAABIBAwABAAAAAQAAABUBAwABAAAAAQAAABYBBAABAAAAAgAAABcBBAADAAAAtgAAABwBAwABAAAAAQAAAD0BAwABAAAAAQAAAEABAwAwAAAAwgAAAAAAAAAiAQAAKgEAADIBAAAIAAAACAAAAAQAAAB/AH8rf1Z/gX+sf9d/An8tf1h/g3+uf9l/BH8vf1p/hX+wf9t/Bn8xf1x/h3+yf91/CH8zf15/iX+0f99/Cn81f2B/i3+2f+F/DH83f2J/jX+4f+N/Dn85f2R/j3+6f+UBI0VveJq83+8BI09WeJq/ze8BLw==",
+      "rgbaBase64": "ALBg/yvbi/9WBrb/gTHh/6xcDP/Xhzf/ArJi/y3djf9YCLj/gzPj/65eDv/ZiTn/BLRk/y/fj/9aCrr/hTXl/wCwYP8r24v/Vga2/4Ex4f+sXAz/14c3/wKyYv8t3Y3/WAi4/4Mz4/+uXg7/2Yk5/wS0ZP8v34//Wgq6/4U15f8AsGD/K9uL/1YGtv8="
+    },
+    {
+      "name": "packed-4-palette-deflate",
+      "stored": {
+        "width": 5,
+        "height": 7,
+        "bits": 4,
+        "bitsTagPresent": true,
+        "photometric": 3,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 8,
+        "strips": 3,
+        "encoder": "Specification-based Python layout; zlib for Deflate"
+      },
+      "width": 5,
+      "height": 7,
+      "encodedSha256": "2a8e062568817976935e6ad76157f45824e9ea0f37efe86dcfe6b76fbcadbad5",
+      "rgbaSha256": "ff0b068d2c6b2efc0c9471445e5f99c0bda3acccced3deaf77d83981c69645dd",
+      "encodedBase64": "TU0AKgAAAAgADQEAAAQAAAABAAAABwEBAAQAAAABAAAABQECAAMAAAABAAQAAAEDAAMAAAABAAgAAAEGAAMAAAABAAMAAAERAAQAAAADAAAAqgESAAMAAAABAAgAAAEVAAMAAAABAAEAAAEWAAQAAAABAAAAAgEXAAQAAAADAAAAtgEcAAMAAAABAAEAAAE9AAMAAAABAAEAAAFAAAMAAAAwAAAAwgAAAAAAAAEiAAABMgAAAUIAAAAQAAAAEAAAAAwAfyt/Vn+Bf6x/138Cfy1/WH+Df65/2X8Efy9/Wn+Ff7B/238GfzF/XH+Hf7J/3X8IfzN/Xn+Jf7R/338KfzV/YH+Lf7Z/4X8Mfzd/Yn+Nf7h/438Ofzl/ZH+Pf7p/5X94nGNUds2vmLXnPgAK0wOGeJx7z6jsH1Yxaz8ADpcDinicO/ueUR8ABjYB7Q==",
+      "rgbaBase64": "ArJi/y/fj/+sXAz/2Yk5/1YGtv/Xhzf/BLRk/4Ex4f+uXg7/K9uL/6xcDP/ZiTn/Vga2/4Mz4/8AsGD/gTHh/65eDv8r24v/WAi4/4U15f9WBrb/gzPj/wCwYP8t3Y3/Wgq6/yvbi/9YCLj/hTXl/wKyYv8v34//ALBg/y3djf9aCrr/14c3/wS0ZP8="
+    },
+    {
+      "name": "pillow-bilevel-raw",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": false,
+        "photometric": 1,
+        "compression": 1,
+        "predictor": 1,
+        "orientation": 1,
+        "strips": 3,
+        "encoder": "Pillow"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "a77c81d72ad4748c114208eff640c931d21c51dbe1be31a67f54516c8ef4a0b0",
+      "rgbaSha256": "4bc0ad53d07fd450d944ece90ba80362439c3d7626d470217dfca337bb408f0e",
+      "encodedBase64": "SUkqAAgAAAAIAAABBAABAAAABwAAAAEBBAABAAAABQAAAAMBAwABAAAAAQAAAAYBAwABAAAAAQAAABEBBAADAAAAbgAAABYBBAABAAAAAgAAABcBBAADAAAAegAAABwBAwABAAAAAQAAAAAAAACGAAAAiAAAAIoAAAACAAAAAgAAAAEAAABUqlSqVA==",
+      "rgbaBase64": "AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP8="
+    },
+    {
+      "name": "pillow-bilevel-packbits",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 32773,
+        "predictor": 1,
+        "orientation": 1,
+        "strips": 3,
+        "encoder": "Pillow"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "7bbb15523f7879f2c4ab9a3fce696a7ac519aef9345510a6d6d93cbb8657bba2",
+      "rgbaSha256": "4bc0ad53d07fd450d944ece90ba80362439c3d7626d470217dfca337bb408f0e",
+      "encodedBase64": "SUkqABIAAAAAVACqAFQAqgBUCQAAAQMAAQAAAAcAAAABAQMAAQAAAAUAAAACAQMAAQAAAAEAAAADAQMAAQAAAAWAAAAGAQMAAQAAAAEAAAARAQQAAwAAAJAAAAAWAQMAAQAAAAIAAAAXAQQAAwAAAIQAAAAcAQMAAQAAAAEAAAAAAAAABAAAAAQAAAACAAAACAAAAAwAAAAQAAAA",
+      "rgbaBase64": "AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP8="
+    },
+    {
+      "name": "pillow-bilevel-tiff_lzw",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 5,
+        "predictor": 1,
+        "orientation": 1,
+        "strips": 3,
+        "encoder": "Pillow"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "81dfeb52b8be601eaa7c8bfc8de0482b4a181f32f966756e20c39e2437bc814d",
+      "rgbaSha256": "4bc0ad53d07fd450d944ece90ba80362439c3d7626d470217dfca337bb408f0e",
+      "encodedBase64": "SUkqABYAAACAFRVQEIAVFVAQgBUgIAkAAAEDAAEAAAAHAAAAAQEDAAEAAAAFAAAAAgEDAAEAAAABAAAAAwEDAAEAAAAFAAAABgEDAAEAAAABAAAAEQEEAAMAAACOAAAAFgEDAAEAAAACAAAAFwEDAAMAAACIAAAAHAEDAAEAAAABAAAAAAAAAAUABQAEAAgAAAANAAAAEgAAAA==",
+      "rgbaBase64": "AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP8="
+    },
+    {
+      "name": "pillow-bilevel-tiff_adobe_deflate",
+      "stored": {
+        "width": 7,
+        "height": 5,
+        "bits": 1,
+        "bitsTagPresent": true,
+        "photometric": 1,
+        "compression": 8,
+        "predictor": 1,
+        "orientation": 1,
+        "strips": 3,
+        "encoder": "Pillow"
+      },
+      "width": 7,
+      "height": 5,
+      "encodedSha256": "a10ea3ee15c45cfc31ed82890f03299ab7326d9eeaf3676f3e1176d2afe99929",
+      "rgbaSha256": "4bc0ad53d07fd450d944ece90ba80362439c3d7626d470217dfca337bb408f0e",
+      "encodedBase64": "SUkqACYAAAB4nAtZBQABVAD/eJwLWQUAAVQA/3icCwEAAFUAVQAJAAABAwABAAAABwAAAAEBAwABAAAABQAAAAIBAwABAAAAAQAAAAMBAwABAAAACAAAAAYBAwABAAAAAQAAABEBBAADAAAAngAAABYBAwABAAAAAgAAABcBAwADAAAAmAAAABwBAwABAAAAAQAAAAAAAAAKAAoACQAIAAAAEgAAABwAAAA=",
+      "rgbaBase64": "AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP//////AAAA//////8AAAD//////wAAAP8="
     }
   ]
 }

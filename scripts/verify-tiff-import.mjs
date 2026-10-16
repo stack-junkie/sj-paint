@@ -135,6 +135,24 @@ export async function verifyTiffImport(page, check) {
     });
     check('Paste from file expands the complete palette into selection pixels', JSON.stringify(pastedPalette) === JSON.stringify([...palette.rgba]));
     await page.keyboard.press('Escape'); await page.evaluate(() => paintApp.doc.markSaved());
+    const packedGray = independent.find(sample => sample.name === 'pillow-bilevel-raw');
+    const packedTransfer = await page.evaluateHandle(bytes => {
+      const transfer = new DataTransfer(); transfer.items.add(new File([Uint8Array.from(bytes)], 'packed-gray.bin', { type: 'application/octet-stream' })); return transfer;
+    }, [...packedGray.bytes]);
+    try { await page.dispatchEvent('#viewport', 'drop', { dataTransfer: packedTransfer }); }
+    finally { await packedTransfer.dispose(); }
+    await waitLoaded('packed-gray.bin');
+    check('Drop reads packed bilevel TIFF with omitted bit-depth tag and padded rows', JSON.stringify(await pixels()) === JSON.stringify([...packedGray.rgba]));
+    const packedPalette = independent.find(sample => sample.name === 'packed-4-palette-deflate');
+    const packedPaste = page.waitForEvent('filechooser');
+    await page.getByRole('button', { name: 'Edit', exact: true }).click(); await page.locator('[data-command="paste-from"]').click();
+    await (await packedPaste).setFiles({ name: 'packed-palette.tiff', mimeType: 'image/tiff', buffer: packedPalette.bytes });
+    await page.waitForFunction(() => Boolean(paintApp.doc.selection), null, { polling: 100 });
+    const packedPixels = await page.evaluate(() => {
+      const c = paintApp.doc.selection.canvas; return [...c.getContext('2d').getImageData(0, 0, c.width, c.height).data];
+    });
+    check('Paste from file expands packed palette indices after Deflate and orientation', JSON.stringify(packedPixels) === JSON.stringify([...packedPalette.rgba]));
+    await page.keyboard.press('Escape'); await page.evaluate(() => paintApp.doc.markSaved());
     const malformed = await malformedSingleChannelTiffFixtures();
     for (const sample of malformed) {
       const before = await snapshot();
@@ -142,12 +160,14 @@ export async function verifyTiffImport(page, check) {
       await choose(sample.name, sample.bytes); await failed;
       check(`${sample.name} preserves the current document, name and history`, await snapshot() === before);
     }
-    const beforeFailedPaste = await snapshot(), failedPaste = page.waitForEvent('filechooser');
-    const pasteError = page.waitForEvent('console', { predicate: e => e.type() === 'error' && /TIFF/.test(e.text()) });
-    await page.getByRole('button', { name: 'Edit', exact: true }).click(); await page.locator('[data-command="paste-from"]').click();
-    await (await failedPaste).setFiles({ name: malformed[0].name, mimeType: 'image/tiff', buffer: malformed[0].bytes });
-    await pasteError;
-    check('Malformed palette Paste from file preserves the current document and history', await snapshot() === beforeFailedPaste);
+    for (const sample of [malformed[0], malformed.find(sample => sample.name === 'packed-unsupported-predictor.tiff')]) {
+      const beforeFailedPaste = await snapshot(), failedPaste = page.waitForEvent('filechooser');
+      const pasteError = page.waitForEvent('console', { predicate: e => e.type() === 'error' && /TIFF/.test(e.text()) });
+      await page.getByRole('button', { name: 'Edit', exact: true }).click(); await page.locator('[data-command="paste-from"]').click();
+      await (await failedPaste).setFiles({ name: sample.name, mimeType: 'image/tiff', buffer: sample.bytes });
+      await pasteError;
+      check(`Malformed ${sample.name} Paste from file preserves the current document and history`, await snapshot() === beforeFailedPaste);
+    }
 
     const native = await optionalNativeTiffs();
     for (const sample of native) {

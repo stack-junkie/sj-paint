@@ -49,34 +49,61 @@ export async function verifyTextPanFocusDesktop(page, check) {
     }
     return before;
   };
-  const pan = async (mode, ending) => {
+  const pan = async (mode, ending, outside = false) => {
     await move(500, 320);
     const box = await page.locator('#overlay').boundingBox();
-    if (mode === 'Alt') await page.keyboard.down('Alt');
-    await page.mouse.down({ button: mode === 'Alt' ? 'left' : 'middle' });
-    await page.mouse.move(box.x + 500, box.y + 280); await frame();
-    let focusEvents = null;
-    if (ending === 'Escape') await page.keyboard.press('Escape');
-    else if (ending === 'blur') focusEvents = await page.evaluate(() => {
-      let count = 0; const onFocus = () => count++;
-      document.addEventListener('focusin', onFocus);
-      try { window.dispatchEvent(new Event('blur')); } finally { document.removeEventListener('focusin', onFocus); }
-      return count;
+    await page.evaluate(() => {
+      const events = [], types = ['pointerup', 'mouseup', 'auxclick', 'paste', 'beforeinput', 'input'];
+      const listener = event => events.push(event);
+      for (const type of types) window.addEventListener(type, listener);
+      window.__textPanTrace = { events, types, listener };
     });
-    else if (ending !== 'release') await page.locator('#overlay').evaluate((el, type) => {
-      const pointerId = Array.from({ length: 32 }, (_, index) => index).find(id => el.hasPointerCapture(id));
-      if (pointerId === undefined) throw new Error('The owned mouse pan did not capture its pointer.');
-      el.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId, pointerType: 'mouse' }));
-    }, ending);
-    await page.mouse.up({ button: mode === 'Alt' ? 'left' : 'middle' });
-    if (mode === 'Alt') await page.keyboard.up('Alt');
-    await frame(); return focusEvents;
+    try {
+      if (mode === 'Alt') await page.keyboard.down('Alt');
+      await page.mouse.down({ button: mode === 'Alt' ? 'left' : 'middle' });
+      await page.mouse.move(box.x + 500, box.y + 280); await frame();
+      let focusEvents = null;
+      if (ending === 'Escape') await page.keyboard.press('Escape');
+      else if (ending === 'blur') focusEvents = await page.evaluate(() => {
+        let count = 0; const onFocus = () => count++;
+        document.addEventListener('focusin', onFocus);
+        try { window.dispatchEvent(new Event('blur')); } finally { document.removeEventListener('focusin', onFocus); }
+        return count;
+      });
+      else if (ending !== 'release') await page.locator('#overlay').evaluate((el, type) => {
+        const pointerId = Array.from({ length: 32 }, (_, index) => index).find(id => el.hasPointerCapture(id));
+        if (pointerId === undefined) throw new Error('The owned mouse pan did not capture its pointer.');
+        el.dispatchEvent(new PointerEvent(type, { bubbles: true, pointerId, pointerType: 'mouse' }));
+      }, ending);
+      if (outside) {
+        const title = await page.locator('.titlebar').boundingBox();
+        await page.mouse.move(title.x + title.width / 2, title.y + title.height / 2);
+      }
+      await page.mouse.up({ button: mode === 'Alt' ? 'left' : 'middle' });
+      if (mode === 'Alt') await page.keyboard.up('Alt');
+      await frame();
+      const events = await page.evaluate(() => window.__textPanTrace.events.map(event => ({
+        type: event.type, button: event.button, prevented: event.defaultPrevented,
+        target: event.target.id || event.target.tagName, inputType: event.inputType,
+      })));
+      return { focusEvents, events };
+    } finally {
+      await page.evaluate(() => {
+        const trace = window.__textPanTrace;
+        if (trace) for (const type of trace.types) window.removeEventListener(type, trace.listener);
+        delete window.__textPanTrace;
+      });
+    }
   };
   try {
-    for (const [mode, ending] of [['middle', 'release'], ['Alt', 'release'], ['middle', 'Escape'],
-      ['middle', 'pointercancel'], ['Alt', 'lostpointercapture'], ['middle', 'blur']]) {
-      const before = await draft(), name = `${mode} text pan ${ending}`;
-      const focusEvents = await pan(mode, ending), after = await snapshot();
+    for (const [mode, ending, outside] of [['middle', 'release'], ['Alt', 'release'], ['middle', 'Escape'],
+      ['middle', 'pointercancel'], ['Alt', 'lostpointercapture'], ['middle', 'lostpointercapture'],
+      ['middle', 'blur'], ['middle', 'Escape', true]]) {
+      const before = await draft(), name = `${mode} text pan ${ending}${outside ? ' released outside canvas' : ''}`;
+      const { focusEvents, events } = await pan(mode, ending, outside), after = await snapshot();
+      if (mode === 'middle') record(`${name} cancels its release default without editing events`,
+        events.some(event => event.type === 'pointerup' && event.button === 1 && event.prevented) &&
+        !events.some(event => ['paste', 'beforeinput', 'input'].includes(event.type)), events);
       record(`${name} preserves text focus, selection and pixels while scrolling`,
         after.scroll > before.scroll && after.focused && after.text === before.text &&
         JSON.stringify(after.selection) === JSON.stringify(before.selection) && after.pixels === before.pixels, focusDetail(after));
@@ -102,7 +129,30 @@ export async function verifyTextPanFocusDesktop(page, check) {
     record('panning preserves deliberate keyboard focus on a formatting control',
       intentional.active === 'italic' && afterToolbar.active === intentional.active && !afterToolbar.focused &&
       afterToolbar.text === beforeToolbar.text && JSON.stringify(afterToolbar.selection) === JSON.stringify(beforeToolbar.selection), focusDetail(afterToolbar));
+
+    // A canceled pan owns only its physical release, not the next unrelated click.
+    await draft(); await pan('middle', 'Escape', true);
+    await page.locator('#overlay').focus(); await page.keyboard.press('Escape');
+    const unrelated = await page.evaluate(() => {
+      window.__unrelatedMiddleRelease = { event: null, listener: event => {
+        window.__unrelatedMiddleRelease.event = event;
+      } };
+      window.addEventListener('pointerup', window.__unrelatedMiddleRelease.listener, { once: true });
+      const title = document.querySelector('.titlebar').getBoundingClientRect();
+      return { x: title.x + title.width / 2, y: title.y + title.height / 2 };
+    });
+    await page.mouse.click(unrelated.x, unrelated.y, { button: 'middle' });
+    const unrelatedRelease = await page.evaluate(() => {
+      const event = window.__unrelatedMiddleRelease.event;
+      return event ? { button: event.button, prevented: event.defaultPrevented, inTitlebar: Boolean(event.target.closest('.titlebar')) } : null;
+    });
+    record('a later unrelated middle gesture does not inherit canceled pan ownership',
+      unrelatedRelease?.button === 1 && !unrelatedRelease.prevented && unrelatedRelease.inTitlebar, unrelatedRelease);
   } finally {
+    await page.evaluate(() => {
+      if (window.__unrelatedMiddleRelease) window.removeEventListener('pointerup', window.__unrelatedMiddleRelease.listener);
+      delete window.__unrelatedMiddleRelease;
+    });
     await reset();
     if (initial.tool) await page.locator(`[data-tool="${initial.tool}"]`).click();
     else { await page.locator('[data-menu="brushes"]').click(); await page.getByRole('menuitem', { name: initial.label, exact: true }).click(); }
