@@ -96,4 +96,3 @@ export async function verifyShapeStyleMenu(page, check) {
     return result;
   } finally { await context.close(); }
 }
-
