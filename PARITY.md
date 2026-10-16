@@ -71,6 +71,14 @@ The completed EfficientSAM evaluation took 65.226 s elapsed and 104.719 s CPU. F
 
 ## Verification history
 
+### Version 0.2.21 color entry
+
+Edit colors now provides RGB and HSV numeric channels, a color-model selector and synchronized hex input. The pinned `EditColorsDialog.xbf` contains a standard ColorPicker instance (SHA-256 `bd9f79f7243d152482e88168efac76150c4cc92374873a2c1605c3a30af39dae`). [Microsoft's ColorPicker documentation](https://learn.microsoft.com/en-us/windows/apps/develop/ui/controls/color-picker) describes RGB, HSV and hex entry; [the framework source](https://github.com/microsoft/microsoft-ui-xaml/blob/main/controls/dev/ColorPicker/ColorPicker.cpp) establishes channel labels, representation selection and hue 0 through 359, saturation/value 0 through 100. These are static resource and framework facts, not observations of this Paint build's runtime configuration. Exact native layout, picker rendering, input correction and rounding remain unverified.
+
+Public controls reproduced empty hex accepting the previous color and the absence of channel controls before their fixes. One dialog-local owner now synchronizes representations; required/bounded inputs block acceptance while incomplete. Switching models retains exact RGB bytes and discards incomplete text from the old representation. Hue/saturation intent is retained at black, and hue at gray. HSV labels round to whole degrees/percentages; conversion rounds RGB to the nearest byte. This independently implemented policy is not claimed as native Paint equivalence. Tests cover standard primary/secondary hue colors exactly, boundaries, invalid inputs, repeated lossless model switches, achromatic editing, cancel/accept/Enter, saved palette, text focus and affected pending-shape workflows. Packaged platform verification is pending.
+
+The focused suite passed 37 color checks plus 59 affected palette, text-focus and pending-shape checks. A further public regression reproduced hue-only edits rounding the untouched channels; the owner now retains their full precision separately from displayed values. One earlier isolated browser startup timed out before loading the app, then the diagnostic rerun reached and reproduced the precision failure. Both runners closed their owned browser/server. No AI work was resumed. Windows archives are now produced by the existing remote CI after its packaged checks, avoiding local compression work.
+
 ### Version 0.2.20 shape-style menus
 
 Outline and Fill now use selectable menu items with independent previews, following the complete ShapesToolbar.xbf item order and `LargeIconSelectableMenuFlyoutItemStyle` declarations. Source SHA-256: `207f68ab402af81e7f1cf855e175a36f1645e59924ab14f4562ce8d5c5ea4ae8`. Samples use SJ Paint's existing shape renderer, not Microsoft assets. Their chosen 80 by 40 logical-unit size is an implementation choice; exact native preview dimensions, pixels and focus behavior remain unverified.

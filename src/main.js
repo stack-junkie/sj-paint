@@ -1,4 +1,5 @@
 import './style.css';
+import { bindColorInputs } from './color-inputs.js';
 import PROJECT from './project-format.json' with { type: 'json' };
 import { VERSION } from './version.js';
 import { bindCanvasResize } from './canvas-resize.js';
@@ -409,10 +410,11 @@ async function saveAs() {
   return false;
 }
 async function colorDialog(which='primary'){
-  const values=await dialog('Edit colors',`<div class="color-editor"><input type="color" name="color" value="${state[which]}" aria-label="Color spectrum"><label>Hex<input id="hex" value="${state[which]}" pattern="#[0-9a-fA-F]{6}" maxlength="7"></label></div><p class="hint">Choose a color, or enter its hexadecimal value.</p>`);
+  const pending=dialog('Edit colors',`<div class="color-editor"><input type="color" name="color" value="${state[which]}" aria-label="Color spectrum"><label>Hex<input id="hex" value="${state[which]}" pattern="#[0-9a-fA-F]{6}" maxlength="7" required spellcheck="false"></label></div><label>Color model<select name="color-model"><option value="rgb">RGB</option><option value="hsv">HSV</option></select></label><fieldset class="color-channels" data-color-model="rgb"><legend>RGB channels</legend>${['Red','Green','Blue'].map(name=>`<label>${name}<input type="number" name="${name.toLowerCase()}" min="0" max="255" step="1" required></label>`).join('')}</fieldset><fieldset class="color-channels" data-color-model="hsv" hidden disabled><legend>HSV channels</legend>${[['Hue',359],['Saturation',100],['Value',100]].map(([name,max])=>`<label>${name}<input type="number" name="${name.toLowerCase()}" min="0" max="${max}" step="1" required></label>`).join('')}</fieldset><p class="hint">RGB uses 0 to 255. Hue uses 0 to 359 degrees; saturation and value use 0 to 100 percent.</p>`);
+  bindColorInputs($('#dialog form'));
+  const values=await pending;
   if(values){state[which]=values.color;customColors=[values.color,...customColors.filter(c=>c!==values.color)].slice(0,10);localStorage.setItem('paint-colors',JSON.stringify(customColors));updateToolState();styleText();updatePendingStyle();}
 }
-$('#dialog').addEventListener('input',e=>{if(e.target.name==='color'&&$('#hex'))$('#hex').value=e.target.value;if(e.target.id==='hex'&&/^#[0-9a-fA-F]{6}$/.test(e.target.value))$('#dialog [name="color"]').value=e.target.value;});
 async function resizeDialog(){
   commitText();const geometry=doc.getSelectionGeometry(),w=geometry?Math.round(geometry.frameWidth):doc.width,h=geometry?Math.round(geometry.frameHeight):doc.height;
   const pending=dialog('Resize and skew',`<fieldset><legend>Resize</legend><label>By<select name="unit" id="resize-unit"><option value="pixels">Pixels</option><option value="percent">Percentage</option></select></label><div class="two-columns"><label>Horizontal<input id="resize-width" name="width" type="number" min="1" max="16384" value="${w}" required></label><label>Vertical<input id="resize-height" name="height" type="number" min="1" max="16384" value="${h}" required></label></div><label class="check-label"><input id="aspect" type="checkbox" checked>Maintain aspect ratio</label><label class="check-label"><input name="scale" type="checkbox" checked>Scale image pixels</label></fieldset><fieldset><legend>Skew (degrees)</legend><div class="two-columns"><label>Horizontal<input name="skewX" type="number" min="-80" max="80" value="0"></label><label>Vertical<input name="skewY" type="number" min="-80" max="80" value="0"></label></div></fieldset>`);

@@ -1,4 +1,5 @@
 import { verifyShapeStyleMenuDesktop } from './verify-shape-style-menu.mjs';
+import { verifyColorInputsDesktop } from './verify-color-inputs.mjs';
 import { verifyViewStateDesktop } from './verify-view-state.mjs';
 import { verifyEraserDesktop } from './verify-eraser-desktop.mjs';
 import { verifyLocalAiDesktop } from './verify-local-ai-desktop.mjs';
@@ -201,6 +202,7 @@ try {
     return { directory, temporaryRoot: os.tmpdir(), owner };
   })()`);
   fixturesOwned = true;
+  await verifyColorInputsDesktop(page, check);
   await verifyPaletteFocusDesktop(page, check);
   await verifyTextPanFocusDesktop(page, check);
   await verifyTextControlsDesktop(page, check);

@@ -87,7 +87,10 @@ export async function verifyTextFocusDesktop(page, check) {
     for (const accept of [false, true]) {
       await draft(); await page.getByRole('button', { name: 'Edit colors', exact: true }).click();
       await page.waitForFunction(() => document.querySelector('#dialog').open);
-      if (accept) { await page.locator('#hex').fill('#123456'); await page.locator('#dialog button[type="submit"]').click(); }
+      if (accept) {
+        for (const [name, value] of [['Red', '18'], ['Green', '52'], ['Blue', '86']]) await page.getByRole('spinbutton', { name, exact: true }).fill(value);
+        await page.locator('#dialog button[type="submit"]').click();
+      }
       else await page.locator('#dialog-cancel').click();
       await page.keyboard.type('s'); await frame(); const typed = await snapshot();
       record(`${accept ? 'accepting' : 'canceling'} pointer-opened colors restores draft selection and typing`,

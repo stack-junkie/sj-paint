@@ -1,4 +1,5 @@
 import { verifyShapeStyleMenu } from './verify-shape-style-menu.mjs';
+import { verifyColorInputs } from './verify-color-inputs.mjs';
 import { chooseShapeStyle } from './shape-style-controls.mjs';
 import { verifyViewState } from './verify-view-state.mjs';
 import { verifyDialogAccessibility } from './verify-dialog-accessibility.mjs';
@@ -74,6 +75,7 @@ try{
  await verifyTextInteractions(page,check);
  await verifyTextFocus(page,check);
  await verifyPaletteFocus(page,check);
+ await verifyColorInputs(page,check);
  await verifyTextPanFocus(page,check);
  await verifyTextControls(page,check);
  await verifySelectionMenu(page,check);

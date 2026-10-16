@@ -2,13 +2,19 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.20] - Unreleased
+## [0.2.21] - Unreleased
+
+- Add RGB and HSV channel editing with a color-model selector, synchronized hex input and dialog-local color ownership.
+- Reject empty, malformed and out-of-range color values before accepting the dialog. Preserve exact color bytes when switching representations and retain hue through gray and black edits.
+- Preserve live text selection and pending-shape styling when accepting colors; cancellation leaves colors, custom palette and document history unchanged.
+
+## [0.2.20] - 2026-10-16
 
 - Replace plain Outline and Fill dropdowns with selectable menus and independently rendered style previews, using the pinned Paint resource order and labels.
 - Keep shape-style controls available in narrow windows and clamp shared menu placement inside short viewports.
 - Preserve pending shapes and curve construction while changing styles, with menu keyboard navigation, focus return and existing cancellation/history behavior.
 
-## [0.2.19] - Unreleased
+## [0.2.19] - 2026-10-16
 
 - Expose checked Rulers and Gridlines states and a Status bar toggle in View, preserving pending drawings and keyboard zoom.
 - Name each shared dialog from its current heading without changing its submit, cancellation or ownership behavior.

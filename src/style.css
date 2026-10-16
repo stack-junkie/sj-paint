@@ -31,3 +31,4 @@
 
 .background-removal-dialog{max-width:min(620px,90vw)}.background-removal-dialog footer{display:flex;justify-content:flex-end;gap:8px}.background-preview{max-height:55vh;overflow:auto;background:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 0/16px 16px}.background-preview canvas{display:block;max-width:100%;height:auto}.background-removal-dialog p{max-width:55ch}
 .image-tools{grid-template-columns:repeat(3,32px)}.image-tools [data-action="remove-background"]{grid-column:3;grid-row:1 / span 2;align-self:center}
+.color-channels{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px}.color-channels input{width:100%}
