@@ -70,7 +70,16 @@ export async function removeBackground(doc) {
       throw new Error('The local worker returned an invalid background mask.');
     }
     resultMask = result.mask;
-    const preview = maskedCanvas(source, resultMask);
+    const masked = maskedCanvas(source, resultMask);
+    // Preview the prospective document through the same display compositor as
+    // the main canvas. Reading layer storage directly skips display rounding
+    // and would also omit the background and other layers.
+    const preview = document.createElement('canvas');
+    preview.width = doc.width; preview.height = doc.height;
+    doc.renderTo(preview.getContext('2d'), { layerPreview: {
+      layerId: target.layerId,
+      paint(context) { context.clearRect(0, 0, doc.width, doc.height); context.drawImage(masked, 0, 0); },
+    } });
     preview.setAttribute('aria-label', 'Background removal preview');
     panel.querySelector('.background-preview').append(preview);
     status.textContent = 'Preview ready. Apply changes only this layer and can be undone.'; apply.disabled = false;

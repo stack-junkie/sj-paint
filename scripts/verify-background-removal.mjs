@@ -25,7 +25,7 @@ export async function verifyBackgroundRemoval(page, check) {
         if (mode === 'failure') return pending.resolve({ ok: false, error: { code: 'BACKEND_FAILED', message: 'Simulated inference failed.' } });
         const { width, height } = pending.request;
         const mask = new Uint8Array(mode === 'malformed' ? width * height - 1 : width * height);
-        for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) mask[y * width + x] = x < 4 ? 0 : x < 8 ? 128 : 255;
+        for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) mask[y * width + x] = mode === 'graded' ? x % 256 : x < 4 ? 0 : x < 8 ? 128 : 255;
         pending.resolve({ ok: true, value: { mask, width, height, metadata: { model: 'simulated-fixture' } } });
       };
     });
@@ -119,7 +119,11 @@ export async function verifyBackgroundRemoval(page, check) {
     await cancel().click(); await frame();
     check('Cancel discards a completed simulated preview without adding history', unchanged(before, await snapshot()));
 
-    await fixture(); before = await snapshot(); await start(); await finish('success'); await apply().click(); await frame();
+    await fixture(); before = await snapshot(); await start(); await finish('success');
+    const acceptedPreview = await target.locator('.background-removal-dialog[open] canvas').evaluate(canvas => canvas.toDataURL());
+    await apply().click(); await frame();
+    check('preview exactly matches the applied display with lower-layer and active-layer opacity',
+      acceptedPreview === await target.locator('#canvas').evaluate(canvas => canvas.toDataURL()));
     const applied = await snapshot(), originalPixels = before.layers[1].pixels, resultPixels = applied.layers[1].pixels;
     check('Apply multiplies active-layer alpha by the simulated foreground mask', resultPixels.every((value, index) => {
       const x = Math.floor(index / 4) % 12, mask = x < 4 ? 0 : x < 8 ? 128 : 255;
@@ -132,6 +136,32 @@ export async function verifyBackgroundRemoval(page, check) {
     await target.getByRole('button', { name: 'Redo (Ctrl+Y)', exact: true }).click(); await frame(); const redone = await snapshot();
     check('background removal Apply is exactly one Undo and Redo operation', applied.undo && !applied.redo && undone.content === before.content &&
       !undone.undo && redone.content === applied.content);
+
+    await fixture(); await target.evaluate(async () => {
+      const data = paintApp.doc.serialize(); data.background = '#f0e0d0';
+      const canvas = document.createElement('canvas'); canvas.width = 12; canvas.height = 8;
+      const ctx = canvas.getContext('2d'); ctx.fillStyle = '#00ff00'; ctx.fillRect(0, 0, 6, 8);
+      data.layers.push({ id: 'upper', name: 'Untouched upper', visible: true, opacity: .25, png: canvas.toDataURL() });
+      ctx.fillStyle = '#ff00ff'; ctx.fillRect(0, 0, 12, 8);
+      data.layers.push({ id: 'hidden', name: 'Untouched hidden', visible: false, opacity: 1, png: canvas.toDataURL() });
+      await paintApp.doc.load(data);
+    }); await frame(); before = await snapshot(); await start(); await finish('success');
+    const compositePreview = await target.locator('.background-removal-dialog[open] canvas').evaluate(canvas => canvas.toDataURL());
+    await apply().click(); await frame(); const compositeApplied = await snapshot();
+    check('preview exactly matches Apply with background, lower, upper and hidden layers',
+      compositePreview === await target.locator('#canvas').evaluate(canvas => canvas.toDataURL()));
+    check('composited preview and Apply preserve all other layers and document background',
+      unchanged(before.layers.filter(layer => layer.id !== 'active'), compositeApplied.layers.filter(layer => layer.id !== 'active')) &&
+      JSON.parse(compositeApplied.content).background === '#f0e0d0');
+
+    await target.evaluate(() => {
+      const doc = paintApp.doc; doc.newDocument(256, 16); doc.setBackground(null); doc.begin('Graded mask fixture');
+      const ctx = doc.activeLayer.canvas.getContext('2d'); ctx.fillStyle = '#ed1c24'; ctx.fillRect(0, 0, 256, 16); doc.commit();
+    }); await frame(); await start(); await finish('graded');
+    const gradedPreview = await target.locator('.background-removal-dialog[open] canvas').evaluate(canvas => canvas.toDataURL());
+    await apply().click(); await frame();
+    check('every graded foreground alpha previews exactly as applied without display-rounding drift',
+      gradedPreview === await target.locator('#canvas').evaluate(canvas => canvas.toDataURL()));
 
     for (const [race, phase] of [['newer edit', 'inflight'], ['replacement document', 'inflight'], ['newer edit', 'preview']]) {
       await fixture(); await start();

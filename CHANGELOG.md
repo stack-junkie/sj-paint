@@ -2,18 +2,22 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.17] - Unreleased
+## [0.2.18] - Unreleased
+
+- Render the background-removal preview through the document compositor, preserving background/layer context and matching the accepted display pixels.
+
+## [0.2.17] - Included in 0.2.18
 
 - Add optional offline background-removal previews using an externally configured U2NetP model and existing Python/ONNX Runtime. Apply changes only the active layer as one undoable edit; cancellation, document changes and invalid results cannot overwrite newer work.
 - Keep local inference in a bounded hidden process with exact model verification, typed IPC, cancellation ownership and cleanup deadlines. Model weights and runtimes are not bundled or downloaded by the application.
 
-## [0.2.16] - Unreleased
+## [0.2.16] - 2026-10-16
 
 - Match decoded selection-menu labels and checked states, add selection-scoped Delete, and keep menu keyboard Delete from clearing an unselected layer.
 - Show nine brush choices with independently rendered previews, retaining Pencil as its separate tool; align shape-style labels and outline order with resource evidence.
 - Prevent tall desktop print output from being clipped by screen styles, isolate paper from the active theme, and clean up failed or concurrent print requests.
 
-## [0.2.15] - Unreleased
+## [0.2.15] - Included in 0.2.16
 
 - Cancel the browser default for a middle-button pan release, including release after cancellation or outside the canvas, so Linux selection-paste cannot overwrite a live text selection.
 
