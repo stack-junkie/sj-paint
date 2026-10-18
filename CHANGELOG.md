@@ -2,12 +2,27 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
-## [0.2.26] - Unreleased
+## [0.3.0] - 2026-10-18
+
+This release consolidates the unpublished 0.2.27 work.
+
+- Keep interrupted text creation in one Undo transaction. Render preview and Apply through the same layer compositor, preserving multiline content, opaque text backgrounds, layer opacity, overlap and native caret editing.
+- Add keyboard layer Rename, anchored canvas resizing, descriptive formatting controls and responsive status presentation.
+- Add document-owned resolution, Properties units and Default, and file size from successful Open/Save operations. Preserve unknown resolution and legacy projects.
+- Improve GIF palettes, dithering and LZW compression. Retain first-frame GIF import and documented TIFF/.paint profiles, with metadata round trips and useful unsupported-file errors.
+- Confirm Linux Save As replacement explicitly before overwriting an existing file. Preserve destination bytes and document state on cancellation or failure.
+- Add private local AI setup, progress, cancellation, background removal, object selection and erase previews with revision checks and Undo/Redo. Preserve working installations and recover from interrupted runtime setup without deleting orphaned attempts.
+- Use full U2Net for new background-removal setup, MI-GAN for object erase.
+- Exclude image creation, Cocreator, Generative Fill, Reimagine, stickers and coloring pages from commands and requests, and omit models used only by excluded capabilities from new setup.
+- Retain ownership until helper/worker processes actually close, and keep AI usable when closing an unsaved drawing is canceled.
+- Distinguish real verification successes, failures and skips. Document file compatibility and native comparison limits without claiming complete Microsoft Paint parity.
+
+## [0.2.26] - 2026-10-16
 
 - Import 8-bit BlackIsZero grayscale TIFFs with a declared unassociated alpha channel through the shared strip codecs, predictor and orientation mapping.
 - Preserve exact decoded gray/alpha bytes and reject unsupported alpha, polarity and mixed-depth variants before pixel allocation. Add independent Pillow fixtures and public Open, Drop and Paste coverage.
 
-## [0.2.25] - Unreleased
+## [0.2.25] - 2026-10-16
 
 - Update held curves, lines, shapes and pending-shape resizing immediately when Shift changes, including without pointer movement. Preserve constrained geometry after mouse release.
 - Include geometry-derived resize cursors from the unpublished 0.2.24 checkpoint and correct test fixture tool restoration.

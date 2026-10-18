@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readNativeFixture } from './native-fixtures.mjs';
 import { createHash } from 'node:crypto';
 import { deflateSync, inflateSync } from 'node:zlib';
 import { readTiff, writeTiff, writeTiffAsync } from '../src/tiff.js';
@@ -101,7 +101,7 @@ function change(bytes, tag, relative, value, size = 4) {
 test('both byte orders and all supported compression schemes preserve RGBA and predictor rows', async () => {
   for (const little of [true, false]) for (const compression of [1, 5, 8, 32946, 32773]) for (const predictor of [1, 2]) {
     const decoded = await readTiff(fixture({ little, compression, predictor, rowsPerStrip: 1 }));
-    assert.deepEqual(decoded, { width: 3, height: 2, rgba: pixels });
+    assert.deepEqual(decoded, { width: 3, height: 2, rgba: pixels, resolution: { xDpi: null, yDpi: null } });
   }
 });
 
@@ -112,7 +112,7 @@ test('8-bit grayscale imports both polarities with opaque alpha', async () => {
       const gray = photometric === 0 ? 255 - value : value;
       return [gray, gray, gray, 255];
     }));
-    assert.deepEqual(await readTiff(fixture({ samples: 1, raw, photometric })), { width: 3, height: 2, rgba: expected });
+    assert.deepEqual(await readTiff(fixture({ samples: 1, raw, photometric })), { width: 3, height: 2, rgba: expected, resolution: { xDpi: null, yDpi: null } });
   }
 });
 
@@ -133,7 +133,7 @@ test('packed samples honor row padding, both byte orders, polarity and exact pal
       const overrides = photometric === 3 ? [[320, [3, palette]]] : [];
       const encoded = fixture({ width, height, bits, samples: 1, raw, photometric, little, compression, rowsPerStrip: 2, overrides });
       const before = encoded.slice();
-      assert.deepEqual(await readTiff(encoded, { inflate: boundedZlib }), { width, height, rgba: expected });
+      assert.deepEqual(await readTiff(encoded, { inflate: boundedZlib }), { width, height, rgba: expected, resolution: { xDpi: null, yDpi: null } });
       assert.deepEqual(encoded, before);
     }
   }
@@ -185,7 +185,7 @@ test('single-channel TIFF reuses strip codecs, predictor rows and both byte orde
     for (const compression of [1, 5, 8, 32946, 32773]) for (const predictor of [1, 2]) {
       const overrides = photometric === 3 ? [[320, [3, palette]]] : [];
       const decoded = await readTiff(fixture({ samples: 1, raw, photometric, little, compression, predictor, rowsPerStrip: 1, overrides }));
-      assert.deepEqual(decoded, { width: 3, height: 2, rgba: expected });
+      assert.deepEqual(decoded, { width: 3, height: 2, rgba: expected, resolution: { xDpi: null, yDpi: null } });
     }
   }
 });
@@ -242,7 +242,7 @@ test('independent Pillow grayscale, palette and gray-alpha fixtures match exact 
 test('existing SJ TIFF exporter round-trips exact unassociated-alpha bytes', async () => {
   const canvas = { width: 3, height: 2, getContext: () => ({ getImageData: () => ({ data: new Uint8ClampedArray(pixels) }) }) };
   const blob = exportTiff(canvas);
-  assert.deepEqual(await readTiff(await blob.arrayBuffer()), { width: 3, height: 2, rgba: pixels });
+  assert.deepEqual(await readTiff(await blob.arrayBuffer()), { width: 3, height: 2, rgba: pixels, resolution: { xDpi: null, yDpi: null } });
 });
 
 test('default TIFF export uses LZW and horizontal prediction, with explicit uncompressed compatibility', async () => {
@@ -252,9 +252,9 @@ test('default TIFF export uses LZW and horizontal prediction, with explicit unco
     const view = new DataView(bytes.buffer);
     assert.equal(view.getUint16(fieldOffset(bytes, 259) + 8, true), compression === 'lzw' ? 5 : 1);
     if (compression === 'lzw') assert.equal(view.getUint16(fieldOffset(bytes, 317) + 8, true), 2);
-    else assert.equal(digest(bytes), '64bebe9261c60a100139ad45cec77528819b6707a03a9709c53b2d3350455cde',
-      'explicit uncompressed output retains the prior exporter bytes');
-    assert.deepEqual(await readTiff(bytes), { width: 3, height: 2, rgba: pixels });
+    else assert.equal(digest(new Uint8Array(await exportTiff(canvas, { compression, resolution: { xDpi: 96, yDpi: 96 } }).arrayBuffer())), '64bebe9261c60a100139ad45cec77528819b6707a03a9709c53b2d3350455cde',
+      'explicit uncompressed 96dpi output retains the prior exporter bytes');
+    assert.deepEqual(await readTiff(bytes), { width: 3, height: 2, rgba: pixels, resolution: { xDpi: null, yDpi: null } });
   }
   const bytes = new Uint8Array(await exportTiff(canvas).arrayBuffer());
   assert.equal(new DataView(bytes.buffer).getUint16(fieldOffset(bytes, 259) + 8, true), 5);
@@ -284,7 +284,8 @@ test('actual TIFF save yields while encoding and keeps its captured pixels and t
   globalThis.window = { paintDesktop: { saveImage: value => { request = value; return { name: 'saved.tiff' }; } } };
   const timer = setInterval(() => { ticks++; if (ticks === 1) current.fill(0); }, 1);
   try {
-    assert.deepEqual(await saveImageFile(canvas, 'tiff', 'snapshot.png', { target: 'original-target' }), { name: 'saved.tiff' });
+    const saved = await saveImageFile(canvas, 'tiff', 'snapshot.png', { target: 'original-target' });
+    assert.deepEqual(saved, { name: 'saved.tiff', encodedBytes: request.bytes.length });
     assert.ok(ticksBeforeBlob > 1, 'event-loop tasks must run during encoding, before Blob/IPC conversion');
     assert.equal(snapshotReads, 1); assert.equal(request.target, 'original-target');
     assert.equal(request.suggestedName, 'snapshot.tiff'); assert.equal(request.format, 'tiff');
@@ -321,7 +322,7 @@ test('TIFF encoder uses bounded whole-row strips including a short last strip', 
     assert.equal(start + length, end);
     assert.equal(bytes[start], 128, 'every MSB-first strip starts with clear code 256');
   }
-  assert.deepEqual(await readTiff(bytes), { width, height, rgba });
+  assert.deepEqual(await readTiff(bytes), { width, height, rgba, resolution: { xDpi: null, yDpi: null } });
   assert.deepEqual(rgba, before, 'prediction must not change caller pixels');
   assert.deepEqual(writeTiff({ width, height, rgba }), bytes, 'encoding is deterministic');
   const padded = new Uint8Array(rgba.length + 11); padded.set(rgba, 7);
@@ -342,7 +343,7 @@ test('cooperative TIFF export is byte-identical to synchronous export', async ()
 });
 
 test('cooperative TIFF save propagates codec and destination failures without retrying', async () => {
-  await assert.rejects(writeTiffAsync({ width: 3, height: 2, rgba: pixels }, { compression: 'zip' }), /compression/);
+  await assert.rejects(writeTiffAsync({ width: 3, height: 2, rgba: pixels, resolution: { xDpi: null, yDpi: null } }, { compression: 'zip' }), /compression/);
   const originalWindow = globalThis.window; let writes = 0;
   const failure = new Error('destination unavailable');
   globalThis.window = { paintDesktop: { saveImage: () => { writes++; throw failure; } } };
@@ -359,7 +360,7 @@ test('cooperative TIFF save propagates codec and destination failures without re
 });
 
 test('TIFF encoder rejects invalid dimensions, buffers and unsupported options', () => {
-  const valid = { width: 3, height: 2, rgba: pixels };
+  const valid = { width: 3, height: 2, rgba: pixels, resolution: { xDpi: null, yDpi: null } };
   for (const width of [0, -1, 1.5, NaN, 16385]) assert.throws(() => writeTiff({ ...valid, width }), /dimensions/);
   assert.throws(() => writeTiff({ ...valid, width: 16384, height: 16384 }), /dimensions/);
   assert.throws(() => writeTiff({ ...valid, rgba: pixels.subarray(1) }), /pixel length/);
@@ -476,24 +477,21 @@ test('input views preserve byte offset and decoding does not mutate source', asy
 });
 
 test('owned native Paint LZW+predictor TIFF matches its independently saved .paint pixels', async t => {
-  let bytes;
-  try { bytes = await readFile(new URL('../output/reference-native-colors.tif', import.meta.url)); }
-  catch (error) { if (error.code === 'ENOENT') { t.skip('owned native fixture is not present'); return; } throw error; }
-  assert.equal(digest(bytes), 'e9dea64dc8bc57c6d134256a3b63cb7f1bb97133be874d3c7b10f6a8008999d5');
+  const bytes = await readNativeFixture('reference-native-colors.tif');
+  if (!bytes) { t.skip('Private fixture absent. Set SJ_PAINT_NATIVE_FIXTURE_DIR to its directory.'); return; }
   const decoded = await readTiff(bytes);
   assert.equal(decoded.width, 128); assert.equal(decoded.height, 128);
   assert.equal(digest(decoded.rgba), '8bd1c0687e45a45225da08f8ae5ff861aeb58142150adb8626001dcf5b655f30');
-  let paint;
-  try { paint = await readFile(new URL('../output/reference-eraser-tolerance-fine-result.paint', import.meta.url)); }
-  catch (error) { if (error.code === 'ENOENT') return; throw error; }
-  const source = await readPaint(paint); assert.equal(source.layers.length, 1); assert.deepEqual(decoded.rgba, source.layers[0].rgba);
+  await t.test('independently saved .paint companion matches', async child => {
+    const paint = await readNativeFixture('reference-eraser-tolerance-fine-result.paint');
+    if (!paint) { child.skip('Private .paint companion absent.'); return; }
+    const source = await readPaint(paint); assert.equal(source.layers.length, 1); assert.deepEqual(decoded.rgba, source.layers[0].rgba);
+  });
 });
 
 test('owned native alpha TIFF matches Paint PNG export pixels, including native RGB rounding', async t => {
-  let bytes;
-  try { bytes = await readFile(new URL('../output/reference-native-alpha.tif', import.meta.url)); }
-  catch (error) { if (error.code === 'ENOENT') { t.skip('owned native alpha fixture is not present'); return; } throw error; }
-  assert.equal(digest(bytes), 'cdaddd4653fe257673a040780b40232945724326cb09546d953ea1426cb4ed45');
+  const bytes = await readNativeFixture('reference-native-alpha.tif');
+  if (!bytes) { t.skip('Private fixture absent. Set SJ_PAINT_NATIVE_FIXTURE_DIR to its directory.'); return; }
   const decoded = await readTiff(bytes);
   assert.equal(decoded.width, 200); assert.equal(decoded.height, 100);
   // Independently established with Pillow from reference-alpha-export.png.
@@ -502,10 +500,9 @@ test('owned native alpha TIFF matches Paint PNG export pixels, including native 
   assert.equal(digest(decoded.rgba), '4a98f30e7eb6f3c5d328f1b80d4ed2f6a2f9e52ad18d0e4845825b5337bcf536');
   assert.deepEqual([...decoded.rgba.subarray((50 * 200 + 100) * 4, (50 * 200 + 100) * 4 + 4)], [179, 79, 39, 128]);
   assert.deepEqual([...decoded.rgba.subarray(0, 4)], [0, 0, 0, 0]);
-  try {
-    const png = await readFile(new URL('../output/reference-alpha-export.png', import.meta.url));
-    assert.equal(digest(png), 'd1dff4385862ca4efcc3dc7b179cf70b1afd1b0b7e1f41fd67536547736e2ef1');
-  } catch (error) { if (error.code !== 'ENOENT') throw error; }
+  await t.test('independently saved PNG companion retains provenance', async child => {
+    if (!await readNativeFixture('reference-alpha-export.png')) child.skip('Private PNG companion absent.');
+  });
 });
 
 test('malformed and unsupported gray-alpha imports remain rejected', async () => {

@@ -1,7 +1,7 @@
 // Caller owns a hidden packaged instance, configured existing runtime/model,
 // and a pristine default Untitled document. No launch, private engine, clipboard,
 // file fixture, native chooser or main-process inspector is used here.
-export async function verifyLocalAiDesktop(page, check) {
+export async function verifyLocalAiDesktop(page, check, { backgroundModel = 'u2netp' } = {}) {
   const frame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   // Decode captured PNGs in a separate software canvas. Reading live display
   // contexts can switch Chromium's raster backend and perturb later drawing.
@@ -64,8 +64,11 @@ export async function verifyLocalAiDesktop(page, check) {
   if (!initial.clean) throw new Error('Local AI checks require a pristine default Untitled document, default colors and full opacity.');
   const state = await page.evaluate(() => window.paintDesktop?.localAiStatus?.());
   check('packaged local AI is configured and idle', state?.ok && state.value.configured && state.value.state === 'idle' && state.value.active === null, state);
+  const pinnedModels = { u2netp: '309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8',
+    u2net: '8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491' };
   check('packaged local AI advertises bounded inputs and the pinned model', state.value.bounds.maxPixels === 16_000_000 &&
-    state.value.bounds.maxPngBytes === 64*1024*1024 && state.value.model.sha256 === '309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8', state.value);
+    state.value.bounds.maxPngBytes === 64*1024*1024 && state.value.model.name === backgroundModel &&
+    !!pinnedModels[backgroundModel] && state.value.model.sha256 === pinnedModels[backgroundModel], state.value);
   const blank = await snapshot();
   let owned = false;
   const clickCanvas = async (x,y) => {
@@ -83,7 +86,7 @@ export async function verifyLocalAiDesktop(page, check) {
       return !panel || !panel.querySelector('[type="submit"]').disabled;
     },null,{timeout:45_000});
     const preview=page.locator('.background-removal-dialog canvas[aria-label="Background removal preview"]');
-    check('packaged real inference produces an explicit background-removal preview',await preview.count()===1);
+    check('packaged worker produces an explicit drawing background-removal preview',await preview.count()===1);
     return preview.evaluate(canvas=>({pixels:canvas.toDataURL(),width:canvas.width,height:canvas.height}));
   };
   try {

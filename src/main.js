@@ -1,3 +1,4 @@
+import releaseCapabilities from '../electron/ai-capabilities.json';
 import './style.css';
 import { STANDARD_FONTS, bindFontPicker, fontFamilyCss } from './font-catalog.js';
 import { bindColorInputs, colorDialogMarkup } from './color-inputs.js';
@@ -6,20 +7,24 @@ import { VERSION } from './version.js';
 import { bindCanvasResize } from './canvas-resize.js';
 import { PaintDocument } from './engine.js';
 import { removeBackground } from './background-removal.js';
+import { selectObject } from './object-selection.js';
+import { showAiSetup, withAiUi } from './ai-setup.js';
+import { generateImage } from './generative-ai.js';
+import { imageProperties, fileSizeLabel } from './image-properties.js';
 import { drawShape } from './shapes.js';
 import { createCurve, paintCurve as paintCurveDraft } from './curve.js';
 import { createPendingShape, paintPendingShape, hitPendingShape, transformPendingShape } from './pending-shape.js';
 import { createStroke, BRUSHES } from './brushes.js';
 import { createEraserStroke, eraserFootprint } from './eraser.js';
-import { layoutTextEditor } from './text-layout.js';
+import { layoutTextEditor, measureTextCaret, rasterizeTextLayout } from './text-layout.js';
 import { icon, SHAPES } from './icons.js';
 import { openImageFile, saveImageFile, openProjectFile, saveProjectFile, savePaintFile, isProjectFile, readImageFile, readProjectFile, copyCanvas, pasteImage, printCanvas } from './files.js';
 
 const $ = (s) => document.querySelector(s);
 const esc = (s) => String(s).replace(/[&<>"']/g,c=>({'&':'&amp;','<':'&lt;','>':'&gt;','"':'&quot;',"'":'&#39;'}[c]));
 const label = (s) => s.replaceAll('-',' ').replace(/^./,c=>c.toUpperCase());
-const doc = new PaintDocument(1152,648);
-const state = {tool:'brush',brush:'brush',primary:'#000000',secondary:'#ffffff',size:5,opacity:1,tolerance:0,zoom:1,outline:'solid',fillStyle:'none',layers:false,grid:false,rulers:false,statusBar:true,name:'Untitled',format:'png',project:false,transparentSelection:false,font:'Arial',fontSize:24,bold:false,italic:false,underline:false,strikethrough:false,textBackground:false,align:'left',theme:localStorage.getItem('paint-theme')||'dark',lastBrushSize:5,eraserSize:8};
+const doc = new PaintDocument();
+const state = {tool:'brush',brush:'brush',primary:'#000000',secondary:'#ffffff',size:5,opacity:1,tolerance:0,zoom:1,outline:'solid',fillStyle:'none',layers:false,grid:false,rulers:false,statusBar:true,name:'Untitled',format:'png',project:false,transparentSelection:false,font:'Arial',fontSize:24,bold:false,italic:false,underline:false,strikethrough:false,textBackground:false,align:'left',theme:localStorage.getItem('paint-theme')||'dark',lastBrushSize:5,eraserSize:8,measurementUnits:'pixels'};
 let drag=null,stroke=null,shapePreview=null,pendingShape=null,curve=null,polygon=[],textEditor=null,raf=0,toastTimer,menuAnchor=null,activePointerId=null,hoverClient=null;
 const colors=['#000000','#7f7f7f','#880015','#ed1c24','#ff7f27','#fff200','#22b14c','#00a2e8','#3f48cc','#a349a4','#ffffff','#c3c3c3','#b97a57','#ffaec9','#ffc90e','#efe4b0','#b5e61d','#99d9ea','#7092be','#c8bfe7'];
 let customColors=[];try{const saved=JSON.parse(localStorage.getItem('paint-colors')||'[]');if(Array.isArray(saved))customColors=saved.filter(c=>typeof c==='string'&&/^#[0-9a-f]{6}$/i.test(c)).slice(0,10);}catch{}
@@ -28,7 +33,7 @@ const toolBtn=(id,title,img=id)=>`<button type="button" data-tool="${id}" title=
 
 $('#app').innerHTML=`
   <header class="titlebar"><span class="appmark">${icon('palette',16)}</span><span id="title">Untitled - ${PROJECT.productName}</span><span class="title-spacer"></span><span class="platform-label">${PROJECT.shortName}</span></header>
-  <nav class="menubar" aria-label="Main menu"><button data-menu="file">File</button><button data-menu="edit">Edit</button><button data-menu="view">View</button><span class="divider"></span>${btn('save','Save (Ctrl+S)','save')}${btn('undo','Undo (Ctrl+Z)')}${btn('redo','Redo (Ctrl+Y)')}<span class="grow"></span>${btn('settings','Settings')}</nav>
+  <nav class="menubar" aria-label="Main menu"><button data-menu="file">File</button><button data-menu="edit">Edit</button><button data-menu="view">View</button><button data-menu="ai">AI</button><span class="divider"></span>${btn('save','Save (Ctrl+S)','save')}${btn('undo','Undo (Ctrl+Z)')}${btn('redo','Redo (Ctrl+Y)')}<span class="grow"></span>${btn('settings','Settings')}</nav>
   <section class="toolbar" aria-label="Drawing tools">
     <div class="toolgroup selection-group"><div class="group-content"><div class="split"><button data-tool="select" class="large" title="Rectangular selection" aria-label="Rectangular selection">${icon('select',26)}</button><button data-menu="selection" class="split-arrow" title="Selection options" aria-label="Selection options">⌄</button></div></div><span class="group-label">Selection</span></div>
     <div class="toolgroup image-group"><div class="group-content image-tools">${btn('crop','Crop','crop')}${btn('rotate-menu','Rotate','rotate')}${btn('flip-menu','Flip','flip')}${btn('resize','Resize and skew','resize')}${btn('remove-background','Remove background','remove-background')}</div><span class="group-label">Image</span></div>
@@ -39,11 +44,16 @@ $('#app').innerHTML=`
     <div class="toolgroup layers-group"><div class="group-content">${btn('layers','Layers','layers','class="large"')}</div><span class="group-label">Layers</span></div>
     <button class="collapse-tools" data-action="collapse" title="Collapse toolbar" aria-label="Collapse toolbar">⌃</button>
   </section>
-  <div class="contextbar"><span id="tool-label">Brush</span><label>Size <input id="size" type="range" min="1" max="500" value="5"><input id="size-number" type="number" min="1" max="500" value="5" aria-label="Size in pixels"><span>px</span></label><label id="opacity-control">Opacity <input id="opacity" type="range" min="1" max="100" value="100"><output id="opacity-value">100%</output></label><label id="tolerance-control" hidden>Tolerance <input id="tolerance" type="range" min="0" max="100" value="0"><output id="tolerance-value">0%</output></label><div id="text-controls" hidden><select id="font" aria-label="Font family">${STANDARD_FONTS.map(name=>`<option>${esc(name)}</option>`).join('')}</select><input id="font-size" type="number" min="6" max="500" step="any" value="24" list="font-size-options" aria-label="Font size"><datalist id="font-size-options">${[8,9,10,11,12,14,16,18,20,22,24,26,28,36,48,72,96,128,172,256].map(size=>`<option value="${size}"></option>`).join('')}</datalist><button data-action="bold" title="Bold"><b>B</b></button><button data-action="italic" title="Italic"><i>I</i></button><button data-action="underline" title="Underline"><u>U</u></button><button data-action="strikethrough" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button><div id="text-align" role="group" aria-label="Text alignment">${['left','center','right'].map(align=>`<button type="button" data-text-align="${align}" title="${label(align)} align" aria-label="${label(align)} align">${icon(`align-${align}`,16)}</button>`).join('')}</div><label><input id="text-background" type="checkbox">Background fill</label>${btn('commit-text','Apply text','check')}</div></div>
-  <main class="workspace"><div class="viewport" id="viewport"><div class="canvas-stage" id="stage"><canvas id="canvas" aria-label="Drawing canvas"></canvas><canvas id="overlay" aria-label="Drawing interaction surface" tabindex="0"></canvas><div id="canvas-resize-preview" aria-hidden="true" hidden></div>${['nw','n','ne','w','e','sw','s','se'].map(edge=>`<div class="resize-handle" data-handle="${edge}" title="Resize canvas" aria-label="Resize canvas ${edge}"></div>`).join('')}</div></div><aside class="layers-panel" id="layers-panel" hidden><div class="panel-title"><strong>Layers</strong>${btn('layers','Close layers','close')}</div><div class="layer-actions">${btn('add-layer','Add layer','plus')}${btn('duplicate-layer','Duplicate layer','duplicate')}${btn('merge-layer','Merge down','merge')}${btn('delete-layer','Delete layer','trash')}</div><div id="layer-list"></div><div class="layer-controls">${btn('layer-up','Move layer up','up')}${btn('layer-down','Move layer down','down')}<label>Opacity <input type="range" min="0" max="100" id="layer-opacity" value="100"></label></div><button class="background-control" data-action="background"><span id="background-swatch"></span><span>Background</span></button></aside></main>
-  <footer class="statusbar"><span id="coordinates">${icon('pencil',14)}<span>Ready</span></span><span id="selection-size"></span><span id="dimensions"></span><span id="document-state"></span><span class="grow"></span>${btn('fit','Fit to window','fit')}<select id="zoom-presets" aria-label="Zoom"><option value=".125">12.5%</option><option value=".25">25%</option><option value=".5">50%</option><option value=".75">75%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="4">400%</option><option value="8">800%</option></select>${btn('zoom-out','Zoom out','minus')}<input id="zoom-slider" type="range" min="-3" max="3" step=".05" value="0" aria-label="Zoom slider">${btn('zoom-in','Zoom in','plus')}</footer>
+  <div class="contextbar"><span id="tool-label">Brush</span><label>Size <input id="size" type="range" min="1" max="500" value="5"><input id="size-number" type="number" min="1" max="500" value="5" aria-label="Size in pixels"><span>px</span></label><label id="opacity-control">Opacity <input id="opacity" type="range" min="1" max="100" value="100"><output id="opacity-value">100%</output></label><label id="tolerance-control" hidden>Tolerance <input id="tolerance" type="range" min="0" max="100" value="0"><output id="tolerance-value">0%</output></label><div id="text-controls" hidden><select id="font" aria-label="Font family">${STANDARD_FONTS.map(name=>`<option>${esc(name)}</option>`).join('')}</select><input id="font-size" type="number" min="6" max="500" step="any" value="24" list="font-size-options" aria-label="Font size"><datalist id="font-size-options">${[8,9,10,11,12,14,16,18,20,22,24,26,28,36,48,72,96,128,172,256].map(size=>`<option value="${size}"></option>`).join('')}</datalist><button data-action="bold" title="Bold" aria-label="Bold"><b>B</b></button><button data-action="italic" title="Italic" aria-label="Italic"><i>I</i></button><button data-action="underline" title="Underline" aria-label="Underline"><u>U</u></button><button data-action="strikethrough" title="Strikethrough" aria-label="Strikethrough"><s>S</s></button><div id="text-align" role="group" aria-label="Text alignment">${['left','center','right'].map(align=>`<button type="button" data-text-align="${align}" title="${label(align)} align" aria-label="${label(align)} align">${icon(`align-${align}`,16)}</button>`).join('')}</div><label><input id="text-background" type="checkbox">Background fill</label>${btn('commit-text','Apply text','check')}</div></div>
+  <main class="workspace"><div class="viewport" id="viewport"><div class="canvas-stage" id="stage"><canvas id="canvas" aria-label="Drawing canvas"></canvas><canvas id="overlay" aria-label="Drawing interaction surface" tabindex="0"></canvas><div id="canvas-resize-preview" aria-hidden="true" hidden></div>${['nw','n','ne','w','e','sw','s','se'].map(edge=>`<div class="resize-handle" data-handle="${edge}" title="Resize canvas" aria-label="Resize canvas ${edge}"></div>`).join('')}</div></div><aside class="layers-panel" id="layers-panel" hidden><div class="panel-title"><strong>Layers</strong>${btn('layers','Close layers','close')}</div><div class="layer-actions">${btn('add-layer','Add layer','plus')}${btn('duplicate-layer','Duplicate layer','duplicate')}${btn('merge-layer','Merge down','merge')}${btn('rename-layer','Rename layer (F2)','text')}${btn('delete-layer','Delete layer','trash')}</div><div id="layer-list"></div><div class="layer-controls">${btn('layer-up','Move layer up','up')}${btn('layer-down','Move layer down','down')}<label>Opacity <input type="range" min="0" max="100" id="layer-opacity" value="100"></label></div><button class="background-control" data-action="background"><span id="background-swatch"></span><span>Background</span></button></aside></main>
+  <footer class="statusbar"><span id="coordinates">${icon('pencil',14)}<span>Ready</span></span><span id="selection-size"></span><span id="dimensions"></span><span id="file-size" title="Encoded file size at the last successful Open or Save"></span><span id="document-state"></span><span class="grow"></span>${btn('fit','Fit to window','fit')}<select id="zoom-presets" aria-label="Zoom"><option value=".125">12.5%</option><option value=".25">25%</option><option value=".5">50%</option><option value=".75">75%</option><option value="1" selected>100%</option><option value="1.5">150%</option><option value="2">200%</option><option value="4">400%</option><option value="8">800%</option></select>${btn('zoom-out','Zoom out','minus')}<input id="zoom-slider" type="range" min="-3" max="3" step=".05" value="0" aria-label="Zoom slider">${btn('zoom-in','Zoom in','plus')}</footer>
   <div id="menu" class="menu" hidden></div><div id="toast" role="status" hidden></div><dialog id="dialog"></dialog>`;
 const canvas=$('#canvas'),overlay=$('#overlay'),viewport=$('#viewport'),stage=$('#stage'),ctx=canvas.getContext('2d'),oc=overlay.getContext('2d');
+// Browsers may leave partly visible toolbar controls clipped when Tab focuses
+// them. Reveal the complete control within its existing scroll container.
+for(const bar of document.querySelectorAll('.toolbar,.contextbar'))bar.addEventListener('focusin',e=>{
+  e.target.scrollIntoView({block:'nearest',inline:'nearest'});
+});
 const customColorSlots=Array.from({length:10},(_,i)=>{
   const button=document.createElement('button');button.type='button';button.setAttribute('aria-label',`Custom color ${i+1}`);
   $('#custom-colors').append(button);return button;
@@ -68,7 +78,7 @@ doc.addEventListener('change',changed);doc.addEventListener('preview',changed);
 function render(){
   $('.statusbar').hidden=!state.statusBar;
   if(canvas.width!==doc.width||canvas.height!==doc.height){canvas.width=overlay.width=doc.width;canvas.height=overlay.height=doc.height;}
-  const hasDraft=shapePreview||pendingShape||curve||polygon.length;
+  const hasDraft=shapePreview||pendingShape||curve||polygon.length||textEditor?.el.value.trim();
   doc.renderTo(ctx,{layerPreview:hasDraft?{layerId:doc.activeLayerId,paint:paintDrawingDraft}:null});
   stage.style.width=`${doc.width*state.zoom}px`;stage.style.height=`${doc.height*state.zoom}px`;
   for(const c of [canvas,overlay]){c.style.width=`${doc.width*state.zoom}px`;c.style.height=`${doc.height*state.zoom}px`;}
@@ -78,6 +88,7 @@ function render(){
   $('#title').textContent=title;document.title=title;window.paintDesktop?.setTitle(title);
   const size=canvasResize.candidate||doc;$('#dimensions').textContent=`${size.width} × ${size.height}px`;
   $('#document-state').textContent=doc.dirty||hasPendingDrawing?'Unsaved changes':'';
+  const file = currentFileInformation(); $('#file-size').textContent = file?.encodedBytes == null ? '' : `Size: ${fileSizeLabel(file.encodedBytes)}`;
   const geometry=doc.getSelectionGeometry({zoom:state.zoom});
   const selection=drag?.kind==='select'?box(drag.start,drag.current):pendingShape?box(pendingShape.start,pendingShape.end):geometry?{width:geometry.frameWidth,height:geometry.frameHeight}:null;
   $('#selection-size').textContent=selection?`${Math.round(selection.width)} × ${Math.round(selection.height)}px`:'';
@@ -115,7 +126,7 @@ function renderLayers(){
     const eye=row.querySelector('.layer-eye'), select=row.querySelector('.layer-select'), c=select.querySelector('canvas');
     eye.dataset.visible=l.id;eye.title=`${l.visible?'Hide':'Show'} layer`;eye.setAttribute('aria-label',`${eye.title} ${l.name}`);eye.setAttribute('aria-pressed',String(l.visible));
     if(eye.dataset.visibleState!==String(l.visible)){eye.innerHTML=icon(l.visible?'eye':'hidden',17);eye.dataset.visibleState=String(l.visible);}
-    select.dataset.layerSelect=l.id;select.setAttribute('aria-label',`Select layer ${l.name}`);select.setAttribute('aria-pressed',String(l.id===doc.activeLayerId));select.querySelector('span').textContent=l.name;
+    select.title='Select layer. Press F2 to rename.';select.dataset.layerSelect=l.id;select.setAttribute('aria-label',`Select layer ${l.name}`);select.setAttribute('aria-pressed',String(l.id===doc.activeLayerId));select.querySelector('span').textContent=l.name;
     c.dataset.thumb=l.id;const cx=c.getContext('2d'), scale=Math.min(c.width/doc.width,c.height/doc.height);cx.clearRect(0,0,c.width,c.height);cx.drawImage(l.canvas,(c.width-doc.width*scale)/2,(c.height-doc.height*scale)/2,doc.width*scale,doc.height*scale);
   }
   if(focused?.isConnected&&document.activeElement!==focused)focused.focus({preventScroll:true});
@@ -188,7 +199,7 @@ const beginPointer=safe(e=>{
   if(!doc.activeLayer.visible&&!['select','lasso','zoom','picker'].includes(state.tool)){toast('Show the active layer before drawing.');return;}
   if(curve){curve.controls.push(p);if(curve.controls.length===2)finishPending();else changed();return;}
   if(state.tool==='polygon'){if(!polygon.length){doc.deselect();doc.begin('Polygon');}polygon.push(p);drag={kind:'polygon',hover:p};changed();return;}
-  if(state.tool==='text'){e.preventDefault();doc.deselect();startText(p);return;}
+  if(state.tool==='text'){e.preventDefault();doc.deselect();releasePointer();startText(p);return;}
   if(state.tool==='zoom'){setZoom(state.zoom*(secondary?.5:2));return;}
   if(state.tool==='picker'){const c=doc.composite().getContext('2d').getImageData(Math.max(0,Math.min(doc.width-1,Math.floor(p[0]))),Math.max(0,Math.min(doc.height-1,Math.floor(p[1]))),1,1).data;state[secondary?'secondary':'primary']='#'+[...c].slice(0,3).map(v=>v.toString(16).padStart(2,'0')).join('');updateToolState();return;}
   if(state.tool==='fill'){doc.deselect();doc.fill(Math.floor(p[0]),Math.floor(p[1]),(secondary?state.secondary:state.primary)+Math.round(state.opacity*255).toString(16).padStart(2,'0'),Math.round(state.tolerance*2.55));return;}
@@ -255,6 +266,7 @@ function paintDrawingDraft(c){
   if(pendingShape)paintPendingShape(c,pendingShape);
   if(curve)paintCurve(c);
   if(polygon.length)paintPolygon(c,true);
+  if(textEditor?.el.value.trim())paintTextDraft(c);
 }
 function paintCurve(c){
   paintCurveDraft(c,curve,shapeOptions());
@@ -272,10 +284,52 @@ function finishPending(){
 }
 function startText(p){
   doc.begin('Text');
-  // Typing changes pending work before it changes the document raster.
-  const t=document.createElement('textarea');t.className='text-editor';t.setAttribute('aria-label','Text on canvas');t.spellcheck=false;t.style.left=`${p[0]*state.zoom}px`;t.style.top=`${p[1]*state.zoom}px`;t.style.width=`${Math.min(400,doc.width-p[0])*state.zoom}px`;t.style.minHeight=`${100*state.zoom}px`;t.addEventListener('input',changed);stage.append(t);textEditor={el:t,x:p[0],y:p[1]};styleText();t.focus();
+  // The text session owns this transaction after the creation pointer releases
+  // ownership. The input owns caret/selection; the document compositor owns ink.
+  const host=document.createElement('div');host.className='text-input-layer';
+  const t=document.createElement('textarea');t.className='text-editor';t.setAttribute('aria-label','Text on canvas');t.spellcheck=false;
+  t.style.left=`${p[0]*state.zoom}px`;t.style.top=`${p[1]*state.zoom}px`;t.style.width=`${Math.max(1,Math.min(400,doc.width-p[0]))*state.zoom}px`;t.style.minHeight=`${100*state.zoom}px`;
+  host.append(t);stage.append(host);
+  const owner={el:t,host,x:p[0],y:p[1],layout:null,observer:null};textEditor=owner;
+  const invalidate=()=>{if(textEditor!==owner)return;owner.layout=null;changed();};
+  t.addEventListener('input',invalidate);
+  for(const event of ['input','selectionchange'])t.addEventListener(event,revealTextCaret);
+  // Keep the caret in the same document coordinates as the raster. Long text
+  // grows its input box and uses the document viewport, not a second scroll origin.
+  t.addEventListener('scroll',()=>{if(t.scrollTop||t.scrollLeft){t.scrollTop=0;t.scrollLeft=0;invalidate();}});
+  owner.observer=new ResizeObserver(invalidate);owner.observer.observe(t);
+  styleText();t.focus();
 }
-function styleText(){if(!textEditor)return;Object.assign(textEditor.el.style,{fontFamily:fontFamilyCss(state.font),fontSize:`${state.fontSize*state.zoom}px`,fontWeight:state.bold?'bold':'normal',fontStyle:state.italic?'italic':'normal',textDecoration:[state.underline?'underline':'',state.strikethrough?'line-through':''].filter(Boolean).join(' ')||'none',color:state.primary,background:state.textBackground?state.secondary:'transparent',textAlign:state.align,lineHeight:'1.2'});}
+function styleText(){if(!textEditor)return;Object.assign(textEditor.el.style,{fontFamily:fontFamilyCss(state.font),fontSize:`${state.fontSize*state.zoom}px`,fontWeight:state.bold?'bold':'normal',fontStyle:state.italic?'italic':'normal',textDecoration:'none',color:'transparent',caretColor:state.primary,background:'transparent',textAlign:state.align,lineHeight:'1.2'});textEditor.layout=null;changed();revealTextCaret();}
+function revealTextCaret(){
+  const owner=textEditor;if(!owner||owner.caretFrame)return;
+  owner.caretFrame=requestAnimationFrame(()=>{
+    owner.caretFrame=0;if(textEditor!==owner||document.activeElement!==owner.el)return;
+    const caret=measureTextCaret(owner.el);if(!caret)return;
+    const input=owner.el.getBoundingClientRect(),view=viewport.getBoundingClientRect(),paper=canvas.getBoundingClientRect();
+    const left=Math.max(paper.left,Math.min(paper.right,input.left+caret.left)),right=Math.max(paper.left,Math.min(paper.right,input.left+caret.right));
+    const top=Math.max(paper.top,Math.min(paper.bottom,input.top+caret.top)),bottom=Math.max(paper.top,Math.min(paper.bottom,input.top+caret.bottom));
+    if(left<view.left+2)viewport.scrollLeft+=left-view.left-2;else if(right>view.left+viewport.clientWidth-2)viewport.scrollLeft+=right-view.left-viewport.clientWidth+2;
+    if(top<view.top+2)viewport.scrollTop+=top-view.top-2;else if(bottom>view.top+viewport.clientHeight-2)viewport.scrollTop+=bottom-view.top-viewport.clientHeight+2;
+  });
+}
+function textLayout(){
+  const owner=textEditor,el=owner.el;
+  if(!owner.layout){
+    if(el.scrollHeight>el.clientHeight)el.style.height=`${el.scrollHeight}px`;
+    el.scrollTop=0;el.scrollLeft=0;
+    owner.layout=layoutTextEditor(el,{scale:state.zoom});
+    if(owner.raster)owner.raster.canvas.width=owner.raster.canvas.height=0;
+    owner.raster=undefined;
+  }
+  return owner.layout;
+}
+function paintTextDraft(c){
+  const owner=textEditor,layout=textLayout();
+  if(owner.raster===undefined)owner.raster=rasterizeTextLayout(layout,{x:owner.x,y:owner.y,color:state.primary,background:state.textBackground?state.secondary:null,underline:state.underline,strikethrough:state.strikethrough,fontSize:state.fontSize},doc);
+  if(owner.raster)c.drawImage(owner.raster.canvas,owner.raster.x,owner.raster.y);
+}
+function disposeText(){const owner=textEditor;if(!owner)return;textEditor=null;cancelAnimationFrame(owner.caretFrame);owner.observer.disconnect();owner.host.remove();if(owner.raster)owner.raster.canvas.width=owner.raster.canvas.height=0;textPointerFocus=null;}
 // A pointer-operated formatting control returns typing to its text session.
 // Keyboard navigation keeps focus on the chosen control. Capture before the
 // browser moves focus, and never restore into a replacement text session.
@@ -298,22 +352,10 @@ document.addEventListener('pointerdown',e=>{
 document.addEventListener('keydown',()=>{textPointerFocus=null;},true);
 document.addEventListener('pointercancel',()=>{textPointerFocus=null;},true);
 function commitText(){
-  if(!textEditor)return;const {el,x,y}=textEditor;
-  if(!el.value.trim()){el.remove();textEditor=null;doc.cancel();return;}
-  // Measure the attached editor before removing it. Its browser layout owns
-  // wrapping, spacing and alignment in both the preview and the saved pixels.
-  const layout=layoutTextEditor(el,{scale:state.zoom}),c=doc.activeLayer.canvas.getContext('2d');
-  c.save();try{
-    c.font=layout.font;c.direction=layout.direction;c.letterSpacing=layout.letterSpacing;c.wordSpacing=layout.wordSpacing;c.textBaseline='alphabetic';c.textAlign='left';
-    if(state.textBackground){c.fillStyle=state.secondary;c.fillRect(x+layout.contentX,y+layout.contentY,layout.width,layout.height);}
-    c.fillStyle=state.primary;
-    for(const line of layout.lines)for(const run of line.runs){
-      c.fillText(run.text,x+run.x,y+run.baseline);
-      if(state.underline)c.fillRect(x+run.x,y+run.baseline+Math.max(1,state.fontSize/12),run.width,Math.max(1,state.fontSize/16));
-      if(state.strikethrough)c.fillRect(x+run.x,y+run.baseline-state.fontSize*.3,run.width,Math.max(1,state.fontSize/16));
-    }
-  }finally{c.restore();}
-  el.remove();textEditor=null;doc.commit();changed();
+  if(!textEditor)return;
+  if(!textEditor.el.value.trim()){disposeText();doc.cancel();return;}
+  paintTextDraft(doc.activeLayer.canvas.getContext('2d'));
+  disposeText();doc.commit();changed();
 }
 function setZoom(value){canvasResize.cancel();if(activePointerId!==null)cancelPointerInteraction();commitText();state.zoom=Math.max(.125,Math.min(8,Number(value)));$('#zoom-slider').value=Math.log2(state.zoom);const select=$('#zoom-presets');let option=[...select.options].find(o=>+o.value===state.zoom);if(!option){option=new Option(`${Math.round(state.zoom*100)}%`,String(state.zoom));select.add(option);}select.value=option.value;changed();}
 function fit(){
@@ -333,7 +375,15 @@ $('#opacity').addEventListener('input',e=>{state.opacity=+e.target.value/100;$('
 
 $('#font').addEventListener('change',e=>{state.font=e.target.value;styleText();restoreTextFocus(takeTextFocus(e.target));});$('#font-size').addEventListener('change',e=>{state.fontSize=Math.max(6,Math.min(500,+e.target.value||24));e.target.value=state.fontSize;styleText();});$('#text-background').addEventListener('change',e=>{state.textBackground=e.target.checked;styleText();restoreTextFocus(takeTextFocus(e.target));});
 $('#layer-opacity').addEventListener('change',e=>{if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();doc.setLayer(doc.activeLayerId,{opacity:+e.target.value/100});});
-$('#layer-list').addEventListener('dblclick',safe(async e=>{const row=e.target.closest('[data-layer]');if(row){if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();const l=doc.layers.find(l=>l.id===row.dataset.layer);const values=await dialog('Rename layer',`<label>Name<input name="name" value="${esc(l.name)}" required maxlength="100"></label>`);if(values)doc.setLayer(l.id,{name:values.name});}}));
+async function renameLayer(id=doc.activeLayerId){
+  if(activePointerId!==null)cancelPointerInteraction();commitText();finishPending();
+  const layer=doc.layers.find(item=>item.id===id);if(!layer)return;
+  const target=doc.captureEditTarget();
+  const values=await dialog('Rename layer',`<label>Name<input name="name" value="${esc(layer.name)}" required maxlength="100"></label>`);
+  if(values){if(!doc.matchesEditTarget(target)){toast('The drawing changed. The layer name was kept.');return;}doc.setLayer(id,{name:values.name});}
+  $(`#layer-list [data-layer-select="${CSS.escape(id)}"]`)?.focus({preventScroll:true});
+}
+$('#layer-list').addEventListener('dblclick',safe(async e=>{const row=e.target.closest('[data-layer]');if(row)await renameLayer(row.dataset.layer);}));
 
 let activeDialog=null;
 async function dialog(title,body,submit='OK',alternate=null){
@@ -369,14 +419,17 @@ async function canDiscard({fileOperationOwned=false}={}){
   if(choice!=='save')return false;
   return Boolean(await (fileOperationOwned?saveCurrent():withFileOperation(saveCurrent)));
 }
-async function loadImage(result){if(!result)return;await doc.load({format:PROJECT.format,version:PROJECT.schemaVersion,width:result.canvas.width,height:result.canvas.height,background:null,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;const format=result.format||result.name.split('.').at(-1).toLowerCase();state.format=['tif','tiff'].includes(format)?'tiff':['jpg','jpeg'].includes(format)?'jpeg':['png','webp','bmp','gif'].includes(format)?format:'png';fit();}
+async function loadImage(result){if(!result)return;await doc.load({format:PROJECT.format,version:PROJECT.schemaVersion,width:result.canvas.width,height:result.canvas.height,background:null,resolution:result.resolution,layers:[{id:'imported',name:'Layer 1',visible:true,opacity:1,png:result.canvas.toDataURL()}],activeLayerId:'imported'});state.name=result.name.replace(/\.[^.]+$/,'');state.project=false;const format=result.format||result.name.split('.').at(-1).toLowerCase();state.format=['tif','tiff'].includes(format)?'tiff':['jpg','jpeg'].includes(format)?'jpeg':['png','webp','bmp','gif'].includes(format)?format:'png';fit();}
 let fileOperation = false, documentFile = null;
-function rememberDocumentFile(target, format) {
-  documentFile = target ? { target, format, generation: doc.captureEditTarget().generation } : null;
+function rememberDocumentFile(target, format, encodedBytes) {
+  documentFile = { target, format, generation: doc.captureEditTarget().generation,
+    encodedBytes: Number.isSafeInteger(encodedBytes) && encodedBytes >= 0 ? encodedBytes : null };
 }
 function currentFileTarget(format) {
-  return documentFile?.generation === doc.captureEditTarget().generation && documentFile.format === format ? documentFile.target : undefined;
+  const file = currentFileInformation();
+  return file?.format === format ? file.target : undefined;
 }
+function currentFileInformation() { return documentFile?.generation === doc.captureEditTarget().generation ? documentFile : null; }
 async function withFileOperation(operation) {
   if (fileOperation) { toast('Finish the current file operation first.'); return; }
   fileOperation = true;
@@ -395,7 +448,7 @@ async function openDocument(picker) {
     state.project = true; state.format = result.format;
     fit();
   }
-  rememberDocumentFile(result.targetFormat === state.format ? result.target : undefined, state.format);
+  rememberDocumentFile(result.targetFormat === state.format ? result.target : undefined, state.format, result.encodedBytes);
 }
 async function saveDocument(format, name, { saveAs = false } = {}) {
   settleForOutput();
@@ -407,13 +460,13 @@ async function saveDocument(format, name, { saveAs = false } = {}) {
     if (!doc.matchesEditTarget(target)) { toast('Save canceled because the drawing changed.'); return false; }
   }
   const destination = saveAs ? undefined : currentFileTarget(format);
-  const options = { target: destination };
+  const options = { target: destination, resolution: doc.resolution };
   const receipt = format === 'paint' ? await savePaintFile(doc, name, options) : format === PROJECT.extension ?
     await saveProjectFile(doc.serialize(), name, options) : await saveImageFile(doc.composite(), format, name, options);
   if (!receipt || doc.captureEditTarget().generation !== target.generation) return;
   state.name = receipt.name ? receipt.name.replace(/\.[^.]+$/, '') : name; state.format = format;
   state.project = project;
-  rememberDocumentFile(receipt.target, format);
+  rememberDocumentFile(receipt.target, format, receipt.encodedBytes);
   if (canMarkSaved) doc.markSaved(revision);
   else toast('Image exported. Save a project to preserve editable layers.');
   changed();
@@ -443,7 +496,10 @@ async function resizeDialog(){
 }
 const actions={
   'remove-background':()=>removeBackground(doc),
-  new:async()=>{if(await canDiscard()){doc.newDocument(1152,648);state.name='Untitled';state.project=false;state.format='png';fit();}},
+  'object-select':()=>selectObject(doc),
+  'ai-setup':()=>withAiUi(()=>showAiSetup()),
+  ...Object.fromEntries(Object.entries(releaseCapabilities.generation).map(([mode, value]) => [value.action, () => generateImage(doc, mode)])),
+  new:async()=>{if(await canDiscard()){doc.newDocument();state.name='Untitled';state.project=false;state.format='png';fit();}},
   open:()=>withFileOperation(()=>openDocument(()=>openImageFile({allowProjects:true}))),
   'open-project':()=>withFileOperation(()=>openDocument(openProjectFile)),
   save:()=>withFileOperation(saveCurrent),
@@ -464,7 +520,7 @@ const actions={
   'rotate-custom':async()=>{const v=await dialog('Custom rotate','<label>Angle in degrees<input name="angle" type="number" min="-360" max="360" step=".1" value="0" required></label>');if(v)doc.rotate(+v.angle);},
   'flip-horizontal':()=>doc.flip(true),'flip-vertical':()=>doc.flip(false),
   layers:()=>{state.layers=!state.layers;$('#layers-panel').hidden=!state.layers;render();},
-  'add-layer':()=>doc.addLayer(),'delete-layer':()=>doc.deleteLayer(),'duplicate-layer':()=>doc.duplicateLayer(),'merge-layer':()=>doc.mergeDown(),'layer-up':()=>doc.moveLayer(doc.activeLayerId,1),'layer-down':()=>doc.moveLayer(doc.activeLayerId,-1),
+  'add-layer':()=>doc.addLayer(),'delete-layer':()=>doc.deleteLayer(),'duplicate-layer':()=>doc.duplicateLayer(),'merge-layer':()=>doc.mergeDown(),'layer-up':()=>doc.moveLayer(doc.activeLayerId,1),'layer-down':()=>doc.moveLayer(doc.activeLayerId,-1),'rename-layer':()=>renameLayer(),
   'toggle-layer':()=>doc.setLayer(doc.activeLayerId,{visible:!doc.activeLayer.visible}),
   background:async()=>{const v=await dialog('Canvas background',`<label>Color<input type="color" name="color" value="${doc.background||'#ffffff'}"></label><label class="check-label"><input name="transparent" type="checkbox" ${!doc.background?'checked':''}>Transparent background</label>`);if(v)doc.setBackground(v.transparent?null:v.color);},
   'toggle-background':()=>doc.setBackground(doc.background?null:state.secondary),
@@ -473,18 +529,19 @@ const actions={
   fit,'zoom-in':()=>setZoom(state.zoom*1.25),'zoom-out':()=>setZoom(state.zoom/1.25),'zoom-100':()=>setZoom(1),grid:()=>{state.grid=!state.grid;changed();},rulers:()=>{state.rulers=!state.rulers;changed();},'status-bar':()=>{state.statusBar=!state.statusBar;changed();},
   collapse:()=>{document.body.classList.toggle('collapsed');$('.collapse-tools').textContent=document.body.classList.contains('collapsed')?'⌄':'⌃';},
   bold:()=>{state.bold=!state.bold;styleText();updateToolState();},italic:()=>{state.italic=!state.italic;styleText();updateToolState();},underline:()=>{state.underline=!state.underline;styleText();updateToolState();},strikethrough:()=>{state.strikethrough=!state.strikethrough;styleText();updateToolState();},'commit-text':commitText,
-  properties:async()=>{const v=await dialog('Image properties',`<p>${esc(state.name)}<br>${doc.layers.length} layer${doc.layers.length===1?'':'s'}</p><div class="two-columns"><label>Width (pixels)<input name="width" type="number" min="1" max="16384" value="${doc.width}" required></label><label>Height (pixels)<input name="height" type="number" min="1" max="16384" value="${doc.height}" required></label></div><p class="hint">Changes canvas dimensions without scaling the image.</p>`);if(v){doc.resize(+v.width,+v.height,{scale:false,target:'document'});fit();}},
+  properties:async()=>{if(await imageProperties({doc,fileInfo:currentFileInformation(),dialog,getDisplayMetrics:window.paintDesktop?.primaryDisplayMetrics,units:state.measurementUnits,onUnitsChange:units=>{state.measurementUnits=units;}}))fit();},
   settings:async()=>{const v=await dialog('Settings',`<label>App theme<select name="theme"><option value="dark" ${state.theme==='dark'?'selected':''}>Dark</option><option value="light" ${state.theme==='light'?'selected':''}>Light</option></select></label><p>${PROJECT.productName} (${PROJECT.shortName})<br>Version ${VERSION}</p><p class="hint">An independent editor for Windows and Linux, built toward Microsoft Paint parity before adding its own features. Projects use .${PROJECT.extension}; older .linuxpaint projects remain readable. Paint .paint projects support full-canvas visible layers; unsupported variants are rejected. Cloud AI services are not connected.</p>`);if(v){state.theme=v.theme;document.documentElement.dataset.theme=v.theme;localStorage.setItem('paint-theme',v.theme);}},
 };
 // Serialized Paint menu order; labels and preview choices share this inventory.
 const shapeStyles=[['none','No'],['solid','Solid'],['crayon','Crayon'],['marker','Marker'],['oil','Oil brush'],['natural-pencil','Natural pencil'],['watercolor','Watercolor brush']];
 const styleMenuEntries=kind=>shapeStyles.map(([value,title])=>[value==='none'||value==='solid'?`${title} ${kind==='outline'?'outline':'fill'}`:title,`${kind}:${value}`]);
 const menus={
+  ai:[['Remove background','remove-background'],['Object select','object-select'],null,...Object.values(releaseCapabilities.generation).map(value=>[value.title,value.action]),null,['Set up local AI','ai-setup']],
   outline:styleMenuEntries('outline'),fillStyle:styleMenuEntries('fillStyle'),
   file:[['New','new','Ctrl+N'],['Open','open','Ctrl+O'],['Open project','open-project'],null,['Save','save','Ctrl+S'],['Save as','save-as','Ctrl+Shift+S'],['Save as project','save-project'],null,['Print','print','Ctrl+P'],['Image properties','properties','Ctrl+E']],
   edit:[['Undo','undo','Ctrl+Z'],['Redo','redo','Ctrl+Y'],null,['Cut','cut','Ctrl+X'],['Copy','copy','Ctrl+C'],['Copy visible layers','copy-all','Ctrl+Shift+C'],['Paste','paste','Ctrl+V'],['Paste from file','paste-from'],null,['Select all','select-all','Ctrl+A'],['Delete','delete','Delete'],['Invert colors','invert-colors','Ctrl+I']],
   view:[['Zoom in','zoom-in','Ctrl+PageUp'],['Zoom out','zoom-out','Ctrl+PageDown'],['100%','zoom-100'],['Fit to window','fit','Ctrl+1'],['Full screen','fullscreen','F11'],null,['Gridlines','grid'],['Rulers','rulers'],['Status bar','status-bar'],['Layers','layers'],['Collapse toolbar','collapse','Ctrl+F1']],
-  selection:[['Rectangle','tool:select'],['Free-form','tool:lasso'],null,['Select all','select-all','Ctrl+A'],['Invert selection','invert-selection','Ctrl+Shift+I'],['Transparent selection','transparent-selection'],['Delete','delete-selection','Delete']],
+  selection:[['Rectangle','tool:select'],['Free-form','tool:lasso'],['Object select','object-select'],null,['Select all','select-all','Ctrl+A'],['Invert selection','invert-selection','Ctrl+Shift+I'],['Transparent selection','transparent-selection'],['Delete','delete-selection','Delete']],
   rotate:[['Rotate right 90°','rotate-right'],['Rotate left 90°','rotate-left'],['Rotate 180°','rotate-180'],['Custom rotate','rotate-custom']],
   flip:[['Flip horizontal','flip-horizontal'],['Flip vertical','flip-vertical']],
 };
@@ -539,6 +596,8 @@ document.addEventListener('click',safe(async e=>{
 }));
 document.addEventListener('contextmenu',e=>{const t=e.target.closest('[data-color]');if(t){e.preventDefault();const focus=takeTextFocus(t);state.secondary=t.dataset.color;updateToolState();styleText();updatePendingStyle();restoreTextFocus(focus);}});
 document.addEventListener('keydown',safe(async e=>{
+  // IME candidate navigation belongs to the composing input, including Escape.
+  if(e.isComposing)return;
   if(document.querySelector('dialog[open]'))return;
   if(e.key==='Escape'&&!$('#menu').hidden){e.preventDefault();closeMenu();return;}
   if(!$('#menu').hidden&&$('#menu').contains(e.target)&&menuAnchor?.dataset.menu==='selection'&&e.key==='Delete'&&!e.ctrlKey&&!e.metaKey&&!e.altKey&&!e.shiftKey){
@@ -549,12 +608,13 @@ document.addEventListener('keydown',safe(async e=>{
     buttons[e.key==='Home'?0:e.key==='End'?buttons.length-1:(index+(e.key==='ArrowDown'?1:buttons.length-1))%buttons.length]?.focus();return;
   }
   const edit=/INPUT|TEXTAREA|SELECT/.test(e.target.tagName);
-  if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}if(drag?.kind==='pan'){cancelPointerInteraction();e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){textEditor.el.remove();textEditor=null;doc.cancel();}doc.deselect();changed();return;}
+  if(e.key==='Escape'){if(canvasResize.cancel()){e.preventDefault();return;}if(drag?.kind==='pan'){cancelPointerInteraction();e.preventDefault();return;}const canceled=cancelPointerInteraction();if(doc.hasSelectionSession){doc.cancelSelection();e.preventDefault();return;}if(canceled){e.preventDefault();return;}closeMenu();if(textEditor){disposeText();doc.cancel();}doc.deselect();changed();return;}
   const key=e.key.toLowerCase(),mod=e.ctrlKey||e.metaKey;
   // Save belongs to the document even while a text or numeric field has focus.
   // Editing keys such as Undo, Select All and clipboard shortcuts stay local.
   if(edit&&!(mod&&key==='s'))return;let action;
   if(e.altKey||(e.ctrlKey&&e.metaKey))return;
+  if(key==='f2'&&!mod&&!e.shiftKey&&e.target.closest('#layer-list [data-layer]')){e.preventDefault();await renameLayer(e.target.closest('[data-layer]').dataset.layer);return;}
   if(e.ctrlKey&&key===' '&&!e.shiftKey&&!e.altKey&&(e.target===overlay||e.target===selectionRotation)&&(doc.selection||pendingShape)){
     if(activePointerId!==null)return;
     e.preventDefault();finishPending();doc.commitSelection();changed();return;

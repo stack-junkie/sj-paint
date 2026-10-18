@@ -8,7 +8,14 @@ import { chooseShapeStyle } from './shape-style-controls.mjs';
 import { verifyViewState } from './verify-view-state.mjs';
 import { verifyDialogAccessibility } from './verify-dialog-accessibility.mjs';
 import { chromium } from 'playwright-core';
+import { createVerificationResults } from './verification-results.mjs';
 import { verifyBackgroundRemoval } from './verify-background-removal.mjs';
+import { verifyObjectMask } from './verify-object-mask.mjs';
+import { verifyAiWorkflows } from './verify-ai-workflows.mjs';
+import { verifyGenerativeEdits } from './verify-generative-edits.mjs';
+import { verifyDocumentMetadata } from './verify-document-metadata.mjs';
+import { verifyFileInformation } from './verify-file-information.mjs';
+import { verifyPropertiesDefault } from './verify-properties-default.mjs';
 import { verifyInteractions } from './verify-interactions.mjs';
 import { verifyCanvasEngine } from './verify-canvas-engine.mjs';
 import { verifyGestureCancellation } from './verify-gesture-cancellation.mjs';
@@ -24,6 +31,12 @@ import { verifyPaintProject } from './verify-paint-project.mjs';
 import { verifyTiffImport } from './verify-tiff-import.mjs';
 import { verifyKeyboardControls } from './verify-keyboard-controls.mjs';
 import { verifyTextLayout } from './verify-text-layout.mjs';
+import { verifyTextRasterBounds } from './verify-text-raster-bounds.mjs';
+import { verifyTextCaretLayout } from './verify-text-caret-layout.mjs';
+import { verifyTextSession } from './verify-text-session.mjs';
+import { verifyCanvasResizeKeyboard } from './verify-canvas-resize-keyboard.mjs';
+import { verifyConnectedEditor } from './verify-connected-editor.mjs';
+import { verifyLayerKeyboard } from './verify-layer-keyboard.mjs';
 import { verifyTextInteractions } from './verify-text-interactions.mjs';
 import { verifyTextFocus } from './verify-text-focus.mjs';
 import { verifyPaletteFocus } from './verify-palette-focus.mjs';
@@ -55,12 +68,13 @@ const server=await createServer({root,server:{host:'127.0.0.1',port:5187,strictP
 const browser=await chromium.launch({headless:true,...(process.env.PAINT_CHROME_PATH?{executablePath:process.env.PAINT_CHROME_PATH}:{channel:process.env.PAINT_CHROME_CHANNEL||'chrome'})});
 const page=await browser.newPage({viewport:{width:1364,height:820},deviceScaleFactor:1});
 const errors=[];page.on('pageerror',e=>errors.push(e.message));
-const checks=[];const check=(name,ok,detail)=>{checks.push({name,ok,detail});if(!ok)throw new Error(name+': '+JSON.stringify(detail));};
+const { checks, check, summary } = createVerificationResults();
 try{
  await page.goto('http://127.0.0.1:5187');await page.waitForFunction(()=>window.paintApp);await page.waitForTimeout(100);
  check('app loads',errors.length===0,errors);check('pristine document closes without warning',await page.evaluate(()=>window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
  await verifyInteractions(page,check,{capturePreview:true});
  await verifyCanvasEngine(page,check);
+ await verifyDocumentMetadata(page,check);
  await verifyGestureCancellation(page,check);
  await verifyPendingShapeGeometry(page,check);
  await verifyLayerPreview(page,check);
@@ -72,10 +86,18 @@ try{
  await verifyClipboardOwnership(page,check);
  await verifyPaintProject(page,check);
  await verifySaveTargets(page,check);
+ await verifyFileInformation(page,check);
+ await verifyPropertiesDefault(page,check);
  await verifyUnsavedChanges(page,check);
  await verifyTiffImport(page,check);
  await verifyKeyboardControls(page,check);
  await verifyTextLayout(page,check);
+ await verifyTextRasterBounds(page,check);
+ await verifyTextCaretLayout(page,check);
+ await verifyTextSession(page,check);
+ await verifyCanvasResizeKeyboard(page,check);
+ await verifyLayerKeyboard(page,check);
+ await verifyConnectedEditor(page,check);
  await verifyTextInteractions(page,check);
  await verifyTextFocus(page,check);
  await verifyPaletteFocus(page,check);
@@ -92,6 +114,9 @@ try{
  await verifyDialogAccessibility(page,check);
  await verifyPrintLayout(page,check);
  await verifyBackgroundRemoval(page,check);
+ await verifyObjectMask(page,check);
+ await verifyAiWorkflows(page,check);
+ await verifyGenerativeEdits(page,check);
  await verifyCurveConstruction(page,check);
  await verifyStrikethrough(page,check);
  await verifyKeyboardCommit(page,check);
@@ -186,4 +211,4 @@ try{
  check('pending curve protects clean document against close',await page.evaluate(()=>!paintApp.doc.dirty&&!window.dispatchEvent(new Event('beforeunload',{cancelable:true}))),null);
  check('no JavaScript errors',errors.length===0,errors);
 }catch(e){checks.push({name:'failure',ok:false,detail:e.stack});await page.screenshot({path:path.join(output,'paint-failure.png')});process.exitCode=1;}
-finally{await fs.writeFile(path.join(output,'verification.json'),JSON.stringify({timestamp:new Date().toISOString(),host:process.platform+' headless Chrome',checks,errors},null,2));console.log(JSON.stringify({passed:checks.filter(c=>c.ok).length,failed:checks.filter(c=>!c.ok),errors}));await browser.close();await server.close();}
+finally{await fs.writeFile(path.join(output,'verification.json'),JSON.stringify({timestamp:new Date().toISOString(),host:process.platform+' headless Chrome',checks,errors},null,2));console.log(JSON.stringify({...summary(),errors}));await browser.close();await server.close();}

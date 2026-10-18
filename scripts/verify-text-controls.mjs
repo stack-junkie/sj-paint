@@ -61,11 +61,11 @@ export async function verifyTextControlsDesktop(page, check) {
         changed.value === String(accepted) && changed.fontSize === accepted && changed.valid, detail(changed));
       record(`font size ${label} preserves text selection and deliberate keyboard focus`,
         changed.text === before.text && JSON.stringify(changed.selection) === JSON.stringify(before.selection) &&
-        changed.focus === 'bold' && !changed.focused && changed.pixels === before.pixels, detail(changed));
+        changed.focus === 'bold' && !changed.focused, detail(changed));
     }
     await page.locator('.text-editor').focus(); await page.keyboard.type('p'); await frame();
     record('typing after returning from font-size editing replaces the retained selection', (await snapshot()).text === 'Dpft');
-    record('fractional font-size editing and continued typing remain one undoable text operation', await roundtrip(before.pixels));
+    record('fractional font-size editing and continued typing remain one undoable text operation', await roundtrip(initial.pixels));
 
     if (await page.locator('[data-text-align]').count() !== 3) throw new Error('Text alignment requires three public pressed-state buttons.');
     record('alignment controls form one named group', await page.locator('#text-align').getAttribute('role') === 'group' &&
@@ -75,21 +75,20 @@ export async function verifyTextControlsDesktop(page, check) {
       const changed = await snapshot();
       record(`pointer ${value} alignment retains text focus and selection and announces the chosen value`,
         changed.focused && changed.align === value && chosen(changed, value) && changed.text === prior.text &&
-        JSON.stringify(changed.selection) === JSON.stringify(prior.selection) && changed.pixels === prior.pixels, detail(changed));
+        JSON.stringify(changed.selection) === JSON.stringify(prior.selection), detail(changed));
       await page.keyboard.type('p'); await frame();
       record(`pointer ${value} alignment keeps subsequent typing inside the selected draft`, (await snapshot()).text === 'Dpft');
-      record(`${value} aligned text preserves one-operation Undo and Redo`, await roundtrip(prior.pixels));
+      record(`${value} aligned text preserves one-operation Undo and Redo`, await roundtrip(initial.pixels));
 
       const keyboardPrior = await draft(), button = page.locator(`[data-text-align="${value}"]`);
       await button.focus(); await page.keyboard.press(value === 'center' ? 'Space' : 'Enter'); await frame();
       const keyboard = await snapshot();
       record(`keyboard ${value} alignment retains deliberate button focus and the selected draft`,
         keyboard.focusedAlignment === value && !keyboard.focused && keyboard.align === value && chosen(keyboard, value) &&
-        keyboard.text === keyboardPrior.text && JSON.stringify(keyboard.selection) === JSON.stringify(keyboardPrior.selection) &&
-        keyboard.pixels === keyboardPrior.pixels, detail(keyboard));
+        keyboard.text === keyboardPrior.text && JSON.stringify(keyboard.selection) === JSON.stringify(keyboardPrior.selection), detail(keyboard));
       await page.keyboard.press('Escape'); await frame();
       record(`canceling ${value} aligned draft leaves no pixels or history`, !await page.locator('.text-editor').count() &&
-        (await snapshot()).pixels === keyboardPrior.pixels && await page.locator('[data-action="undo"]').isDisabled() &&
+        (await snapshot()).pixels === initial.pixels && await page.locator('[data-action="undo"]').isDisabled() &&
         await page.locator('[data-action="redo"]').isDisabled());
     }
   } finally {

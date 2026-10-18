@@ -1,15 +1,19 @@
-const { app, BrowserWindow, dialog, ipcMain, session } = require('electron');
+const { app, BrowserWindow, dialog, ipcMain, session, screen } = require('electron');
 const fs = require('node:fs/promises');
 const path = require('node:path');
 const { randomUUID } = require('node:crypto');
 const { pathToFileURL } = require('node:url');
-const { writeFileAtomically } = require('./atomic-write.cjs');
+const { createFileSaver } = require('./save-file.cjs');
 const { FileTargets } = require('./file-targets.cjs');
 const { createFontCatalog } = require('./font-catalog.cjs');
-const { createLocalAiService } = require('./local-ai-service.cjs');
+const { createDisplayMetrics } = require('./display-metrics.cjs');
+const { createAiController } = require('./ai-controller.cjs');
+const { createQuitCoordinator } = require('./quit-coordinator.cjs');
 const PROJECT = require('../src/project-format.json');
 
 app.setName(PROJECT.productName);
+const ownsInstance = app.requestSingleInstanceLock();
+if (!ownsInstance) app.quit();
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const entry = path.resolve(__dirname, '../dist/index.html');
@@ -19,8 +23,13 @@ let mainWindow;
 let dialogBusy = false;
 let closeRequest = null;
 const fileTargets = new FileTargets();
+const saveFile = createFileSaver({ getWindow: () => mainWindow, dialog, fileTargets });
 const fontCatalog = createFontCatalog();
-const localAi = createLocalAiService();
+const displayMetrics = createDisplayMetrics({ getPrimaryDisplay: () => screen.getPrimaryDisplay() });
+let aiQuit;
+const localAi = createAiController({ userDataPath: app.getPath('userData'), onOwnershipReleased() { aiQuit?.ownershipReleased(); }, onProgress(value) {
+  if (mainWindow && !mainWindow.isDestroyed()) mainWindow.webContents.send('paint:local-ai-progress', value);
+} });
 
 function authorized(event) {
   if (!mainWindow || event.sender !== mainWindow.webContents ||
@@ -78,22 +87,11 @@ async function openedFile(filePath, owner) {
   return { bytes, name, ...(format ? { target: fileTargets.grant(filePath, format), targetFormat: format } : {}) };
 }
 
-async function saveFile(request, format, options, bytes) {
-  const owner = mainWindow;
-  let destination;
-  if (request.target !== undefined) destination = fileTargets.resolve(request.target, format);
-  else {
-    const result = await dialog.showSaveDialog(mainWindow, options);
-    if (result.canceled || !result.filePath) return false;
-    destination = result.filePath;
-  }
-  if (!owner || mainWindow !== owner || owner.isDestroyed()) return false;
-  await writeFileAtomically(destination, bytes);
-  if (mainWindow !== owner || owner.isDestroyed()) return false;
-  return { name: path.basename(destination), target: request.target ?? fileTargets.grant(destination, format) };
-}
-
 function registerHandlers() {
+  handle('primary-display-metrics', request => {
+    if (request !== undefined) throw new Error('Invalid display request.');
+    return displayMetrics.load();
+  });
   handle('list-fonts', request => {
     if (request !== undefined) throw new Error('Invalid font request.');
     return fontCatalog.load();
@@ -102,6 +100,15 @@ function registerHandlers() {
   handle('local-ai-probe', request => localAi.probe(request));
   handle('local-ai-run', request => localAi.run(request));
   handle('local-ai-cancel', request => localAi.cancel(request));
+  handle('local-ai-setup-plan', request => localAi.plan(request));
+  handle('local-ai-setup', request => localAi.install(request));
+  handle('local-ai-setup-cancel', request => localAi.cancelSetup(request));
+  handle('local-ai-prepare-selection', request => localAi.prepareSelection(request));
+  handle('local-ai-select-object', request => localAi.selectObject(request));
+  handle('local-ai-release-selection', request => localAi.releaseSelection(request));
+  handle('local-ai-generate', request => localAi.generate(request));
+  handle('local-ai-release-generation', request => localAi.releaseGeneration(request));
+  handle('local-ai-release', () => localAi.releaseOwned());
   handle('open-image', (request) => withDialog(async () => {
     const owner = mainWindow;
     if (request !== undefined && (!request || typeof request.allowProjects !== 'boolean')) throw new Error('Invalid open request.');
@@ -206,8 +213,7 @@ function createWindow() {
   const owner = mainWindow;
   owner.webContents.on('render-process-gone', () => {
     if (owner !== mainWindow) return;
-    const operation = localAi.status().value.active;
-    if (operation) void localAi.cancel({ id: operation.id });
+    void localAi.releaseOwned();
   });
   let closeIntent = false;
   owner.on('close', () => { closeIntent = true; });
@@ -227,14 +233,15 @@ function createWindow() {
   });
   owner.on('closed', () => {
     void fontCatalog.cancel();
-    const operation = localAi.status().value.active;
-    if (operation) void localAi.cancel({ id: operation.id });
+    void displayMetrics.cancel();
+    void localAi.releaseOwned();
     fileTargets.clear(); closeRequest = null; mainWindow = null;
   });
   mainWindow.loadFile(entry);
 }
 
 app.whenReady().then(() => {
+  if (!ownsInstance) return;
   const allowClipboard = (contents, permission) => Boolean(mainWindow &&
     contents === mainWindow.webContents && contents.getURL() === entryUrl &&
     ['clipboard-read', 'clipboard-sanitized-write'].includes(permission));
@@ -251,20 +258,18 @@ app.whenReady().then(() => {
   app.on('activate', () => { if (BrowserWindow.getAllWindows().length === 0) createWindow(); });
 });
 app.on('window-all-closed', () => { if (process.platform !== 'darwin') app.quit(); });
-let fontExitCancellation = null;
+let queryExitCancellation = null;
 app.on('before-quit', event => {
-  if (!fontCatalog.active) return;
+  if (!fontCatalog.active && !displayMetrics.active) return;
   event.preventDefault();
-  if (!fontExitCancellation) fontExitCancellation = fontCatalog.cancel().then(() => { fontExitCancellation = null; app.quit(); });
-});
-let aiExitCancellation = null;
-app.on('before-quit', event => {
-  const state = localAi.status().value;
-  if (!state.active) return;
-  event.preventDefault();
-  if (!aiExitCancellation) aiExitCancellation = localAi.cancel({ id: state.active.id }).then(result => {
-    aiExitCancellation = null;
-    if (result.ok) app.quit();
-    else console.error('Local worker cleanup is unresolved; application exit remains blocked.');
+  if (!queryExitCancellation) queryExitCancellation = Promise.all([fontCatalog.cancel(), displayMetrics.cancel()]).then(() => {
+    queryExitCancellation = null;
+    setImmediate(() => app.quit());
   });
 });
+// A dirty renderer can still veto app.quit after before-quit. Retire the AI
+// owners only after every window accepted closure; Cancel must leave them usable.
+aiQuit = createQuitCoordinator({ shutdown: () => localAi.shutdown(), requestQuit: () => app.quit(),
+  reportFailure: result => console.error('Local worker cleanup is unresolved; application exit remains blocked.', result?.error) });
+app.on('will-quit', aiQuit.willQuit);
+app.once('quit', () => { app.removeListener('will-quit', aiQuit.willQuit); aiQuit.dispose(); });

@@ -56,12 +56,11 @@ export async function verifyTiffDesktop(page, check, { main, waitForFile }) {
       await page.locator('#overlay').focus(); await page.keyboard.press('Control+o'); await failed;
       check(`desktop ${sample.name} preserves the document and history controls`, before === await snapshot());
     }
-    const native = await optionalNativeTiffs();
+    const native = await optionalNativeTiffs(check);
     for (const sample of native) {
       await open(sample.name, sample.bytes);
       check(`desktop opens digest-pinned ${sample.name}`, JSON.stringify(await pixels()) === JSON.stringify(await canvasTiffPixels(page, sample)));
     }
-    if (!native.length) check('desktop native TIFF fixture coverage is optional and absent', true, { skipped: true });
   } finally {
     if (await page.locator('#dialog').evaluate(d => d.open)) await page.locator('#dialog-cancel').click();
     await page.locator('#overlay').focus(); await page.keyboard.press('Control+n');

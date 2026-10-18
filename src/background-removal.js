@@ -1,6 +1,6 @@
 import { maskedCanvas } from './engine.js';
+import { ensureAiReady, withAiUi } from './ai-setup.js';
 
-let active = false;
 const unwrap = result => {
   if (!result?.ok) throw new Error(result?.error?.message || 'Local background removal failed.');
   return result.value;
@@ -9,14 +9,16 @@ const unwrap = result => {
 // This controller owns only its preview dialog. The document owns the eventual
 // edit, and the main process owns inference and cancellation until child exit.
 export async function removeBackground(doc) {
-  if (active) return;
+  return withAiUi(() => runBackgroundRemoval(doc));
+}
+async function runBackgroundRemoval(doc) {
   const bridge = window.paintDesktop;
   if (!bridge?.localAiStatus || !bridge.localAiRun || !bridge.localAiCancel) {
     throw new Error('Local background removal requires the desktop edition and a configured local runtime.');
   }
   if (doc.selection) throw new Error('Finish or cancel the selection before removing the active layer background.');
   if (!doc.activeLayer.visible) throw new Error('Show the active layer before removing its background.');
-  active = true;
+  if (!await ensureAiReady(['u2netp'])) return;
   const target = doc.captureEditTarget(), source = doc.activeLayer.canvas;
   const id = crypto.randomUUID();
   let cancelled = false, running = false, resultMask = null;
@@ -46,7 +48,7 @@ export async function removeBackground(doc) {
   doc.addEventListener('change', changed); doc.addEventListener('preview', changed);
   try {
     const state = unwrap(await bridge.localAiStatus());
-    if (!state.configured) throw new Error('Local background removal is not configured. See the desktop setup instructions in README.');
+    if (!state.configured) throw new Error('The background-removal runtime is unavailable. Open AI setup and retry.');
     const bounds = state.bounds;
     if (!Number.isSafeInteger(bounds?.maxPixels) || bounds.maxPixels < 1 || !Number.isSafeInteger(bounds?.maxPngBytes) || bounds.maxPngBytes < 1) {
       throw new Error('The local worker returned invalid input limits.');
@@ -70,7 +72,8 @@ export async function removeBackground(doc) {
       throw new Error('The local worker returned an invalid background mask.');
     }
     resultMask = result.mask;
-    const masked = maskedCanvas(source, resultMask);
+    const matte = result.metadata?.matte;
+    const masked = maskedCanvas(source, resultMask, matte);
     // Preview the prospective document through the same display compositor as
     // the main canvas. Reading layer storage directly skips display rounding
     // and would also omit the background and other layers.
@@ -83,12 +86,12 @@ export async function removeBackground(doc) {
     preview.setAttribute('aria-label', 'Background removal preview');
     panel.querySelector('.background-preview').append(preview);
     status.textContent = 'Preview ready. Apply changes only this layer and can be undone.'; apply.disabled = false;
-    if (await decision && !cancelled) doc.applyLayerMask(target, resultMask);
+    if (await decision && !cancelled) doc.applyLayerMask(target, resultMask, matte);
   } finally {
     doc.removeEventListener('change', changed); doc.removeEventListener('preview', changed);
     if (running) {
       // Keep this UI lease until native cleanup has acknowledged the cancellation.
-      try { await cancelOwned(); } finally { panel.close(); panel.remove(); active = false; }
-    } else { panel.close(); panel.remove(); active = false; }
+      try { await cancelOwned(); } finally { panel.close(); panel.remove(); }
+    } else { panel.close(); panel.remove(); }
   }
 }

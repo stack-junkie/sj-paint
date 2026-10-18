@@ -65,7 +65,10 @@ export async function verifyTextFocusDesktop(page, check) {
         styled.focused && styled.start === 1 && styled.end === 3 && styled.value === before.value, styled);
       await page.keyboard.type('p'); await frame(); const typed = await snapshot();
       record(`typing after ${action} replaces the selection without selecting Pencil`,
-        typed.value === 'Dpft' && typed.tool === 'text' && typed.pixels === before.pixels, typed);
+        typed.value === 'Dpft' && typed.tool === 'text', typed);
+      await page.keyboard.press('Escape'); await frame();
+      record(`canceling ${action} text restores the drawing without a history entry`,
+        (await snapshot()).pixels === initial.pixels && await page.locator('[data-action="undo"]').isDisabled());
       await reset();
     }
 
@@ -111,7 +114,7 @@ export async function verifyTextFocusDesktop(page, check) {
       (await snapshot()).value === 'Draft');
     await reset();
 
-    await draft(); const blank = (await snapshot()).pixels;
+    const blank = initial.pixels; await draft();
     await page.locator('[data-action="bold"]').click(); await page.keyboard.type('p');
     if (await editor.count()) {
       await page.locator('[data-action="commit-text"]').click(); await frame();

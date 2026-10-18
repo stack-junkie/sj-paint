@@ -26,11 +26,12 @@ export async function verifyStrikethrough(page, check) {
     await page.mouse.click(bounds.x + 20, bounds.y + 20);
     await page.locator('.text-editor').fill(text);
   };
-  const snapshot = () => page.evaluate(() => {
+  const snapshot = () => page.evaluate(async () => {
+    await new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve)));
     const d = paintApp.doc, editor = document.querySelector('.text-editor');
     return { pixels: d.activeLayer.canvas.toDataURL(), transaction: Boolean(d._transaction),
       undo: d._undo.length, redo: d._redo.length, value: editor?.value,
-      decoration: editor ? getComputedStyle(editor).textDecorationLine : null };
+      displayed: document.querySelector('#canvas').toDataURL() };
   });
   try {
     await reset(); await page.locator('[data-action="commit-text"]').click();
@@ -46,15 +47,19 @@ export async function verifyStrikethrough(page, check) {
       decorated.value === text && decorated.transaction && decorated.pixels === draft.pixels &&
       decorated.undo === draft.undo && decorated.redo === draft.redo, decorated);
     check('live text supports underline and strikethrough together',
-      decorated.decoration.includes('underline') && decorated.decoration.includes('line-through'), decorated.decoration);
+      decorated.displayed !== draft.displayed);
     await page.locator('[data-action="underline"]').click();
+    const strikeOnly = await snapshot();
     check('turning underline off retains strikethrough in the live draft',
-      (await snapshot()).decoration === 'line-through');
+      strikeOnly.displayed !== decorated.displayed && strikeOnly.displayed !== draft.displayed);
     await page.locator('[data-action="underline"]').click();
     await page.locator('[data-action="strikethrough"]').click();
+    const underlineOnly = await snapshot();
     check('turning strikethrough off retains underline in the live draft',
-      (await snapshot()).decoration === 'underline');
+      underlineOnly.displayed !== decorated.displayed && underlineOnly.displayed !== draft.displayed &&
+      underlineOnly.displayed !== strikeOnly.displayed);
     await page.locator('[data-action="strikethrough"]').click();
+    check('restoring both decorations restores the exact displayed draft', (await snapshot()).displayed === decorated.displayed);
     await page.locator('[data-action="commit-text"]').click();
     const committed = await snapshot();
     const comparison = await page.evaluate(plain => {

@@ -1,0 +1,1619 @@
+{
+  "schemaVersion": 1,
+  "pythonVersion": "3.12.15",
+  "artifacts": {
+    "bbc902d4d187ac4914915bf538196a064b49109a33a104965b5164ced5b80a1e": {
+      "sha256": "bbc902d4d187ac4914915bf538196a064b49109a33a104965b5164ced5b80a1e",
+      "filename": "cpython-3.12.15+20261013-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "bytes": 46390009,
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.12.15%2B20261013-x86_64-pc-windows-msvc-install_only.tar.gz",
+      "kind": "python",
+      "license": "CPython and bundled dependency licenses retained inside archive",
+      "expandedBytes": 149856949
+    },
+    "5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560": {
+      "sha256": "5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560",
+      "filename": "cpython-3.12.15+20261013-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "bytes": 66983838,
+      "url": "https://github.com/astral-sh/python-build-standalone/releases/download/20261013/cpython-3.12.15%2B20261013-x86_64-unknown-linux-gnu-install_only.tar.gz",
+      "kind": "python",
+      "license": "CPython and bundled dependency licenses retained inside archive",
+      "expandedBytes": 222291869
+    },
+    "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4": {
+      "sha256": "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+      "filename": "flatbuffers-25.12.19-py2.py3-none-any.whl",
+      "bytes": 26661,
+      "url": "https://files.pythonhosted.org/packages/e8/2d/d2a548598be01649e2d46231d151a6c56d10b964d94043a335ae56ea2d92/flatbuffers-25.12.19-py2.py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache 2.0",
+      "expandedBytes": 87988
+    },
+    "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c": {
+      "sha256": "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+      "filename": "mpmath-1.3.0-py3-none-any.whl",
+      "bytes": 536198,
+      "url": "https://files.pythonhosted.org/packages/43/e3/7d92a15f894aa0c9c4b49b8ee9ac9850d6e63b03c9c32c0367a13ae62209/mpmath-1.3.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "BSD",
+      "expandedBytes": 1950197
+    },
+    "a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a": {
+      "sha256": "a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a",
+      "filename": "numpy-2.5.4-cp312-cp312-win_amd64.whl",
+      "bytes": 12573091,
+      "url": "https://files.pythonhosted.org/packages/12/33/fefe62073dc8acfd0f2b9ed7c003af2f50aa61555e113e6db02b8f79f145/numpy-2.5.4-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+      "expandedBytes": 41939514
+    },
+    "535b29475ca42b593c45fbb2152fbf1cdf3f287315bf650e6a724a0a1d065cdb": {
+      "sha256": "535b29475ca42b593c45fbb2152fbf1cdf3f287315bf650e6a724a0a1d065cdb",
+      "filename": "onnxruntime-1.24.4-cp312-cp312-win_amd64.whl",
+      "bytes": 12596856,
+      "url": "https://files.pythonhosted.org/packages/8b/f4/6b89e297b93704345f0f3f8c62229bee323ef25682a3f9b4f89a39324950/onnxruntime-1.24.4-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "MIT License",
+      "expandedBytes": 36703972
+    },
+    "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c": {
+      "sha256": "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+      "filename": "packaging-26.3-py3-none-any.whl",
+      "bytes": 129956,
+      "url": "https://files.pythonhosted.org/packages/63/34/ba1c580383c9eada3711951fef0795c80b829a078d72188184bcab9dd527/packaging-26.3-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0 OR BSD-2-Clause",
+      "expandedBytes": 499179
+    },
+    "a2b55dd6b2a4c4b7d87ffa56bdb33fdc5fdb9a462173861a7bc097f17d91cb09": {
+      "sha256": "a2b55dd6b2a4c4b7d87ffa56bdb33fdc5fdb9a462173861a7bc097f17d91cb09",
+      "filename": "pillow-12.3.0-cp312-cp312-win_amd64.whl",
+      "bytes": 7227137,
+      "url": "https://files.pythonhosted.org/packages/45/89/da2f7971a317f83d807fdd4065c0af40208e59e692cc43d315a71a0e96d1/pillow-12.3.0-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "MIT-CMU",
+      "expandedBytes": 14761030
+    },
+    "a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353": {
+      "sha256": "a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353",
+      "filename": "protobuf-7.36.2-cp310-abi3-win_amd64.whl",
+      "bytes": 456514,
+      "url": "https://files.pythonhosted.org/packages/8a/55/b77bda4e5e5f5971fb51b07663694690e9afdb9402136c16a522bd621cad/protobuf-7.36.2-cp310-abi3-win_amd64.whl",
+      "kind": "wheel",
+      "license": "3-Clause BSD License",
+      "expandedBytes": 1711365
+    },
+    "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5": {
+      "sha256": "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+      "filename": "sympy-1.14.0-py3-none-any.whl",
+      "bytes": 6299353,
+      "url": "https://files.pythonhosted.org/packages/a2/09/77d55d46fd61b4a135c444fc97158ef34a095e5681d0a6c10b75bf356191/sympy-1.14.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "BSD",
+      "expandedBytes": 26841861
+    },
+    "a628fa6beb069b8e549460fc449135d5bd8d73e7a11fd09f0bc9fc4ace7f06f1": {
+      "sha256": "a628fa6beb069b8e549460fc449135d5bd8d73e7a11fd09f0bc9fc4ace7f06f1",
+      "filename": "accelerate-1.11.0-py3-none-any.whl",
+      "bytes": 375777,
+      "url": "https://files.pythonhosted.org/packages/77/85/85951bc0f9843e2c10baaa1b6657227056095de08f4d1eea7d8b423a6832/accelerate-1.11.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache",
+      "expandedBytes": 1470490
+    },
+    "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775": {
+      "sha256": "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+      "filename": "certifi-2026.7.22-py3-none-any.whl",
+      "bytes": 136983,
+      "url": "https://files.pythonhosted.org/packages/0b/a7/71ac2cff56fec219ed242bb11b8efb69fcc4bec75db06fb7bfe35de520e6/certifi-2026.7.22-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "MPL-2.0",
+      "expandedBytes": 248921
+    },
+    "780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc": {
+      "sha256": "780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc",
+      "filename": "charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl",
+      "bytes": 207486,
+      "url": "https://files.pythonhosted.org/packages/eb/e6/e6e083884cbcfd49c64865af05027fe7011be7b2d9179524f099a1b611f3/charset_normalizer-3.5.2-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 572878
+    },
+    "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6": {
+      "sha256": "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+      "filename": "colorama-0.4.6-py2.py3-none-any.whl",
+      "bytes": 25335,
+      "url": "https://files.pythonhosted.org/packages/d1/d6/3965ed04c63042e047cb6a3e6ed1a63a35087b6a609aa3a15ed8ac56c221/colorama-0.4.6-py2.py3-none-any.whl",
+      "kind": "wheel",
+      "license": "BSD License (wheel LICENSE.txt)",
+      "expandedBytes": 77669
+    },
+    "d50d5e74fdd6dcf55e5c1d304bc52cc7c2659abd1752740d736d7b54078b4db5": {
+      "sha256": "d50d5e74fdd6dcf55e5c1d304bc52cc7c2659abd1752740d736d7b54078b4db5",
+      "filename": "diffusers-0.35.2-py3-none-any.whl",
+      "bytes": 4121649,
+      "url": "https://files.pythonhosted.org/packages/2a/2e/38d9824f8c6bb048c5ba21c6d4da54c29c162a46b58b3ef907a360a76d3e/diffusers-0.35.2-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache 2.0 License",
+      "expandedBytes": 17928642
+    },
+    "2ff5690882e8cdb00ef31fb3d01a3094c29f30985426c59495afb1733f3b7238": {
+      "sha256": "2ff5690882e8cdb00ef31fb3d01a3094c29f30985426c59495afb1733f3b7238",
+      "filename": "filelock-4.2.0-py3-none-any.whl",
+      "bytes": 135032,
+      "url": "https://files.pythonhosted.org/packages/8e/a3/9bc26acff301fe1aaea1cc3d82a1d57e0a34df3e1cadbfa91ac2dbcdde5c/filelock-4.2.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 469932
+    },
+    "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f": {
+      "sha256": "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+      "filename": "fsspec-2026.9.0-py3-none-any.whl",
+      "bytes": 221738,
+      "url": "https://files.pythonhosted.org/packages/6c/c0/a98505f18594f1bce828bb159cec0fcf9860562f1a2c85913409fc8f3d9e/fsspec-2026.9.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 810582
+    },
+    "7bcc9ad17d5b3f07b57c78e79d527102d08313caa278a641993acddcb894548d": {
+      "sha256": "7bcc9ad17d5b3f07b57c78e79d527102d08313caa278a641993acddcb894548d",
+      "filename": "huggingface_hub-0.36.0-py3-none-any.whl",
+      "bytes": 566094,
+      "url": "https://files.pythonhosted.org/packages/cb/bd/1a875e0d592d447cbc02805fd3fe0f497714d6a2583f59d14fa9ebad96eb/huggingface_hub-0.36.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache",
+      "expandedBytes": 2254952
+    },
+    "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c": {
+      "sha256": "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+      "filename": "idna-3.20-py3-none-any.whl",
+      "bytes": 69583,
+      "url": "https://files.pythonhosted.org/packages/58/a2/bb081bab032533a855d44de1d56f8e8426114ff1ba5d1f07a438a0a654f8/idna-3.20-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 342091
+    },
+    "bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0": {
+      "sha256": "bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0",
+      "filename": "importlib_metadata-9.0.1-py3-none-any.whl",
+      "bytes": 27920,
+      "url": "https://files.pythonhosted.org/packages/b3/55/ecca97ae19075f1fac62def77731e7f535e6c1fb8f92ff08160c5e6dade8/importlib_metadata-9.0.1-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0",
+      "expandedBytes": 77488
+    },
+    "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67": {
+      "sha256": "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+      "filename": "jinja2-3.1.6-py3-none-any.whl",
+      "bytes": 134899,
+      "url": "https://files.pythonhosted.org/packages/62/a1/3d680cbfd5f4b8f15abc1d571870c5fc3e594bb582bc3b64ea099db13e56/jinja2-3.1.6-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "See distribution METADATA and license files",
+      "expandedBytes": 496892
+    },
+    "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7": {
+      "sha256": "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7",
+      "filename": "markupsafe-3.0.4-cp312-cp312-win_amd64.whl",
+      "bytes": 14303,
+      "url": "https://files.pythonhosted.org/packages/3f/bf/62495e180b7000aaf30000fff849e933f74264638057176cf46852500adc/markupsafe-3.0.4-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 35603
+    },
+    "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0": {
+      "sha256": "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+      "filename": "networkx-3.7-py3-none-any.whl",
+      "bytes": 2142205,
+      "url": "https://files.pythonhosted.org/packages/7e/cd/fe58041e9011f307c490e3e17dd48cc516448f7c698a3f2d9d9d65d7e6a8/networkx-3.7-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 7298220
+    },
+    "eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988": {
+      "sha256": "eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988",
+      "filename": "psutil-7.2.2-cp37-abi3-win_amd64.whl",
+      "bytes": 137737,
+      "url": "https://files.pythonhosted.org/packages/b4/90/e2159492b5426be0c1fef7acba807a03511f97c5f86b3caeda6ad92351a7/psutil-7.2.2-cp37-abi3-win_amd64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 451054
+    },
+    "5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b": {
+      "sha256": "5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b",
+      "filename": "pyyaml-6.0.3-cp312-cp312-win_amd64.whl",
+      "bytes": 154003,
+      "url": "https://files.pythonhosted.org/packages/86/bf/899e81e4cce32febab4fb42bb97dcdf66bc135272882d1987881a4b519e9/pyyaml-6.0.3-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 478269
+    },
+    "fdd88ed5e20b1bcdd234421e454962c971aa44b653bdb7f1ea9ef683e90fb649": {
+      "sha256": "fdd88ed5e20b1bcdd234421e454962c971aa44b653bdb7f1ea9ef683e90fb649",
+      "filename": "regex-2026.9.29-cp312-cp312-win_amd64.whl",
+      "bytes": 280334,
+      "url": "https://files.pythonhosted.org/packages/93/19/489bc8db91196381c935752df01ba3f607140daece33b78d88573f028e64/regex-2026.9.29-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0 AND CNRI-Python",
+      "expandedBytes": 1207707
+    },
+    "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0": {
+      "sha256": "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+      "filename": "requests-2.34.2-py3-none-any.whl",
+      "bytes": 73075,
+      "url": "https://files.pythonhosted.org/packages/a0/f4/c67b0b3f1b9245e8d266f0f112c500d50e5b4e83cb6f3b71b6528104182a/requests-2.34.2-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0",
+      "expandedBytes": 234397
+    },
+    "096ec1a98435df7beb08853bb5aa9081a84f23d0adc67ed1a0a10550f608373f": {
+      "sha256": "096ec1a98435df7beb08853bb5aa9081a84f23d0adc67ed1a0a10550f608373f",
+      "filename": "safetensors-0.8.0-cp310-abi3-win_amd64.whl",
+      "bytes": 355540,
+      "url": "https://files.pythonhosted.org/packages/1b/6d/3fba214c1e5e0f69991677ec3bc17023f0421776975e1de0c682dca475e2/safetensors-0.8.0-cp310-abi3-win_amd64.whl",
+      "kind": "wheel",
+      "license": "See distribution METADATA and license files",
+      "expandedBytes": 848323
+    },
+    "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670": {
+      "sha256": "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
+      "filename": "setuptools-84.0.0-py3-none-any.whl",
+      "bytes": 818216,
+      "url": "https://files.pythonhosted.org/packages/95/9c/c510029fc6ef33a6275cd2c5d3cecd6613dfd6aa401d57c54f1c18852ccf/setuptools-84.0.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 2773629
+    },
+    "65fd6e3fb11ca1e78a6a93602490f134d1fdeb13bcef99389d5102ea318ed138": {
+      "sha256": "65fd6e3fb11ca1e78a6a93602490f134d1fdeb13bcef99389d5102ea318ed138",
+      "filename": "tokenizers-0.22.1-cp39-abi3-win_amd64.whl",
+      "bytes": 2674684,
+      "url": "https://files.pythonhosted.org/packages/b3/46/e33a8c93907b631a99377ef4c5f817ab453d0b34f93529421f42ff559671/tokenizers-0.22.1-cp39-abi3-win_amd64.whl",
+      "kind": "wheel",
+      "license": "See distribution METADATA and license files",
+      "expandedBytes": 7859170
+    },
+    "21cb5436978ef47c823b7a813ff0f8c2892e266cfe0f1d944879b5fba81bf4e1": {
+      "sha256": "21cb5436978ef47c823b7a813ff0f8c2892e266cfe0f1d944879b5fba81bf4e1",
+      "filename": "torch-2.10.0+cpu-cp312-cp312-win_amd64.whl",
+      "bytes": 113671330,
+      "url": "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 424616135
+    },
+    "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73": {
+      "sha256": "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+      "filename": "tqdm-4.70.1-py3-none-any.whl",
+      "bytes": 80199,
+      "url": "https://files.pythonhosted.org/packages/a7/03/921a3d3c75785aca9ebfbfcabfbc3a1be12e2ab5265deb026d55a5a3f83e/tqdm-4.70.1-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "MPL-2.0 AND MIT",
+      "expandedBytes": 233479
+    },
+    "b10d05da8fa67dc41644dbbf9bc45a44cb86ae33da6f9295f5fbf5b7890bd267": {
+      "sha256": "b10d05da8fa67dc41644dbbf9bc45a44cb86ae33da6f9295f5fbf5b7890bd267",
+      "filename": "transformers-4.57.1-py3-none-any.whl",
+      "bytes": 11990925,
+      "url": "https://files.pythonhosted.org/packages/71/d3/c16c3b3cf7655a67db1144da94b021c200ac1303f82428f2beef6c2e72bb/transformers-4.57.1-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache 2.0 License",
+      "expandedBytes": 52406713
+    },
+    "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8": {
+      "sha256": "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+      "filename": "typing_extensions-4.16.0-py3-none-any.whl",
+      "bytes": 45571,
+      "url": "https://files.pythonhosted.org/packages/49/d3/b8441a820a491ddfc024b0b0cf0393375b75ea13866d9c66727e54c2fc80/typing_extensions-4.16.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "PSF-2.0",
+      "expandedBytes": 182767
+    },
+    "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3": {
+      "sha256": "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+      "filename": "urllib3-2.8.0-py3-none-any.whl",
+      "bytes": 135717,
+      "url": "https://files.pythonhosted.org/packages/92/9d/c4e665119135114480843e7ab388fa94d8480650450e6f8e26b70d323a4c/urllib3-2.8.0-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 450461
+    },
+    "8979f52d874162f485ff2981e3891f3a3317b7a3dd43ff1e1775b9304f307a9c": {
+      "sha256": "8979f52d874162f485ff2981e3891f3a3317b7a3dd43ff1e1775b9304f307a9c",
+      "filename": "zipp-4.1.1-py3-none-any.whl",
+      "bytes": 10582,
+      "url": "https://files.pythonhosted.org/packages/b5/98/df615823cd9419131ce19fba00de53a663794369e198aade064a244b385d/zipp-4.1.1-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 24397
+    },
+    "fbde8f6a9ec8c76979a0d14df21c10b9e5cab6f0d106a73ca73e2179bc597cae": {
+      "sha256": "fbde8f6a9ec8c76979a0d14df21c10b9e5cab6f0d106a73ca73e2179bc597cae",
+      "filename": "torch-2.10.0+cu128-cp312-cp312-win_amd64.whl",
+      "bytes": 2867409626,
+      "url": "https://download-r2.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp312-cp312-win_amd64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 4526302323
+    },
+    "fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a": {
+      "sha256": "fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a",
+      "filename": "numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 16727283,
+      "url": "https://files.pythonhosted.org/packages/43/a3/c799c62e19c337e6d3770b08e475887fb30ce8477d3c09efca6b2f0228a6/numpy-2.5.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause AND 0BSD AND MIT AND Zlib AND CC0-1.0",
+      "expandedBytes": 56387772
+    },
+    "0d640eb9f3782689b55cfa715094474cd5662f2f137be6a6f847a594b6e9705c": {
+      "sha256": "0d640eb9f3782689b55cfa715094474cd5662f2f137be6a6f847a594b6e9705c",
+      "filename": "onnxruntime-1.24.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 17244912,
+      "url": "https://files.pythonhosted.org/packages/6d/ab/5b68110e0460d73fad814d5bd11c7b1ddcce5c37b10177eb264d6a36e331/onnxruntime-1.24.4-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "MIT License",
+      "expandedBytes": 49755010
+    },
+    "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91": {
+      "sha256": "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91",
+      "filename": "pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 6940830,
+      "url": "https://files.pythonhosted.org/packages/84/21/a35af28dcc61f37ed850a2d64c65c701321dfbf25085e469d5559360cbbf/pillow-12.3.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "MIT-CMU",
+      "expandedBytes": 19667368
+    },
+    "89f23aa53c24553a2416fd4fd1ec06f74fa42b14b546d8883128813f775bbfd2": {
+      "sha256": "89f23aa53c24553a2416fd4fd1ec06f74fa42b14b546d8883128813f775bbfd2",
+      "filename": "protobuf-7.36.2-cp310-abi3-manylinux2014_x86_64.whl",
+      "bytes": 343223,
+      "url": "https://files.pythonhosted.org/packages/db/f3/3996583dd2906297a637af12114deddf7658af6e683fedb83be061983fb5/protobuf-7.36.2-cp310-abi3-manylinux2014_x86_64.whl",
+      "kind": "wheel",
+      "license": "3-Clause BSD License",
+      "expandedBytes": 1388238
+    },
+    "3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649": {
+      "sha256": "3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649",
+      "filename": "charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 257601,
+      "url": "https://files.pythonhosted.org/packages/7f/c5/38806a25ab5e65fc178f39affeda20858efafede2fce1ffc2556cfc9fe73/charset_normalizer-3.5.2-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 760865
+    },
+    "2814a6e999d13464c4d679b788cc5d784eb5a4edfc638a31f10e9a11ab531ef8": {
+      "sha256": "2814a6e999d13464c4d679b788cc5d784eb5a4edfc638a31f10e9a11ab531ef8",
+      "filename": "hf_xet-1.7.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 4212180,
+      "url": "https://files.pythonhosted.org/packages/a3/4c/2bf3b66c215d409655f28de1622393dde04c9461280d48c7924bb3b2decd/hf_xet-1.7.0-cp38-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0",
+      "expandedBytes": 11573549
+    },
+    "8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581": {
+      "sha256": "8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581",
+      "filename": "markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 22985,
+      "url": "https://files.pythonhosted.org/packages/4f/a7/aeedb5140afa41fc74c225e9184ab96723a6e873b6ee1c9fede7283456d8/markupsafe-3.0.4-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 67294
+    },
+    "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9": {
+      "sha256": "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9",
+      "filename": "psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 155560,
+      "url": "https://files.pythonhosted.org/packages/b5/70/5d8df3b09e25bce090399cf48e452d25c935ab72dad19406c77f4e828045/psutil-7.2.2-cp36-abi3-manylinux2010_x86_64.manylinux_2_12_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 520630
+    },
+    "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc": {
+      "sha256": "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+      "filename": "pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 807870,
+      "url": "https://files.pythonhosted.org/packages/8b/9d/b3589d3877982d4f2329302ef98a8026e7f4443c765c46cfecc8858c6b4b/pyyaml-6.0.3-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "MIT",
+      "expandedBytes": 2903648
+    },
+    "39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0": {
+      "sha256": "39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0",
+      "filename": "regex-2026.9.29-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 807783,
+      "url": "https://files.pythonhosted.org/packages/26/83/d2fbd2e4e3afb1167daa825187d196f313cbaa1a4768f311fb041bb0e3d2/regex-2026.9.29-cp312-cp312-manylinux2014_x86_64.manylinux_2_17_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0 AND CNRI-Python",
+      "expandedBytes": 3056917
+    },
+    "fd6f3f93c9a0a7cc2788ee63fb763353d4bd2e89b0751bc78fcf7dda00bea774": {
+      "sha256": "fd6f3f93c9a0a7cc2788ee63fb763353d4bd2e89b0751bc78fcf7dda00bea774",
+      "filename": "safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "bytes": 516040,
+      "url": "https://files.pythonhosted.org/packages/28/50/f203ff3a3ddfe19308efc83c5a3a29ed02bf786732ec35e68bf9162f3365/safetensors-0.8.0-cp310-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "kind": "wheel",
+      "license": "See distribution METADATA and license files",
+      "expandedBytes": 1337729
+    },
+    "e2ef6063d7a84994129732b47e7915e8710f27f99f3a3260b8a38fc7ccd083f4": {
+      "sha256": "e2ef6063d7a84994129732b47e7915e8710f27f99f3a3260b8a38fc7ccd083f4",
+      "filename": "tokenizers-0.22.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "bytes": 3250221,
+      "url": "https://files.pythonhosted.org/packages/d0/c6/dc3a0db5a6766416c32c034286d7c2d406da1f498e4de04ab1b8959edd00/tokenizers-0.22.1-cp39-abi3-manylinux_2_17_x86_64.manylinux2014_x86_64.whl",
+      "kind": "wheel",
+      "license": "See distribution METADATA and license files",
+      "expandedBytes": 10587453
+    },
+    "ee40b8a4b4b2cf0670c6fd4f35a7ef23871af956fecb238fbf5da15a72650b1d": {
+      "sha256": "ee40b8a4b4b2cf0670c6fd4f35a7ef23871af956fecb238fbf5da15a72650b1d",
+      "filename": "torch-2.10.0+cpu-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "bytes": 188943803,
+      "url": "https://download-r2.pytorch.org/whl/cpu/torch-2.10.0%2Bcpu-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 696031884
+    },
+    "fda147a344e8eaeca0c6ff113d2851ffca8f7dfc0a6c932374ee5c47caa649c8": {
+      "sha256": "fda147a344e8eaeca0c6ff113d2851ffca8f7dfc0a6c932374ee5c47caa649c8",
+      "filename": "cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 12151019,
+      "url": "https://files.pythonhosted.org/packages/a9/c1/dabe88f52c3e3760d861401bb994df08f672ec893b8f7592dc91626adcf3/cuda_bindings-12.9.4-cp312-cp312-manylinux_2_24_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "LicenseRef-NVIDIA-SOFTWARE-LICENSE",
+      "expandedBytes": 110606602
+    },
+    "e29e59829c297a7a5233bd9cc71094fc5bddbd076951482670178f9eade39b1f": {
+      "sha256": "e29e59829c297a7a5233bd9cc71094fc5bddbd076951482670178f9eade39b1f",
+      "filename": "cuda_pathfinder-1.8.3-py3-none-any.whl",
+      "bytes": 62561,
+      "url": "https://files.pythonhosted.org/packages/b9/fb/f8e1890428f9f590b4beebd63b068aac1ce32a3331510c847b9f9a78f261/cuda_pathfinder-1.8.3-py3-none-any.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0",
+      "expandedBytes": 187878
+    },
+    "8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142": {
+      "sha256": "8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142",
+      "filename": "nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl",
+      "bytes": 594346921,
+      "url": "https://files.pythonhosted.org/packages/dc/61/e24b560ab2e2eaeb3c839129175fb330dfcfc29e5203196e5541a4c44682/nvidia_cublas_cu12-12.8.4.1-py3-none-manylinux_2_27_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 869571101
+    },
+    "ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182": {
+      "sha256": "ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182",
+      "filename": "nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 10248621,
+      "url": "https://files.pythonhosted.org/packages/f8/02/2adcaa145158bf1a8295d83591d22e4103dbfd821bcaf6f3f53151ca4ffa/nvidia_cuda_cupti_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 42519186
+    },
+    "a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994": {
+      "sha256": "a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994",
+      "filename": "nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "bytes": 88040029,
+      "url": "https://files.pythonhosted.org/packages/05/6b/32f747947df2da6994e999492ab306a903659555dddc0fbdeb9d71f75e52/nvidia_cuda_nvrtc_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 222208780
+    },
+    "adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90": {
+      "sha256": "adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90",
+      "filename": "nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 954765,
+      "url": "https://files.pythonhosted.org/packages/0d/9b/a997b638fcd068ad6e4d53b8551a7d30fe8b404d6f1804abf1df69838932/nvidia_cuda_runtime_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 4991977
+    },
+    "949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8": {
+      "sha256": "949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8",
+      "filename": "nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl",
+      "bytes": 706758467,
+      "url": "https://files.pythonhosted.org/packages/ba/51/e123d997aa098c61d029f76663dedbfb9bc8dcf8c60cbd6adbe42f76d049/nvidia_cudnn_cu12-9.10.2.21-py3-none-manylinux_2_27_x86_64.whl",
+      "kind": "wheel",
+      "license": "LicenseRef-NVIDIA-Proprietary",
+      "expandedBytes": 1053624755
+    },
+    "4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74": {
+      "sha256": "4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74",
+      "filename": "nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 193118695,
+      "url": "https://files.pythonhosted.org/packages/1f/13/ee4e00f30e676b66ae65b4f08cb5bcbb8392c03f54f2d5413ea99a5d1c80/nvidia_cufft_cu12-11.3.3.83-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 281139226
+    },
+    "1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc": {
+      "sha256": "1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc",
+      "filename": "nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 1197834,
+      "url": "https://files.pythonhosted.org/packages/bb/fe/1bcba1dfbfb8d01be8d93f07bfc502c93fa23afa6fd5ab3fc7c1df71038a/nvidia_cufile_cu12-1.13.1.3-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 3347697
+    },
+    "b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9": {
+      "sha256": "b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9",
+      "filename": "nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl",
+      "bytes": 63619976,
+      "url": "https://files.pythonhosted.org/packages/fb/aa/6584b56dc84ebe9cf93226a5cde4d99080c8e90ab40f0c27bda7a0f29aa1/nvidia_curand_cu12-10.3.9.90-py3-none-manylinux_2_27_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 138917483
+    },
+    "4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450": {
+      "sha256": "4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450",
+      "filename": "nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl",
+      "bytes": 267506905,
+      "url": "https://files.pythonhosted.org/packages/85/48/9a13d2975803e8cf2777d5ed57b87a0b6ca2cc795f9a4f59796a910bfb80/nvidia_cusolver_cu12-11.7.3.90-py3-none-manylinux_2_27_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 405119140
+    },
+    "1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b": {
+      "sha256": "1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b",
+      "filename": "nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 288216466,
+      "url": "https://files.pythonhosted.org/packages/c2/f5/e1854cb2f2bcd4280c44736c93550cc300ff4b8c95ebe370d0aa7d2b473d/nvidia_cusparse_cu12-12.5.8.93-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 388351850
+    },
+    "f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623": {
+      "sha256": "f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623",
+      "filename": "nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl",
+      "bytes": 287193691,
+      "url": "https://files.pythonhosted.org/packages/56/79/12978b96bd44274fe38b5dde5cfb660b1d114f70a65ef962bcbbed99b549/nvidia_cusparselt_cu12-0.7.1-py3-none-manylinux2014_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 452024081
+    },
+    "ad730cf15cb5d25fe849c6e6ca9eb5b76db16a80f13f425ac68d8e2e55624457": {
+      "sha256": "ad730cf15cb5d25fe849c6e6ca9eb5b76db16a80f13f425ac68d8e2e55624457",
+      "filename": "nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 322348229,
+      "url": "https://files.pythonhosted.org/packages/6e/89/f7a07dc961b60645dbbf42e80f2bc85ade7feb9a491b11a1e973aa00071f/nvidia_nccl_cu12-2.27.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 429655582
+    },
+    "81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88": {
+      "sha256": "81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88",
+      "filename": "nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "bytes": 39254836,
+      "url": "https://files.pythonhosted.org/packages/f6/74/86a07f1d0f42998ca31312f998bd3b9a7eff7f52378f4f270c8679c77fb9/nvidia_nvjitlink_cu12-12.8.93-py3-none-manylinux2010_x86_64.manylinux_2_12_x86_64.whl",
+      "kind": "wheel",
+      "license": "NVIDIA Proprietary Software",
+      "expandedBytes": 94180576
+    },
+    "042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd": {
+      "sha256": "042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd",
+      "filename": "nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 139103095,
+      "url": "https://files.pythonhosted.org/packages/b5/09/6ea3ea725f82e1e76684f0708bbedd871fc96da89945adeba65c3835a64c/nvidia_nvshmem_cu12-3.4.5-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "See distribution METADATA and license files",
+      "expandedBytes": 204181279
+    },
+    "5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f": {
+      "sha256": "5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f",
+      "filename": "nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 89954,
+      "url": "https://files.pythonhosted.org/packages/a2/eb/86626c1bbc2edb86323022371c39aa48df6fd8b0a1647bc274577f72e90b/nvidia_nvtx_cu12-12.8.90-py3-none-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "Apache 2.0",
+      "expandedBytes": 367247
+    },
+    "628e89bd5110ced7debee2a57c69959725b7fbc64eab81a39dd70e46c7e28ba5": {
+      "sha256": "628e89bd5110ced7debee2a57c69959725b7fbc64eab81a39dd70e46c7e28ba5",
+      "filename": "torch-2.10.0+cu128-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "bytes": 916856347,
+      "url": "https://download-r2.pytorch.org/whl/cu128/torch-2.10.0%2Bcu128-cp312-cp312-manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "BSD-3-Clause",
+      "expandedBytes": 1761597233
+    },
+    "74caf5e34b66d9f3a429af689c1c7128daba1d8208df60e81106b115c00d6fca": {
+      "sha256": "74caf5e34b66d9f3a429af689c1c7128daba1d8208df60e81106b115c00d6fca",
+      "filename": "triton-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "bytes": 188266850,
+      "url": "https://files.pythonhosted.org/packages/ab/a8/cdf8b3e4c98132f965f88c2313a4b493266832ad47fb52f23d14d4f86bb5/triton-3.6.0-cp312-cp312-manylinux_2_27_x86_64.manylinux_2_28_x86_64.whl",
+      "kind": "wheel",
+      "license": "See distribution METADATA and license files",
+      "expandedBytes": 669050695
+    },
+    "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8": {
+      "sha256": "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8",
+      "filename": "u2netp.onnx",
+      "bytes": 4574861,
+      "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2netp.onnx",
+      "kind": "model",
+      "license": "Apache-2.0"
+    },
+    "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491": {
+      "sha256": "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491",
+      "filename": "u2net.onnx",
+      "bytes": 175997641,
+      "url": "https://github.com/danielgatis/rembg/releases/download/v0.0.0/u2net.onnx",
+      "kind": "model",
+      "license": "Apache-2.0"
+    },
+    "84ed466ffcc5c1f8d08409bc34a23bb364ab2c15e402cb12d4335a42be0e0951": {
+      "sha256": "84ed466ffcc5c1f8d08409bc34a23bb364ab2c15e402cb12d4335a42be0e0951",
+      "filename": "efficientsam_ti_encoder.onnx",
+      "bytes": 24799761,
+      "url": "https://huggingface.co/yunyangx/EfficientSAM/resolve/1cf49585c39567bfc49e991ab8eb31f491ad4877/efficientsam_ti_encoder.onnx",
+      "kind": "model",
+      "license": "Apache-2.0"
+    },
+    "a62f8fa5ea080447c0689418d69e58f1e83e0b7adf9c142e2bd9bcc8045c0b11": {
+      "sha256": "a62f8fa5ea080447c0689418d69e58f1e83e0b7adf9c142e2bd9bcc8045c0b11",
+      "filename": "efficientsam_ti_decoder.onnx",
+      "bytes": 16565728,
+      "url": "https://huggingface.co/yunyangx/EfficientSAM/resolve/1cf49585c39567bfc49e991ab8eb31f491ad4877/efficientsam_ti_decoder.onnx",
+      "kind": "model",
+      "license": "Apache-2.0"
+    },
+    "80f91748ac64a5f0a72d7b133fc6a2ff5291a35464ea341960b8c23ea59affa4": {
+      "sha256": "80f91748ac64a5f0a72d7b133fc6a2ff5291a35464ea341960b8c23ea59affa4",
+      "filename": "README.md",
+      "bytes": 4861,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/README.md",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "308a792b15086bf89807b88729ef80d33d5b8264b14a96b57d2c92b5ab7f5a53": {
+      "sha256": "308a792b15086bf89807b88729ef80d33d5b8264b14a96b57d2c92b5ab7f5a53",
+      "filename": "model_index.json",
+      "bytes": 690,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/model_index.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "a8e9a8517e8739938ea85819012bad195d41ccb3e11e2501cf196da64099b1f6": {
+      "sha256": "a8e9a8517e8739938ea85819012bad195d41ccb3e11e2501cf196da64099b1f6",
+      "filename": "scheduler_config.json",
+      "bytes": 479,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/scheduler/scheduler_config.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "46ae51fa8bde7817168d97faa0556cc0ac42ec0a7a53248bab4a52f8f5866f13": {
+      "sha256": "46ae51fa8bde7817168d97faa0556cc0ac42ec0a7a53248bab4a52f8f5866f13",
+      "filename": "config.json",
+      "bytes": 746,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/text_encoder/config.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "fc83cf401d930147807e7c44021c164bcc5508c9d4cc0ff35f4e354685ca9cd0": {
+      "sha256": "fc83cf401d930147807e7c44021c164bcc5508c9d4cc0ff35f4e354685ca9cd0",
+      "filename": "model.fp16.safetensors",
+      "bytes": 246144867,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/text_encoder/model.fp16.safetensors",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "fbcd3aad07a99e28d4c51550bd798903922083527ec69ad026f25699518af82d": {
+      "sha256": "fbcd3aad07a99e28d4c51550bd798903922083527ec69ad026f25699518af82d",
+      "filename": "config.json",
+      "bytes": 758,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/text_encoder_2/config.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "a8622bd41f8d359df484fdf9de091edb9337a2fd747f0a5c9c320a62e24d1fd3": {
+      "sha256": "a8622bd41f8d359df484fdf9de091edb9337a2fd747f0a5c9c320a62e24d1fd3",
+      "filename": "model.fp16.safetensors",
+      "bytes": 1389382884,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/text_encoder_2/model.fp16.safetensors",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a": {
+      "sha256": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+      "filename": "merges.txt",
+      "bytes": 524619,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/tokenizer/merges.txt",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac": {
+      "sha256": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+      "filename": "special_tokens_map.json",
+      "bytes": 472,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/tokenizer/special_tokens_map.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "19d7b034cb0cc3ce9766c2231373ab8aa8991fc72e2c8f76558bfaae3de0d563": {
+      "sha256": "19d7b034cb0cc3ce9766c2231373ab8aa8991fc72e2c8f76558bfaae3de0d563",
+      "filename": "tokenizer_config.json",
+      "bytes": 737,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/tokenizer/tokenizer_config.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349": {
+      "sha256": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+      "filename": "vocab.json",
+      "bytes": 1059962,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/tokenizer/vocab.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6": {
+      "sha256": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+      "filename": "special_tokens_map.json",
+      "bytes": 460,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/tokenizer_2/special_tokens_map.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "c9d23941f76a41cbd50eda9290f57be7828f0a7a677939e9ef181f7e12bd1bdf": {
+      "sha256": "c9d23941f76a41cbd50eda9290f57be7828f0a7a677939e9ef181f7e12bd1bdf",
+      "filename": "tokenizer_config.json",
+      "bytes": 725,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/tokenizer_2/tokenizer_config.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "aaedf41fbcb29d2d8725241413b8525bd97005dea3f86d8056199469032537e9": {
+      "sha256": "aaedf41fbcb29d2d8725241413b8525bd97005dea3f86d8056199469032537e9",
+      "filename": "config.json",
+      "bytes": 1932,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/unet/config.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "6470840731e98cc16713ddf3ac7ee458c9fdbcb881a98c6727cd4a938f227d3f": {
+      "sha256": "6470840731e98cc16713ddf3ac7ee458c9fdbcb881a98c6727cd4a938f227d3f",
+      "filename": "diffusion_pytorch_model.fp16.safetensors",
+      "bytes": 5135178560,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/unet/diffusion_pytorch_model.fp16.safetensors",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "b822341e6125efedebffb8e3f35e7288aab06bb4c49853d50a16964bf104a727": {
+      "sha256": "b822341e6125efedebffb8e3f35e7288aab06bb4c49853d50a16964bf104a727",
+      "filename": "config.json",
+      "bytes": 659,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/vae/config.json",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "4ad62825e5c8b31eefb77355ba6693785619bf7d669d9b1a6fd9f19dec6d65b3": {
+      "sha256": "4ad62825e5c8b31eefb77355ba6693785619bf7d669d9b1a6fd9f19dec6d65b3",
+      "filename": "diffusion_pytorch_model.fp16.safetensors",
+      "bytes": 167335338,
+      "url": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/resolve/115134f363124c53c7d878647567d04daf26e41e/vae/diffusion_pytorch_model.fp16.safetensors",
+      "kind": "model",
+      "license": "OpenRAIL++"
+    },
+    "19b6998b569b53ac1fc2158a8a3202c8699a9a4605b47075715d9c96be7fb6d0": {
+      "sha256": "19b6998b569b53ac1fc2158a8a3202c8699a9a4605b47075715d9c96be7fb6d0",
+      "filename": "LICENSE.md",
+      "bytes": 14109,
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/462165984030d82259a11f4367a4eed129e94a7b/LICENSE.md",
+      "kind": "license",
+      "license": "OpenRAIL++"
+    },
+    "0525a3d2c0b46c611e2130b5fdebc94cf404845d8fa64d2f3a3b679572a5bd22": {
+      "sha256": "0525a3d2c0b46c611e2130b5fdebc94cf404845d8fa64d2f3a3b679572a5bd22",
+      "filename": "opencv_python_headless-4.13.0.92-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "bytes": 56016764,
+      "url": "https://files.pythonhosted.org/packages/92/ce/bd17ff5772938267fd49716e94ca24f616ff4cb1ff4c6be13085108037be/opencv_python_headless-4.13.0.92-cp37-abi3-manylinux2014_x86_64.manylinux_2_17_x86_64.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0 AND MIT; bundled third-party notices retained",
+      "expandedBytes": 155708397
+    },
+    "77a82fe35ddcec0f62c15f2ba8a12ecc2ed4207c17b0902c7a3151ae29f37fb6": {
+      "sha256": "77a82fe35ddcec0f62c15f2ba8a12ecc2ed4207c17b0902c7a3151ae29f37fb6",
+      "filename": "opencv_python_headless-4.13.0.92-cp37-abi3-win_amd64.whl",
+      "bytes": 40070414,
+      "url": "https://files.pythonhosted.org/packages/4a/90/b338326131ccb2aaa3c2c85d00f41822c0050139a4bfe723cfd95455bd2d/opencv_python_headless-4.13.0.92-cp37-abi3-win_amd64.whl",
+      "kind": "wheel",
+      "license": "Apache-2.0 AND MIT; bundled third-party notices retained",
+      "expandedBytes": 113745942
+    },
+    "6f1f3530a1a2324b19752018ce756088b07973cda8d7d890034ace5c8a48c40b": {
+      "sha256": "6f1f3530a1a2324b19752018ce756088b07973cda8d7d890034ace5c8a48c40b",
+      "filename": "migan_pipeline_v2.onnx",
+      "bytes": 28079181,
+      "url": "https://huggingface.co/andraniksargsyan/migan/resolve/406830d0fa60666da0071c342ad2fbc8f30c5c64/migan_pipeline_v2.onnx",
+      "kind": "model",
+      "license": "MIT, explicit upstream model weights grant"
+    },
+    "13348eaaebc0b07b0faf3a92db04e0858737713a917d064b599c87cac05b571f": {
+      "sha256": "13348eaaebc0b07b0faf3a92db04e0858737713a917d064b599c87cac05b571f",
+      "filename": "migan-LICENSE",
+      "bytes": 1082,
+      "url": "https://huggingface.co/andraniksargsyan/migan/resolve/406830d0fa60666da0071c342ad2fbc8f30c5c64/LICENSE",
+      "kind": "license",
+      "license": "MIT"
+    },
+    "64419d21ad45b70337dc501f2aa1a1c18eb1115be6378bc05fca048937d4498b": {
+      "sha256": "64419d21ad45b70337dc501f2aa1a1c18eb1115be6378bc05fca048937d4498b",
+      "filename": "migan-SOURCE.md",
+      "bytes": 12659,
+      "url": "https://raw.githubusercontent.com/Picsart-AI-Research/MI-GAN/2b793c5ece43f4253e32d4afc257120a5deed6f5/README.md",
+      "kind": "license",
+      "license": "MIT source provenance and model documentation"
+    },
+    "83e012a805b84c7ca28e5646747c90a243c65c8ba4f070e2d7ddc9d74661e139": {
+      "sha256": "83e012a805b84c7ca28e5646747c90a243c65c8ba4f070e2d7ddc9d74661e139",
+      "filename": "sdxl-base-unet-diffusion_pytorch_model.fp16.safetensors",
+      "bytes": 5135149760,
+      "kind": "model",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/462165984030d82259a11f4367a4eed129e94a7b/unet/diffusion_pytorch_model.fp16.safetensors",
+      "license": "CreativeML Open RAIL++-M"
+    },
+    "30ebc70750223e59006f7f2b4e1e6c102570aa19a9c4ae3e1fbe7591332dbae6": {
+      "sha256": "30ebc70750223e59006f7f2b4e1e6c102570aa19a9c4ae3e1fbe7591332dbae6",
+      "filename": "sdxl-base-unet-config.json",
+      "bytes": 1680,
+      "kind": "model",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/462165984030d82259a11f4367a4eed129e94a7b/unet/config.json",
+      "license": "CreativeML Open RAIL++-M"
+    },
+    "6d7b93508390ab91ac5bfbe4aeb4dc2d83f7bb1b05fb069d714b5b0c75f70d44": {
+      "sha256": "6d7b93508390ab91ac5bfbe4aeb4dc2d83f7bb1b05fb069d714b5b0c75f70d44",
+      "filename": "sdxl-base-model_index.json",
+      "bytes": 609,
+      "kind": "model",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/462165984030d82259a11f4367a4eed129e94a7b/model_index.json",
+      "license": "CreativeML Open RAIL++-M"
+    },
+    "af3e45a949aff8b8341ab8b811429ec03fee857a700a1d9477363e4fff9666e2": {
+      "sha256": "af3e45a949aff8b8341ab8b811429ec03fee857a700a1d9477363e4fff9666e2",
+      "filename": "sdxl-base-scheduler-scheduler_config.json",
+      "bytes": 479,
+      "kind": "model",
+      "url": "https://huggingface.co/stabilityai/stable-diffusion-xl-base-1.0/resolve/462165984030d82259a11f4367a4eed129e94a7b/scheduler/scheduler_config.json",
+      "license": "CreativeML Open RAIL++-M"
+    },
+    "94eb17068a45df06a9e6ab0bcbbd5c381e03f09320da46839c1ed0cee733af31": {
+      "sha256": "94eb17068a45df06a9e6ab0bcbbd5c381e03f09320da46839c1ed0cee733af31",
+      "filename": "ColoringBookRedmond-ColoringBook-ColoringBookAF.safetensors",
+      "bytes": 170540036,
+      "kind": "model",
+      "url": "https://huggingface.co/artificialguybr/ColoringBookRedmond-V2/resolve/0e67e0de2b603db085e525e7f6194b24dc60033d/ColoringBookRedmond-ColoringBook-ColoringBookAF.safetensors",
+      "license": "CreativeML OpenRAIL-M"
+    },
+    "20bda38e38459b551cbbb1222c0563363750290df35c360a84bc3bb23648eb06": {
+      "sha256": "20bda38e38459b551cbbb1222c0563363750290df35c360a84bc3bb23648eb06",
+      "filename": "MODEL-CARD.md",
+      "bytes": 1951,
+      "kind": "model",
+      "url": "https://huggingface.co/artificialguybr/ColoringBookRedmond-V2/raw/0e67e0de2b603db085e525e7f6194b24dc60033d/README.md",
+      "license": "CreativeML OpenRAIL-M"
+    },
+    "a5c6d8dfa72fa840f3edd40cee982e4fa34e345ba971ede3663036ded45d3f67": {
+      "sha256": "a5c6d8dfa72fa840f3edd40cee982e4fa34e345ba971ede3663036ded45d3f67",
+      "filename": "LICENSE-CreativeML-OpenRAIL-M.html",
+      "bytes": 326878,
+      "kind": "model",
+      "url": "https://compvis-stable-diffusion-license.static.hf.space/index.html",
+      "license": "CreativeML OpenRAIL-M"
+    }
+  },
+  "runtimes": {
+    "win32-x64-onnx": {
+      "platform": "win32",
+      "arch": "x64",
+      "python": "bbc902d4d187ac4914915bf538196a064b49109a33a104965b5164ced5b80a1e",
+      "executable": "python.exe",
+      "wheels": [
+        "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+        "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+        "a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a",
+        "535b29475ca42b593c45fbb2152fbf1cdf3f287315bf650e6a724a0a1d065cdb",
+        "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "a2b55dd6b2a4c4b7d87ffa56bdb33fdc5fdb9a462173861a7bc097f17d91cb09",
+        "a300819d441e078a5608c0d3c709796bb548136058fda017ae51d425b44fd353",
+        "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"
+      ],
+      "packages": {
+        "flatbuffers": "25.12.19",
+        "mpmath": "1.3.0",
+        "numpy": "2.5.4",
+        "onnxruntime": "1.24.4",
+        "packaging": "26.3",
+        "pillow": "12.3.0",
+        "protobuf": "7.36.2",
+        "sympy": "1.14.0"
+      },
+      "probe": "onnx"
+    },
+    "win32-x64-sdxl-cpu": {
+      "platform": "win32",
+      "arch": "x64",
+      "python": "bbc902d4d187ac4914915bf538196a064b49109a33a104965b5164ced5b80a1e",
+      "executable": "python.exe",
+      "wheels": [
+        "a628fa6beb069b8e549460fc449135d5bd8d73e7a11fd09f0bc9fc4ace7f06f1",
+        "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+        "780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc",
+        "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+        "d50d5e74fdd6dcf55e5c1d304bc52cc7c2659abd1752740d736d7b54078b4db5",
+        "2ff5690882e8cdb00ef31fb3d01a3094c29f30985426c59495afb1733f3b7238",
+        "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+        "7bcc9ad17d5b3f07b57c78e79d527102d08313caa278a641993acddcb894548d",
+        "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+        "bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0",
+        "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+        "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7",
+        "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+        "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+        "a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a",
+        "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "a2b55dd6b2a4c4b7d87ffa56bdb33fdc5fdb9a462173861a7bc097f17d91cb09",
+        "eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988",
+        "5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b",
+        "fdd88ed5e20b1bcdd234421e454962c971aa44b653bdb7f1ea9ef683e90fb649",
+        "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+        "096ec1a98435df7beb08853bb5aa9081a84f23d0adc67ed1a0a10550f608373f",
+        "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
+        "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+        "65fd6e3fb11ca1e78a6a93602490f134d1fdeb13bcef99389d5102ea318ed138",
+        "21cb5436978ef47c823b7a813ff0f8c2892e266cfe0f1d944879b5fba81bf4e1",
+        "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+        "b10d05da8fa67dc41644dbbf9bc45a44cb86ae33da6f9295f5fbf5b7890bd267",
+        "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+        "8979f52d874162f485ff2981e3891f3a3317b7a3dd43ff1e1775b9304f307a9c",
+        "77a82fe35ddcec0f62c15f2ba8a12ecc2ed4207c17b0902c7a3151ae29f37fb6"
+      ],
+      "packages": {
+        "accelerate": "1.11.0",
+        "certifi": "2026.7.22",
+        "charset-normalizer": "3.5.2",
+        "colorama": "0.4.6",
+        "diffusers": "0.35.2",
+        "filelock": "4.2.0",
+        "fsspec": "2026.9.0",
+        "huggingface-hub": "0.36.0",
+        "idna": "3.20",
+        "importlib-metadata": "9.0.1",
+        "jinja2": "3.1.6",
+        "markupsafe": "3.0.4",
+        "mpmath": "1.3.0",
+        "networkx": "3.7",
+        "numpy": "2.5.4",
+        "packaging": "26.3",
+        "pillow": "12.3.0",
+        "psutil": "7.2.2",
+        "pyyaml": "6.0.3",
+        "regex": "2026.9.29",
+        "requests": "2.34.2",
+        "safetensors": "0.8.0",
+        "setuptools": "84.0.0",
+        "sympy": "1.14.0",
+        "tokenizers": "0.22.1",
+        "torch": "2.10.0+cpu",
+        "tqdm": "4.70.1",
+        "transformers": "4.57.1",
+        "typing-extensions": "4.16.0",
+        "urllib3": "2.8.0",
+        "zipp": "4.1.1",
+        "opencv-python-headless": "4.13.0.92"
+      },
+      "probe": "sdxl"
+    },
+    "win32-x64-sdxl-cuda": {
+      "platform": "win32",
+      "arch": "x64",
+      "python": "bbc902d4d187ac4914915bf538196a064b49109a33a104965b5164ced5b80a1e",
+      "executable": "python.exe",
+      "wheels": [
+        "a628fa6beb069b8e549460fc449135d5bd8d73e7a11fd09f0bc9fc4ace7f06f1",
+        "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+        "780fbe7cab297b81dad9fb8dc5eb003c0468ffb0d9e5f65068c53a34661a96bc",
+        "4f1d9991f5acc0ca119f9d443620b77f9d6b33703e51011c16baf57afb285fc6",
+        "d50d5e74fdd6dcf55e5c1d304bc52cc7c2659abd1752740d736d7b54078b4db5",
+        "2ff5690882e8cdb00ef31fb3d01a3094c29f30985426c59495afb1733f3b7238",
+        "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+        "7bcc9ad17d5b3f07b57c78e79d527102d08313caa278a641993acddcb894548d",
+        "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+        "bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0",
+        "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+        "11935df9bf455ed0c04eb87bcd720f02b1fe5e02128a9430f23aed6f93336fc7",
+        "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+        "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+        "a7b1b6353e36a7e50de2973a38d705c88ee93adcf120673cee7f45a4a3fa223a",
+        "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "a2b55dd6b2a4c4b7d87ffa56bdb33fdc5fdb9a462173861a7bc097f17d91cb09",
+        "eb7e81434c8d223ec4a219b5fc1c47d0417b12be7ea866e24fb5ad6e84b3d988",
+        "5fcd34e47f6e0b794d17de1b4ff496c00986e1c83f7ab2fb8fcfe9616ff7477b",
+        "fdd88ed5e20b1bcdd234421e454962c971aa44b653bdb7f1ea9ef683e90fb649",
+        "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+        "096ec1a98435df7beb08853bb5aa9081a84f23d0adc67ed1a0a10550f608373f",
+        "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
+        "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+        "65fd6e3fb11ca1e78a6a93602490f134d1fdeb13bcef99389d5102ea318ed138",
+        "fbde8f6a9ec8c76979a0d14df21c10b9e5cab6f0d106a73ca73e2179bc597cae",
+        "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+        "b10d05da8fa67dc41644dbbf9bc45a44cb86ae33da6f9295f5fbf5b7890bd267",
+        "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+        "8979f52d874162f485ff2981e3891f3a3317b7a3dd43ff1e1775b9304f307a9c",
+        "77a82fe35ddcec0f62c15f2ba8a12ecc2ed4207c17b0902c7a3151ae29f37fb6"
+      ],
+      "packages": {
+        "accelerate": "1.11.0",
+        "certifi": "2026.7.22",
+        "charset-normalizer": "3.5.2",
+        "colorama": "0.4.6",
+        "diffusers": "0.35.2",
+        "filelock": "4.2.0",
+        "fsspec": "2026.9.0",
+        "huggingface-hub": "0.36.0",
+        "idna": "3.20",
+        "importlib-metadata": "9.0.1",
+        "jinja2": "3.1.6",
+        "markupsafe": "3.0.4",
+        "mpmath": "1.3.0",
+        "networkx": "3.7",
+        "numpy": "2.5.4",
+        "packaging": "26.3",
+        "pillow": "12.3.0",
+        "psutil": "7.2.2",
+        "pyyaml": "6.0.3",
+        "regex": "2026.9.29",
+        "requests": "2.34.2",
+        "safetensors": "0.8.0",
+        "setuptools": "84.0.0",
+        "sympy": "1.14.0",
+        "tokenizers": "0.22.1",
+        "torch": "2.10.0+cu128",
+        "tqdm": "4.70.1",
+        "transformers": "4.57.1",
+        "typing-extensions": "4.16.0",
+        "urllib3": "2.8.0",
+        "zipp": "4.1.1",
+        "opencv-python-headless": "4.13.0.92"
+      },
+      "probe": "sdxl"
+    },
+    "linux-x64-onnx": {
+      "platform": "linux",
+      "arch": "x64",
+      "python": "5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560",
+      "executable": "bin/python3",
+      "wheels": [
+        "7634f50c427838bb021c2d66a3d1168e9d199b0607e6329399f04846d42e20b4",
+        "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+        "fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a",
+        "0d640eb9f3782689b55cfa715094474cd5662f2f137be6a6f847a594b6e9705c",
+        "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91",
+        "89f23aa53c24553a2416fd4fd1ec06f74fa42b14b546d8883128813f775bbfd2",
+        "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5"
+      ],
+      "packages": {
+        "flatbuffers": "25.12.19",
+        "mpmath": "1.3.0",
+        "numpy": "2.5.4",
+        "onnxruntime": "1.24.4",
+        "packaging": "26.3",
+        "pillow": "12.3.0",
+        "protobuf": "7.36.2",
+        "sympy": "1.14.0"
+      },
+      "probe": "onnx"
+    },
+    "linux-x64-sdxl-cpu": {
+      "platform": "linux",
+      "arch": "x64",
+      "python": "5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560",
+      "executable": "bin/python3",
+      "wheels": [
+        "a628fa6beb069b8e549460fc449135d5bd8d73e7a11fd09f0bc9fc4ace7f06f1",
+        "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+        "3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649",
+        "d50d5e74fdd6dcf55e5c1d304bc52cc7c2659abd1752740d736d7b54078b4db5",
+        "2ff5690882e8cdb00ef31fb3d01a3094c29f30985426c59495afb1733f3b7238",
+        "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+        "2814a6e999d13464c4d679b788cc5d784eb5a4edfc638a31f10e9a11ab531ef8",
+        "7bcc9ad17d5b3f07b57c78e79d527102d08313caa278a641993acddcb894548d",
+        "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+        "bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0",
+        "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+        "8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581",
+        "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+        "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+        "fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a",
+        "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91",
+        "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9",
+        "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+        "39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0",
+        "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+        "fd6f3f93c9a0a7cc2788ee63fb763353d4bd2e89b0751bc78fcf7dda00bea774",
+        "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
+        "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+        "e2ef6063d7a84994129732b47e7915e8710f27f99f3a3260b8a38fc7ccd083f4",
+        "ee40b8a4b4b2cf0670c6fd4f35a7ef23871af956fecb238fbf5da15a72650b1d",
+        "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+        "b10d05da8fa67dc41644dbbf9bc45a44cb86ae33da6f9295f5fbf5b7890bd267",
+        "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+        "8979f52d874162f485ff2981e3891f3a3317b7a3dd43ff1e1775b9304f307a9c",
+        "0525a3d2c0b46c611e2130b5fdebc94cf404845d8fa64d2f3a3b679572a5bd22"
+      ],
+      "packages": {
+        "accelerate": "1.11.0",
+        "certifi": "2026.7.22",
+        "charset-normalizer": "3.5.2",
+        "diffusers": "0.35.2",
+        "filelock": "4.2.0",
+        "fsspec": "2026.9.0",
+        "hf-xet": "1.7.0",
+        "huggingface-hub": "0.36.0",
+        "idna": "3.20",
+        "importlib-metadata": "9.0.1",
+        "jinja2": "3.1.6",
+        "markupsafe": "3.0.4",
+        "mpmath": "1.3.0",
+        "networkx": "3.7",
+        "numpy": "2.5.4",
+        "packaging": "26.3",
+        "pillow": "12.3.0",
+        "psutil": "7.2.2",
+        "pyyaml": "6.0.3",
+        "regex": "2026.9.29",
+        "requests": "2.34.2",
+        "safetensors": "0.8.0",
+        "setuptools": "84.0.0",
+        "sympy": "1.14.0",
+        "tokenizers": "0.22.1",
+        "torch": "2.10.0+cpu",
+        "tqdm": "4.70.1",
+        "transformers": "4.57.1",
+        "typing-extensions": "4.16.0",
+        "urllib3": "2.8.0",
+        "zipp": "4.1.1",
+        "opencv-python-headless": "4.13.0.92"
+      },
+      "probe": "sdxl"
+    },
+    "linux-x64-sdxl-cuda": {
+      "platform": "linux",
+      "arch": "x64",
+      "python": "5d546fc004fc2435fa142eb8f42ed8de5eb4725963dc22f7e6671014a80eb560",
+      "executable": "bin/python3",
+      "wheels": [
+        "a628fa6beb069b8e549460fc449135d5bd8d73e7a11fd09f0bc9fc4ace7f06f1",
+        "62f22742b58a1a33014a2b6b706588a8d7e2a88ae7bd1a6ebe8c992928483775",
+        "3d31298449090ab8d47b7b1b2a555ff73cac7ed438a08b7ac160980c7ebed649",
+        "fda147a344e8eaeca0c6ff113d2851ffca8f7dfc0a6c932374ee5c47caa649c8",
+        "e29e59829c297a7a5233bd9cc71094fc5bddbd076951482670178f9eade39b1f",
+        "d50d5e74fdd6dcf55e5c1d304bc52cc7c2659abd1752740d736d7b54078b4db5",
+        "2ff5690882e8cdb00ef31fb3d01a3094c29f30985426c59495afb1733f3b7238",
+        "8dd6e646e99ea382bd85f97a45e6b526a442d79423a7dc673f1e2756d05fcb5f",
+        "2814a6e999d13464c4d679b788cc5d784eb5a4edfc638a31f10e9a11ab531ef8",
+        "7bcc9ad17d5b3f07b57c78e79d527102d08313caa278a641993acddcb894548d",
+        "ab7ae7122974553370f0bdb919e1a960b2cd1bc1ef0276416d896db81c14582c",
+        "bba5600596a7e21f3eef53281cf28d6a5195634d2f2b78ff9501a3272c6eaab0",
+        "85ece4451f492d0c13c5dd7c13a64681a86afae63a5f347908daf103ce6d2f67",
+        "8e124f974786f831d6043728e38296969d3579db8896fe004682f5758e613581",
+        "a0b2b9fe80bbcd81a6647ff13108738cfb482d481d826cc0e02f5b35e5c88d2c",
+        "e3fd2c13a7814cee3746340d8d7f8598a67f16a58bf47fb7f8793fab6efca1b0",
+        "fbde6962867ee75b48b0ee29b2b9372ec5d617799dbaf38e82dc0596f2f7738a",
+        "8ac4e771d5a348c551b2a426eda6193c19aa630236b418086020df5ba9667142",
+        "ea0cb07ebda26bb9b29ba82cda34849e73c166c18162d3913575b0c9db9a6182",
+        "a7756528852ef889772a84c6cd89d41dfa74667e24cca16bb31f8f061e3e9994",
+        "adade8dcbd0edf427b7204d480d6066d33902cab2a4707dcfc48a2d0fd44ab90",
+        "949452be657fa16687d0930933f032835951ef0892b37d2d53824d1a84dc97a8",
+        "4d2dd21ec0b88cf61b62e6b43564355e5222e4a3fb394cac0db101f2dd0d4f74",
+        "1d069003be650e131b21c932ec3d8969c1715379251f8d23a1860554b1cb24fc",
+        "b32331d4f4df5d6eefa0554c565b626c7216f87a06a4f56fab27c3b68a830ec9",
+        "4376c11ad263152bd50ea295c05370360776f8c3427b30991df774f9fb26c450",
+        "1ec05d76bbbd8b61b06a80e1eaf8cf4959c3d4ce8e711b65ebd0443bb0ebb13b",
+        "f1bb701d6b930d5a7cea44c19ceb973311500847f81b634d802b7b539dc55623",
+        "ad730cf15cb5d25fe849c6e6ca9eb5b76db16a80f13f425ac68d8e2e55624457",
+        "81ff63371a7ebd6e6451970684f916be2eab07321b73c9d244dc2b4da7f73b88",
+        "042f2500f24c021db8a06c5eec2539027d57460e1c1a762055a6554f72c369bd",
+        "5b17e2001cc0d751a5bc2c6ec6d26ad95913324a4adb86788c944f8ce9ba441f",
+        "d7193f7c8e4e93f444fde0262bf90af30e16fa0ad0ad44cb553c87339b23cd1c",
+        "78cb2c6865a35ab8ff8b75fd122f6033b92a62c82801110e48ddd6c936a45d91",
+        "076a2d2f923fd4821644f5ba89f059523da90dc9014e85f8e45a5774ca5bc6f9",
+        "ba1cc08a7ccde2d2ec775841541641e4548226580ab850948cbfda66a1befcdc",
+        "39ab5894d971f9ac68baa6eca5c50387db579cfcacf36ae8df3feceb1815e6d0",
+        "2a0d60c172f83ac6ab31e4554906c0f3b3588d37b5cb939b1c061f4907e278e0",
+        "fd6f3f93c9a0a7cc2788ee63fb763353d4bd2e89b0751bc78fcf7dda00bea774",
+        "51a52592b3b99e102b609654876bd65f19f999935166d1352678931132b0c670",
+        "e091cc3e99d2141a0ba2847328f5479b05d94a6635cb96148ccb3f34671bd8f5",
+        "e2ef6063d7a84994129732b47e7915e8710f27f99f3a3260b8a38fc7ccd083f4",
+        "628e89bd5110ced7debee2a57c69959725b7fbc64eab81a39dd70e46c7e28ba5",
+        "c293e525e6fef9c20e8728fd4612df02a0aa31bb5fe91ecd93e123b1b7bffa73",
+        "b10d05da8fa67dc41644dbbf9bc45a44cb86ae33da6f9295f5fbf5b7890bd267",
+        "74caf5e34b66d9f3a429af689c1c7128daba1d8208df60e81106b115c00d6fca",
+        "481caa481374e813c1b176ada14e97f1f67a4539ce9cfeb3f350d78d6370c2e8",
+        "0cf3cae568d36aa9576b28dfb35f11328f1cb974ca7647d9475ebb86c75ac6e3",
+        "8979f52d874162f485ff2981e3891f3a3317b7a3dd43ff1e1775b9304f307a9c",
+        "0525a3d2c0b46c611e2130b5fdebc94cf404845d8fa64d2f3a3b679572a5bd22"
+      ],
+      "packages": {
+        "accelerate": "1.11.0",
+        "certifi": "2026.7.22",
+        "charset-normalizer": "3.5.2",
+        "cuda-bindings": "12.9.4",
+        "cuda-pathfinder": "1.8.3",
+        "diffusers": "0.35.2",
+        "filelock": "4.2.0",
+        "fsspec": "2026.9.0",
+        "hf-xet": "1.7.0",
+        "huggingface-hub": "0.36.0",
+        "idna": "3.20",
+        "importlib-metadata": "9.0.1",
+        "jinja2": "3.1.6",
+        "markupsafe": "3.0.4",
+        "mpmath": "1.3.0",
+        "networkx": "3.7",
+        "numpy": "2.5.4",
+        "nvidia-cublas-cu12": "12.8.4.1",
+        "nvidia-cuda-cupti-cu12": "12.8.90",
+        "nvidia-cuda-nvrtc-cu12": "12.8.93",
+        "nvidia-cuda-runtime-cu12": "12.8.90",
+        "nvidia-cudnn-cu12": "9.10.2.21",
+        "nvidia-cufft-cu12": "11.3.3.83",
+        "nvidia-cufile-cu12": "1.13.1.3",
+        "nvidia-curand-cu12": "10.3.9.90",
+        "nvidia-cusolver-cu12": "11.7.3.90",
+        "nvidia-cusparse-cu12": "12.5.8.93",
+        "nvidia-cusparselt-cu12": "0.7.1",
+        "nvidia-nccl-cu12": "2.27.5",
+        "nvidia-nvjitlink-cu12": "12.8.93",
+        "nvidia-nvshmem-cu12": "3.4.5",
+        "nvidia-nvtx-cu12": "12.8.90",
+        "packaging": "26.3",
+        "pillow": "12.3.0",
+        "psutil": "7.2.2",
+        "pyyaml": "6.0.3",
+        "regex": "2026.9.29",
+        "requests": "2.34.2",
+        "safetensors": "0.8.0",
+        "setuptools": "84.0.0",
+        "sympy": "1.14.0",
+        "tokenizers": "0.22.1",
+        "torch": "2.10.0+cu128",
+        "tqdm": "4.70.1",
+        "transformers": "4.57.1",
+        "triton": "3.6.0",
+        "typing-extensions": "4.16.0",
+        "urllib3": "2.8.0",
+        "zipp": "4.1.1",
+        "opencv-python-headless": "4.13.0.92"
+      },
+      "probe": "sdxl"
+    }
+  },
+  "models": {
+    "u2netp": {
+      "license": "Apache-2.0",
+      "source": "https://github.com/xuebinqin/U-2-Net",
+      "files": [
+        {
+          "artifact": "309c8469258dda742793dce0ebea8e6dd393174f89934733ecc8b14c76f4ddd8",
+          "path": "u2netp.onnx"
+        }
+      ]
+    },
+    "u2net": {
+      "license": "Apache-2.0",
+      "source": "https://github.com/xuebinqin/U-2-Net",
+      "files": [
+        {
+          "artifact": "8d10d2f3bb75ae3b6d527c77944fc5e7dcd94b29809d47a739a7a728a912b491",
+          "path": "u2net.onnx"
+        }
+      ]
+    },
+    "efficientsam-ti": {
+      "license": "Apache-2.0",
+      "source": "https://huggingface.co/yunyangx/EfficientSAM/tree/1cf49585c39567bfc49e991ab8eb31f491ad4877",
+      "files": [
+        {
+          "artifact": "84ed466ffcc5c1f8d08409bc34a23bb364ab2c15e402cb12d4335a42be0e0951",
+          "path": "efficientsam_ti_encoder.onnx"
+        },
+        {
+          "artifact": "a62f8fa5ea080447c0689418d69e58f1e83e0b7adf9c142e2bd9bcc8045c0b11",
+          "path": "efficientsam_ti_decoder.onnx"
+        }
+      ]
+    },
+    "sdxl": {
+      "license": "OpenRAIL++",
+      "source": "https://huggingface.co/diffusers/stable-diffusion-xl-1.0-inpainting-0.1/tree/115134f363124c53c7d878647567d04daf26e41e",
+      "files": [
+        {
+          "artifact": "80f91748ac64a5f0a72d7b133fc6a2ff5291a35464ea341960b8c23ea59affa4",
+          "path": "README.md"
+        },
+        {
+          "artifact": "308a792b15086bf89807b88729ef80d33d5b8264b14a96b57d2c92b5ab7f5a53",
+          "path": "model_index.json"
+        },
+        {
+          "artifact": "a8e9a8517e8739938ea85819012bad195d41ccb3e11e2501cf196da64099b1f6",
+          "path": "scheduler/scheduler_config.json"
+        },
+        {
+          "artifact": "46ae51fa8bde7817168d97faa0556cc0ac42ec0a7a53248bab4a52f8f5866f13",
+          "path": "text_encoder/config.json"
+        },
+        {
+          "artifact": "fc83cf401d930147807e7c44021c164bcc5508c9d4cc0ff35f4e354685ca9cd0",
+          "path": "text_encoder/model.fp16.safetensors"
+        },
+        {
+          "artifact": "fbcd3aad07a99e28d4c51550bd798903922083527ec69ad026f25699518af82d",
+          "path": "text_encoder_2/config.json"
+        },
+        {
+          "artifact": "a8622bd41f8d359df484fdf9de091edb9337a2fd747f0a5c9c320a62e24d1fd3",
+          "path": "text_encoder_2/model.fp16.safetensors"
+        },
+        {
+          "artifact": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "path": "tokenizer/merges.txt"
+        },
+        {
+          "artifact": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "path": "tokenizer/special_tokens_map.json"
+        },
+        {
+          "artifact": "19d7b034cb0cc3ce9766c2231373ab8aa8991fc72e2c8f76558bfaae3de0d563",
+          "path": "tokenizer/tokenizer_config.json"
+        },
+        {
+          "artifact": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "path": "tokenizer/vocab.json"
+        },
+        {
+          "artifact": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "path": "tokenizer_2/merges.txt"
+        },
+        {
+          "artifact": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+          "path": "tokenizer_2/special_tokens_map.json"
+        },
+        {
+          "artifact": "c9d23941f76a41cbd50eda9290f57be7828f0a7a677939e9ef181f7e12bd1bdf",
+          "path": "tokenizer_2/tokenizer_config.json"
+        },
+        {
+          "artifact": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "path": "tokenizer_2/vocab.json"
+        },
+        {
+          "artifact": "aaedf41fbcb29d2d8725241413b8525bd97005dea3f86d8056199469032537e9",
+          "path": "unet/config.json"
+        },
+        {
+          "artifact": "6470840731e98cc16713ddf3ac7ee458c9fdbcb881a98c6727cd4a938f227d3f",
+          "path": "unet/diffusion_pytorch_model.fp16.safetensors"
+        },
+        {
+          "artifact": "b822341e6125efedebffb8e3f35e7288aab06bb4c49853d50a16964bf104a727",
+          "path": "vae/config.json"
+        },
+        {
+          "artifact": "4ad62825e5c8b31eefb77355ba6693785619bf7d669d9b1a6fd9f19dec6d65b3",
+          "path": "vae/diffusion_pytorch_model.fp16.safetensors"
+        },
+        {
+          "artifact": "19b6998b569b53ac1fc2158a8a3202c8699a9a4605b47075715d9c96be7fb6d0",
+          "path": "LICENSE.md"
+        }
+      ]
+    },
+    "migan": {
+      "revision": "406830d0fa60666da0071c342ad2fbc8f30c5c64",
+      "license": "MIT",
+      "provenance": "https://github.com/Picsart-AI-Research/MI-GAN/issues/25",
+      "files": [
+        {
+          "artifact": "6f1f3530a1a2324b19752018ce756088b07973cda8d7d890034ace5c8a48c40b",
+          "path": "migan_pipeline_v2.onnx"
+        },
+        {
+          "artifact": "13348eaaebc0b07b0faf3a92db04e0858737713a917d064b599c87cac05b571f",
+          "path": "LICENSE"
+        },
+        {
+          "artifact": "64419d21ad45b70337dc501f2aa1a1c18eb1115be6378bc05fca048937d4498b",
+          "path": "SOURCE.md"
+        }
+      ]
+    },
+    "sdxl-base": {
+      "revision": "462165984030d82259a11f4367a4eed129e94a7b",
+      "components": "SDXL base UNet/config and scheduler; existing pinned CLIP encoders/tokenizers and madebyollin fp16-fixed VAE",
+      "files": [
+        {
+          "artifact": "80f91748ac64a5f0a72d7b133fc6a2ff5291a35464ea341960b8c23ea59affa4",
+          "path": "README.md"
+        },
+        {
+          "artifact": "6d7b93508390ab91ac5bfbe4aeb4dc2d83f7bb1b05fb069d714b5b0c75f70d44",
+          "path": "model_index.json"
+        },
+        {
+          "artifact": "af3e45a949aff8b8341ab8b811429ec03fee857a700a1d9477363e4fff9666e2",
+          "path": "scheduler/scheduler_config.json"
+        },
+        {
+          "artifact": "46ae51fa8bde7817168d97faa0556cc0ac42ec0a7a53248bab4a52f8f5866f13",
+          "path": "text_encoder/config.json"
+        },
+        {
+          "artifact": "fc83cf401d930147807e7c44021c164bcc5508c9d4cc0ff35f4e354685ca9cd0",
+          "path": "text_encoder/model.fp16.safetensors"
+        },
+        {
+          "artifact": "fbcd3aad07a99e28d4c51550bd798903922083527ec69ad026f25699518af82d",
+          "path": "text_encoder_2/config.json"
+        },
+        {
+          "artifact": "a8622bd41f8d359df484fdf9de091edb9337a2fd747f0a5c9c320a62e24d1fd3",
+          "path": "text_encoder_2/model.fp16.safetensors"
+        },
+        {
+          "artifact": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "path": "tokenizer/merges.txt"
+        },
+        {
+          "artifact": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "path": "tokenizer/special_tokens_map.json"
+        },
+        {
+          "artifact": "19d7b034cb0cc3ce9766c2231373ab8aa8991fc72e2c8f76558bfaae3de0d563",
+          "path": "tokenizer/tokenizer_config.json"
+        },
+        {
+          "artifact": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "path": "tokenizer/vocab.json"
+        },
+        {
+          "artifact": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "path": "tokenizer_2/merges.txt"
+        },
+        {
+          "artifact": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+          "path": "tokenizer_2/special_tokens_map.json"
+        },
+        {
+          "artifact": "c9d23941f76a41cbd50eda9290f57be7828f0a7a677939e9ef181f7e12bd1bdf",
+          "path": "tokenizer_2/tokenizer_config.json"
+        },
+        {
+          "artifact": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "path": "tokenizer_2/vocab.json"
+        },
+        {
+          "artifact": "30ebc70750223e59006f7f2b4e1e6c102570aa19a9c4ae3e1fbe7591332dbae6",
+          "path": "unet/config.json"
+        },
+        {
+          "artifact": "83e012a805b84c7ca28e5646747c90a243c65c8ba4f070e2d7ddc9d74661e139",
+          "path": "unet/diffusion_pytorch_model.fp16.safetensors"
+        },
+        {
+          "artifact": "b822341e6125efedebffb8e3f35e7288aab06bb4c49853d50a16964bf104a727",
+          "path": "vae/config.json"
+        },
+        {
+          "artifact": "4ad62825e5c8b31eefb77355ba6693785619bf7d669d9b1a6fd9f19dec6d65b3",
+          "path": "vae/diffusion_pytorch_model.fp16.safetensors"
+        },
+        {
+          "artifact": "19b6998b569b53ac1fc2158a8a3202c8699a9a4605b47075715d9c96be7fb6d0",
+          "path": "LICENSE.md"
+        }
+      ]
+    },
+    "sdxl-coloring": {
+      "revision": "462165984030d82259a11f4367a4eed129e94a7b",
+      "components": "SDXL base UNet/config and scheduler; existing pinned CLIP encoders/tokenizers and madebyollin fp16-fixed VAE",
+      "files": [
+        {
+          "artifact": "80f91748ac64a5f0a72d7b133fc6a2ff5291a35464ea341960b8c23ea59affa4",
+          "path": "README.md"
+        },
+        {
+          "artifact": "6d7b93508390ab91ac5bfbe4aeb4dc2d83f7bb1b05fb069d714b5b0c75f70d44",
+          "path": "model_index.json"
+        },
+        {
+          "artifact": "af3e45a949aff8b8341ab8b811429ec03fee857a700a1d9477363e4fff9666e2",
+          "path": "scheduler/scheduler_config.json"
+        },
+        {
+          "artifact": "46ae51fa8bde7817168d97faa0556cc0ac42ec0a7a53248bab4a52f8f5866f13",
+          "path": "text_encoder/config.json"
+        },
+        {
+          "artifact": "fc83cf401d930147807e7c44021c164bcc5508c9d4cc0ff35f4e354685ca9cd0",
+          "path": "text_encoder/model.fp16.safetensors"
+        },
+        {
+          "artifact": "fbcd3aad07a99e28d4c51550bd798903922083527ec69ad026f25699518af82d",
+          "path": "text_encoder_2/config.json"
+        },
+        {
+          "artifact": "a8622bd41f8d359df484fdf9de091edb9337a2fd747f0a5c9c320a62e24d1fd3",
+          "path": "text_encoder_2/model.fp16.safetensors"
+        },
+        {
+          "artifact": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "path": "tokenizer/merges.txt"
+        },
+        {
+          "artifact": "c4864a9376a8401918425bed71fc14fc0e81f9b59ec45c1cf96cccb2df508eac",
+          "path": "tokenizer/special_tokens_map.json"
+        },
+        {
+          "artifact": "19d7b034cb0cc3ce9766c2231373ab8aa8991fc72e2c8f76558bfaae3de0d563",
+          "path": "tokenizer/tokenizer_config.json"
+        },
+        {
+          "artifact": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "path": "tokenizer/vocab.json"
+        },
+        {
+          "artifact": "9fd691f7c8039210e0fced15865466c65820d09b63988b0174bfe25de299051a",
+          "path": "tokenizer_2/merges.txt"
+        },
+        {
+          "artifact": "f118ab3a983206e4f32583448de6bd6aae4ee21869135cef1f5848a753cdaab6",
+          "path": "tokenizer_2/special_tokens_map.json"
+        },
+        {
+          "artifact": "c9d23941f76a41cbd50eda9290f57be7828f0a7a677939e9ef181f7e12bd1bdf",
+          "path": "tokenizer_2/tokenizer_config.json"
+        },
+        {
+          "artifact": "e089ad92ba36837a0d31433e555c8f45fe601ab5c221d4f607ded32d9f7a4349",
+          "path": "tokenizer_2/vocab.json"
+        },
+        {
+          "artifact": "30ebc70750223e59006f7f2b4e1e6c102570aa19a9c4ae3e1fbe7591332dbae6",
+          "path": "unet/config.json"
+        },
+        {
+          "artifact": "83e012a805b84c7ca28e5646747c90a243c65c8ba4f070e2d7ddc9d74661e139",
+          "path": "unet/diffusion_pytorch_model.fp16.safetensors"
+        },
+        {
+          "artifact": "b822341e6125efedebffb8e3f35e7288aab06bb4c49853d50a16964bf104a727",
+          "path": "vae/config.json"
+        },
+        {
+          "artifact": "4ad62825e5c8b31eefb77355ba6693785619bf7d669d9b1a6fd9f19dec6d65b3",
+          "path": "vae/diffusion_pytorch_model.fp16.safetensors"
+        },
+        {
+          "artifact": "19b6998b569b53ac1fc2158a8a3202c8699a9a4605b47075715d9c96be7fb6d0",
+          "path": "LICENSE.md"
+        },
+        {
+          "artifact": "94eb17068a45df06a9e6ab0bcbbd5c381e03f09320da46839c1ed0cee733af31",
+          "path": "ColoringBookRedmond-ColoringBook-ColoringBookAF.safetensors"
+        },
+        {
+          "artifact": "20bda38e38459b551cbbb1222c0563363750290df35c360a84bc3bb23648eb06",
+          "path": "MODEL-CARD.md"
+        },
+        {
+          "artifact": "a5c6d8dfa72fa840f3edd40cee982e4fa34e345ba971ede3663036ded45d3f67",
+          "path": "LICENSE-CreativeML-OpenRAIL-M.html"
+        }
+      ],
+      "adapterRevision": "0e67e0de2b603db085e525e7f6194b24dc60033d"
+    }
+  }
+}

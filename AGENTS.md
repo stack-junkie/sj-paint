@@ -4,7 +4,7 @@
 
 - Follow the user's current request and work from the current checkout. Preserve unrelated edits and active processes.
 - Keep this repository independent of surrounding checkouts and machine-specific setup.
-- Treat Windows as the primary desktop platform and preserve Linux and browser support. The baseline goal remains a 1:1 recreation of Microsoft Paint in appearance, features and behavior. The rebrand does not reduce that scope. Add project-specific features only after the baseline is completed and verified, unless the user explicitly changes that order.
+- Treat Windows as the primary desktop platform and preserve Linux desktop support and browser-based editor development/tests. The approved v0.3.0 release covers the implemented painting, image-editing, file-format and verified local AI workflows, with documented compatibility limits. Exact Microsoft Paint parity is not a release gate. Image creation, Cocreator, Generative Fill, Reimagine, stickers and coloring pages are excluded. It excludes a separate browser product, Microsoft accounts/credits/cloud replication, physical-printer certification and exhaustive hardware certification. Retain the existing Print command. Do not expand this release into parity research, speculative features or additional AI development.
 - Do not publish, push, create releases, install system software or change user settings without authorization.
 - Do not open visible apps, move focus or use the user's active desktop/browser without explicit authorization. Use headless browser tests and disposable Xvfb containers for authorized background verification.
 - Write plainly. Never use em dashes. Do not claim completed Microsoft Paint parity, platform coverage or runtime verification without evidence.

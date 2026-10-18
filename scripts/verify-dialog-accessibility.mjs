@@ -40,7 +40,7 @@ export async function verifyDialogAccessibility(page, check) {
 
     await properties();
     record('sequential dialogs reuse the producer node with the new title', await shared.evaluate(el => el === document.querySelector('#dialog')));
-    await dialog.getByRole('spinbutton', { name: 'Width (pixels)', exact: true }).focus();
+    await dialog.getByRole('spinbutton', { name: 'Width', exact: true }).focus();
     await target.keyboard.press('Enter'); await closed();
     record('Enter accepts unchanged named Properties without creating history', JSON.stringify(await snapshot()) === JSON.stringify(initial));
 

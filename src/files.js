@@ -2,6 +2,8 @@ import { PAINT_LIMITS, assertDocumentBudget } from './engine.js';
 import PROJECT from './project-format.json' with { type: 'json' };
 import { readPaint, writePaint } from './paint-format.js';
 import { readTiff, writeTiff, writeTiffAsync } from './tiff.js';
+import { writeGif } from './gif.js';
+import { normalizeResolution, readImageResolution, writeImageResolution, resolutionPixelsPerMetre } from './image-metadata.js';
 
 const MAX_BYTES = 64 * 1024 * 1024;
 const MAX_SIDE = PAINT_LIMITS.maxDimension;
@@ -66,17 +68,18 @@ function download(blob, name) {
 
 async function decode(blob, name) {
   if (!blob.size || blob.size > MAX_BYTES) throw new Error('Choose an image smaller than 64 MiB.');
-  const header = new Uint8Array(await blob.slice(0, 4).arrayBuffer());
+  const bytes = new Uint8Array(await blob.arrayBuffer()), header = bytes;
   const tiffHeader = (header[0] === 73 && header[1] === 73 && [42, 43].includes(header[2]) && header[3] === 0) ||
     (header[0] === 77 && header[1] === 77 && header[2] === 0 && [42, 43].includes(header[3]));
   if (tiffHeader || /\.tiff?$/i.test(name) || /^image\/(?:x-)?tiff?(?:;|$)/i.test(blob.type)) {
     // Validate TIFF dimensions, strip expansion and supported interpretations
     // before allocating a browser canvas. Magic takes precedence over names.
-    const { width, height, rgba } = await readTiff(new Uint8Array(await blob.arrayBuffer()));
+    const { width, height, rgba, resolution } = await readTiff(bytes);
     const canvas = document.createElement('canvas'); canvas.width = width; canvas.height = height;
     canvas.getContext('2d').putImageData(new ImageData(new Uint8ClampedArray(rgba.buffer, rgba.byteOffset, rgba.byteLength), width, height), 0, 0);
-    return { canvas, name, format: 'tiff' };
+    return { canvas, name, format: 'tiff', resolution, encodedBytes: blob.size };
   }
+  const resolution = readImageResolution(bytes);
   let bitmap;
   try { bitmap = await createImageBitmap(blob); }
   catch { throw new Error('This image could not be decoded. Try PNG, JPEG, WebP, BMP or supported TIFF.'); }
@@ -86,7 +89,7 @@ async function decode(blob, name) {
     canvas.width = bitmap.width;
     canvas.height = bitmap.height;
     canvas.getContext('2d').drawImage(bitmap, 0, 0);
-    return { canvas, name };
+    return { canvas, name, resolution, encodedBytes: blob.size };
   } finally { bitmap.close(); }
 }
 
@@ -131,7 +134,7 @@ function flattenedCanvas(canvas) {
   return flat;
 }
 
-export function exportBmp(canvas) {
+export function exportBmp(canvas, { resolution: requestedResolution } = {}) {
   dimensions(canvas.width, canvas.height);
   const { width, height } = canvas;
   const stride = Math.ceil(width * 3 / 4) * 4;
@@ -149,8 +152,9 @@ export function exportBmp(canvas) {
   view.setUint16(26, 1, true);
   view.setUint16(28, 24, true);
   view.setUint32(34, imageBytes, true);
-  view.setInt32(38, 2835, true);
-  view.setInt32(42, 2835, true);
+  const resolution = normalizeResolution(requestedResolution);
+  view.setInt32(38, resolutionPixelsPerMetre(resolution.xDpi, 0x7fffffff), true);
+  view.setInt32(42, resolutionPixelsPerMetre(resolution.yDpi, 0x7fffffff), true);
   const rgba = canvas.getContext('2d').getImageData(0, 0, width, height).data;
   for (let y = 0; y < height; y++) {
     for (let x = 0; x < width; x++) {
@@ -168,79 +172,8 @@ export function exportBmp(canvas) {
 export function exportGif(canvas) {
   dimensions(canvas.width, canvas.height);
   const { width, height } = canvas;
-  const pixels = width * height;
-  // Literal LZW codes reset before the dictionary reaches a 10-bit code.
-  // This bounds encoder memory and avoids a document-sized dictionary.
-  const codeCount = pixels + Math.ceil(pixels / 250) + 1;
-  const compressedSize = Math.ceil(codeCount * 9 / 8);
-  const fileSize = 800 + compressedSize + Math.ceil(compressedSize / 255) + 2;
-  if (fileSize > MAX_BYTES) throw new Error('The GIF exceeds the 64 MiB file limit.');
-  const bytes = new Uint8Array(fileSize);
-  let offset = 0;
-  const byte = value => { bytes[offset++] = value; };
-  const word = value => { byte(value & 255); byte(value >> 8); };
-  for (const value of 'GIF89a') byte(value.charCodeAt(0));
-  word(width); word(height);
-  byte(0xf7); byte(0); byte(0); // Global 256-entry color table, 8-bit color resolution.
-  const palette = new Uint8Array(256 * 3);
-  for (let red = 0; red < 6; red++) {
-    for (let green = 0; green < 6; green++) {
-      for (let blue = 0; blue < 6; blue++) {
-        const index = (red * 36 + green * 6 + blue) * 3;
-        palette[index] = red * 51;
-        palette[index + 1] = green * 51;
-        palette[index + 2] = blue * 51;
-      }
-    }
-  }
-  for (let gray = 0; gray < 39; gray++) palette.fill(Math.round(gray * 255 / 38), (216 + gray) * 3, (217 + gray) * 3);
-  bytes.set(palette, offset); offset += palette.length;
-  // A single frame with binary transparency, index 255 reserved for alpha < 128.
-  for (const value of [0x21, 0xf9, 4, 1, 0, 0, 255, 0, 0x2c]) byte(value);
-  word(0); word(0); word(width); word(height); byte(0); byte(8);
   const rgba = canvas.getContext('2d').getImageData(0, 0, width, height).data;
-  let blockSizeOffset = offset++;
-  let blockLength = 0;
-  let bitBuffer = 0;
-  let bitCount = 0;
-  const dataByte = value => {
-    if (blockLength === 255) {
-      bytes[blockSizeOffset] = blockLength;
-      blockSizeOffset = offset++;
-      blockLength = 0;
-    }
-    byte(value);
-    blockLength++;
-  };
-  const code = value => {
-    bitBuffer |= value << bitCount;
-    bitCount += 9;
-    while (bitCount >= 8) {
-      dataByte(bitBuffer & 255);
-      bitBuffer >>>= 8;
-      bitCount -= 8;
-    }
-  };
-  for (let pixel = 0; pixel < pixels; pixel++) {
-    if (pixel % 250 === 0) code(256);
-    const source = pixel * 4;
-    let index = 255;
-    if (rgba[source + 3] >= 128) {
-      const red = rgba[source], green = rgba[source + 1], blue = rgba[source + 2];
-      index = Math.round(red / 51) * 36 + Math.round(green / 51) * 6 + Math.round(blue / 51);
-      const grayIndex = 216 + Math.round((red + green + blue) / 3 * 38 / 255);
-      const cubeError = (red - palette[index * 3]) ** 2 + (green - palette[index * 3 + 1]) ** 2 + (blue - palette[index * 3 + 2]) ** 2;
-      const gray = palette[grayIndex * 3];
-      const grayError = (red - gray) ** 2 + (green - gray) ** 2 + (blue - gray) ** 2;
-      if (grayError < cubeError) index = grayIndex;
-    }
-    code(index);
-  }
-  code(257);
-  if (bitCount) dataByte(bitBuffer & 255);
-  bytes[blockSizeOffset] = blockLength;
-  byte(0); byte(0x3b);
-  return new Blob([bytes.subarray(0, offset)], { type: MIME.gif });
+  return writeGif({ width, height, rgba }, MAX_BYTES);
 }
 
 export function exportTiff(canvas, options) {
@@ -259,24 +192,29 @@ export async function exportTiffAsync(canvas, options) {
   return new Blob([await writeTiffAsync({ width, height, rgba }, options)], { type: MIME.tiff });
 }
 
-export async function saveImageFile(canvas, format = 'png', name = 'Untitled', { target } = {}) {
+export async function saveImageFile(canvas, format = 'png', name = 'Untitled', { target, resolution: requestedResolution } = {}) {
   dimensions(canvas.width, canvas.height);
   if (format === 'jpg') format = 'jpeg';
   if (format === 'tif') format = 'tiff';
   if (!Object.hasOwn(MIME, format)) throw new Error('Supported exports are PNG, JPEG, GIF, TIFF, WebP and BMP.');
-  const blob = format === 'bmp' ? exportBmp(canvas) : format === 'gif' ? exportGif(canvas) :
-    format === 'tiff' ? await exportTiffAsync(canvas) :
+  const resolution = normalizeResolution(requestedResolution);
+  let blob = format === 'bmp' ? exportBmp(canvas, { resolution }) : format === 'gif' ? exportGif(canvas) :
+    format === 'tiff' ? await exportTiffAsync(canvas, { resolution }) :
     await canvasBlob(format === 'jpeg' ? flattenedCanvas(canvas) : canvas, MIME[format]);
+  if (format === 'png' || format === 'jpeg') blob = new Blob([writeImageResolution(new Uint8Array(await blob.arrayBuffer()), format, resolution)], { type: MIME[format] });
+  if (blob.size > MAX_BYTES) throw new Error('The encoded image exceeds the 64 MiB file limit.');
   const suggestedName = filename(name, format === 'jpeg' ? 'jpg' : format);
   if (window.paintDesktop) {
-    return window.paintDesktop.saveImage({ bytes: Array.from(new Uint8Array(await blob.arrayBuffer())), suggestedName, format, ...(target !== undefined ? { target } : {}) });
+    const result = await window.paintDesktop.saveImage({ bytes: Array.from(new Uint8Array(await blob.arrayBuffer())), suggestedName, format, ...(target !== undefined ? { target } : {}) });
+    return result ? { ...result, encodedBytes: blob.size } : null;
   }
-  return download(blob, suggestedName);
+  return { ...download(blob, suggestedName), encodedBytes: blob.size };
 }
 
 function validateProject(data) {
   if (!data || !PROJECT.readableFormats.includes(data.format) || data.version !== PROJECT.schemaVersion) throw new Error('This is not a supported SJ Paint project.');
   dimensions(data.width, data.height);
+  normalizeResolution(data.resolution);
   if ((data.background !== null && typeof data.background !== 'string') ||
       !Array.isArray(data.layers) || data.layers.length < 1 || data.layers.length > PAINT_LIMITS.maxLayers) {
     throw new Error('Invalid project background or layer count.');
@@ -321,7 +259,7 @@ function parseProject(text, name) {
   if (new Blob([text]).size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
   let data;
   try { data = JSON.parse(text); } catch { throw new Error('The project does not contain valid JSON.'); }
-  return { data: validateProject(data), name, format: PROJECT.extension };
+  return { data: validateProject(data), name, format: PROJECT.extension, resolution: normalizeResolution(data.resolution) };
 }
 
 export async function readProjectFile(file) {
@@ -331,12 +269,12 @@ export async function readProjectFile(file) {
     const decoded = await readPaint(new Uint8Array(await file.arrayBuffer()));
     const layers = decoded.layers.map((layer, index) => ({ ...layer, id: `paint-${index}` }));
     const background = `#${decoded.background.map(value => value.toString(16).padStart(2, '0')).join('')}`;
-    return { name: file.name, format: 'paint', data: { ...decoded, background, layers, activeLayerId: layers.at(-1).id } };
+    return { name: file.name, format: 'paint', resolution: decoded.resolution, encodedBytes: file.size, data: { ...decoded, background, layers, activeLayerId: layers.at(-1).id } };
   }
-  return parseProject(await file.text(), file.name);
+  return { ...parseProject(await file.text(), file.name), encodedBytes: file.size };
 }
 
-export async function savePaintFile(doc, name = 'Untitled', { target } = {}) {
+export async function savePaintFile(doc, name = 'Untitled', { target, resolution = doc.resolution } = {}) {
   // Capture before awaiting compression or a dialog so the saved revision and
   // pixels describe the same drawing even if the user continues editing.
   let background = [0, 0, 0, 0];
@@ -350,14 +288,15 @@ export async function savePaintFile(doc, name = 'Untitled', { target } = {}) {
     ctx.fillStyle = doc.background; ctx.fillRect(0, 0, 1, 1);
     background = [...ctx.getImageData(0, 0, 1, 1).data];
   }
-  const data = { width: doc.width, height: doc.height,
+  const data = { width: doc.width, height: doc.height, resolution: normalizeResolution(resolution),
     background,
     layers: doc.layers.map(layer => ({ name: layer.name, visible: layer.visible, opacity: layer.opacity,
       rgba: new Uint8Array(layer.canvas.getContext('2d').getImageData(0, 0, doc.width, doc.height).data.buffer) })) };
   const bytes = await writePaint(data);
   const suggestedName = filename(name, 'paint');
-  return window.paintDesktop ? window.paintDesktop.savePaint({ bytes, suggestedName, ...(target !== undefined ? { target } : {}) }) :
+  const result = window.paintDesktop ? await window.paintDesktop.savePaint({ bytes, suggestedName, ...(target !== undefined ? { target } : {}) }) :
     download(new Blob([bytes], { type: 'application/octet-stream' }), suggestedName);
+  return result ? { ...result, encodedBytes: bytes.length } : null;
 }
 
 export async function saveProjectFile(data, name = 'Untitled', { target } = {}) {
@@ -366,7 +305,8 @@ export async function saveProjectFile(data, name = 'Untitled', { target } = {}) 
   const blob = new Blob([text], { type: 'application/json' });
   if (blob.size > PAINT_LIMITS.maxEncodedProjectBytes) throw new Error('The project exceeds the 64 MiB file limit.');
   const suggestedName = filename(name, PROJECT.extension);
-  return window.paintDesktop ? window.paintDesktop.saveProject({ text, suggestedName, ...(target !== undefined ? { target } : {}) }) : download(blob, suggestedName);
+  const result = window.paintDesktop ? await window.paintDesktop.saveProject({ text, suggestedName, ...(target !== undefined ? { target } : {}) }) : download(blob, suggestedName);
+  return result ? { ...result, encodedBytes: blob.size } : null;
 }
 
 export async function copyCanvas(canvas) {

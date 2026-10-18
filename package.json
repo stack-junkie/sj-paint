@@ -1,6 +1,6 @@
 {
   "name": "sj-paint",
-  "version": "0.2.26",
+  "version": "0.3.0",
   "private": true,
   "type": "module",
   "description": "Stack Junkie Paint: an independent Microsoft Paint-inspired editor for Windows and Linux.",
@@ -12,10 +12,19 @@
     "desktop": "electron .",
     "package:linux": "npm run build && electron-builder --linux dir",
     "test": "node scripts/verify.mjs",
+    "test:text": "node scripts/verify-text-workflows.mjs",
+    "test:verification": "node --test scripts/verification-results.test.mjs scripts/native-fixtures.test.mjs",
+    "test:print-pdf": "node scripts/verify-print-pdf.mjs",
     "test:linux": "node scripts/verify-linux.mjs",
-    "test:files": "node --test electron/atomic-write.test.cjs electron/file-targets.test.cjs",
+    "test:files": "node --test electron/atomic-write.test.cjs electron/file-targets.test.cjs electron/save-file.test.cjs",
+    "test:display": "node --test electron/owned-query.test.cjs electron/display-metrics.test.cjs scripts/verify-default-dimensions.mjs",
     "test:paint-format": "node --test scripts/verify-paint-format.mjs",
     "test:tiff": "node --test scripts/verify-tiff.mjs",
+    "test:gif": "node --test scripts/verify-gif.mjs",
+    "test:metadata": "node --test scripts/verify-image-metadata.mjs",
+    "test:formats": "node --test scripts/verify-paint-format.mjs scripts/verify-tiff.mjs scripts/verify-gif.mjs scripts/verify-image-metadata.mjs",
+    "test:ai-ui": "node scripts/verify-text-workflows.mjs object-mask ai-workflows generative-edits background-removal",
+    "test:document-metadata": "node scripts/verify-text-workflows.mjs document-metadata file-information properties-default",
     "version:check": "node scripts/version.mjs check",
     "version:bump": "node scripts/version.mjs bump",
     "hooks:install": "node scripts/install-hooks.mjs",
@@ -24,7 +33,7 @@
     "archive:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/archive-windows.ps1",
     "test:desktop": "node scripts/verify-desktop.mjs",
     "test:windows": "node scripts/test-windows.mjs",
-    "test:local-ai": "node --test electron/local-ai.test.cjs electron/local-ai-service.test.cjs"
+    "test:local-ai": "node --test electron/local-ai-process.test.cjs electron/local-ai.test.cjs electron/local-ai-service.test.cjs electron/ai-setup.test.cjs electron/ai-controller.test.cjs electron/quit-coordinator.test.cjs electron/generative-worker.test.cjs"
   },
   "devDependencies": {
     "electron": "44.7.2",
@@ -73,5 +82,8 @@
   "engines": {
     "node": ">=22.12.0"
   },
-  "desktopName": "io.stackjunkie.sjpaint.desktop"
+  "desktopName": "io.stackjunkie.sjpaint.desktop",
+  "dependencies": {
+    "tar": "7.5.22"
+  }
 }

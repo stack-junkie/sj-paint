@@ -1,9 +1,10 @@
 import { PAINT_LIMITS, assertDocumentBudget } from './engine.js';
+import { normalizeResolution, readTiffMetadata, writeExifResolution } from './image-metadata.js';
 
 // Independent implementation of the subset observed in owned Paint 11.2605.81.0
 // fixtures. Format reference: https://github.com/setiri/mspaintlib/blob/master/PAINT-FORMAT-SPEC.md
-// No third-party source is included. This is not a general HEIF reader. Exif is
-// accepted as ancillary metadata but is not returned or preserved by this API.
+// No third-party source is included. This is not a general HEIF reader. Exif
+// physical resolution is retained; unrelated Exif fields are not preserved.
 // Layer arrays are bottom-to-top; background is straight RGBA8, separate from pixels.
 const MAX_FILE = PAINT_LIMITS.maxEncodedProjectBytes;
 const MAX_ITEMS = PAINT_LIMITS.maxLayers + 2;
@@ -226,7 +227,7 @@ export async function readPaint(input, { inflate } = {}) {
   }
   ipma.end();
   const references = fullChildren(one(meta, 'iref'), parse); only(references, ['dimg', 'cdsc']);
-  let layerIds;
+  let layerIds; const metadataIds = [];
   for (const reference of references) {
     const c = new Cursor(reference.data), from = c.uint(2), count = c.uint(2);
     check(count > 0 && count <= PAINT_LIMITS.maxLayers, 'invalid item reference count');
@@ -234,7 +235,10 @@ export async function readPaint(input, { inflate } = {}) {
     check(items.has(from) && ids.every(id => items.has(id)), 'reference to missing item');
     if (reference.type === 'dimg') {
       check(from === primaryId && !layerIds && new Set(ids).size === ids.length, 'unsupported overlay graph'); layerIds = ids;
-    } else check(items.get(from).type === 'Exif' && count === 1 && ids[0] === primaryId, 'unsupported metadata reference');
+    } else {
+      check(items.get(from).type === 'Exif' && count === 1 && ids[0] === primaryId, 'unsupported metadata reference');
+      metadataIds.push(from);
+    }
   }
   check(layerIds?.length && layerIds.every(id => items.get(id).type === 'unci'), 'missing or invalid layer references');
   check([...items.values()].filter(item => item.type === 'unci').length === layerIds.length, 'unreferenced layers may encode unsupported visibility');
@@ -252,6 +256,15 @@ export async function readPaint(input, { inflate } = {}) {
     const layout = imageProperties(properties, associations, id, true);
     check(layout.width === width && layout.height === height, 'cropped or differently sized layers are not supported'); return layout;
   });
+  check(metadataIds.length <= 1, 'ambiguous Exif resolution metadata');
+  let resolution = normalizeResolution();
+  if (metadataIds.length) {
+    const metadata = items.get(metadataIds[0]).extent;
+    check(metadata.length >= 4, 'truncated Exif offset');
+    const offset = new DataView(metadata.buffer, metadata.byteOffset, metadata.byteLength).getUint32(0);
+    check(offset <= metadata.length - 4, 'Exif offset exceeds its item');
+    resolution = readTiffMetadata(metadata.subarray(4 + offset)).resolution;
+  }
   // Validate the whole structure and aggregate pixel budget before any inflation.
   const layers = [];
   for (let index = 0; index < layerIds.length; index++) {
@@ -265,7 +278,7 @@ export async function readPaint(input, { inflate } = {}) {
     }
     layers.push({ name: item.name, visible: true, opacity: 1, rgba });
   }
-  return { width, height, background, layers };
+  return { width, height, background, layers, resolution };
 }
 
 function join(parts, cap = MAX_FILE) {
@@ -304,7 +317,7 @@ function nameByteLength(name, cap) {
 }
 
 /** Encode this profile without flattening. Hidden layers or layer opacity fail. */
-export async function writePaint(document, { deflate } = {}) {
+export async function writePaint(document, { deflate, resolution = document?.resolution } = {}) {
   check(document && Array.isArray(document.layers), 'document layers are missing');
   const { width, height, layers } = document; dimensions(width, height, layers.length);
   const background = document.background === null ? [0, 0, 0, 0] : document.background;
@@ -318,7 +331,9 @@ export async function writePaint(document, { deflate } = {}) {
     names.push(name);
     const rgba = bytesOf(layer.rgba); check(rgba.length === width * height * 4, 'layer pixel length does not match dimensions'); pixels.push(rgba);
   }
-  const primary = layers.length + 1;
+  const exifTiff = writeExifResolution(resolution, { double: true });
+  const exif = exifTiff ? join([u32(0), exifTiff]) : null;
+  const primary = layers.length + 1, itemCount = primary + (exif ? 1 : 0), exifId = primary + 1;
   const ftyp = box('ftyp', text('mif1'), u32(0), text('mif1gcmiisoamiaf'));
   const free = box('free', new Uint8Array(56));
   const ipco = box('ipco',
@@ -335,18 +350,22 @@ export async function writePaint(document, { deflate } = {}) {
       const location = join([u16(index + 1), u16(0), u16(0), u16(1), u32(offset), u32(data.length)]);
       offset += data.length; return location;
     });
+    const exifInfo = exif ? [box('infe', Uint8Array.of(2, 0, 0, 1), u16(exifId), u16(0), text('Exif'), u8(0))] : [];
+    const exifLocation = exif ? [u16(exifId), u16(0), u16(0), u16(1), u32(offset), u32(exif.length)] : [];
+    const exifReference = exif ? [box('cdsc', u16(exifId), u16(1), u16(primary))] : [];
     return full('meta', 0,
       full('hdlr', 0, u32(0), text('pict'), new Uint8Array(13)),
       full('pitm', 0, u16(primary)),
-      full('iinf', 0, u16(primary), ...names.map((name, index) => full('infe', 2, u16(index + 1), u16(0), text('unci'), name, u8(0))), full('infe', 2, u16(primary), u16(0), text('iovl'), u8(0))),
-      full('iloc', 1, Uint8Array.of(0x44, 0), u16(primary), ...locations, u16(primary), u16(1), u16(0), u16(1), u32(0), u32(overlay.length)),
+      full('iinf', 0, u16(itemCount), ...names.map((name, index) => full('infe', 2, u16(index + 1), u16(0), text('unci'), name, u8(0))), full('infe', 2, u16(primary), u16(0), text('iovl'), u8(0)), ...exifInfo),
+      full('iloc', 1, Uint8Array.of(0x44, 0), u16(itemCount), ...locations, u16(primary), u16(1), u16(0), u16(1), u32(0), u32(overlay.length), ...exifLocation),
       box('iprp', ipco, full('ipma', 0, u32(primary), ...layers.map((_, index) => join([u16(index + 1), Uint8Array.of(6, 129, 2, 3, 132, 133, 6)])), u16(primary), Uint8Array.of(2, 2, 6))),
-      full('iref', 0, box('dimg', u16(primary), u16(layers.length), ...layers.map((_, index) => u16(index + 1)))),
+      full('iref', 0, box('dimg', u16(primary), u16(layers.length), ...layers.map((_, index) => u16(index + 1))), ...exifReference),
       box('idat', overlay));
   };
   // Compute exact metadata overhead with one location record for every layer.
   for (let index = 0; index < layers.length; index++) compressed.push(new Uint8Array(0));
-  const overhead = ftyp.length + makeMeta(0).length + free.length + 8;
+  const headerLength = ftyp.length + makeMeta(0).length + free.length + 8;
+  const overhead = headerLength + (exif?.length ?? 0);
   check(overhead < MAX_FILE, 'project metadata exceeds the file limit');
   for (let index = 0; index < pixels.length; index++) {
     const bgra = new Uint8Array(pixels[index].length), rgba = pixels[index];
@@ -358,5 +377,5 @@ export async function writePaint(document, { deflate } = {}) {
     check(encoded.length > 0 && encoded.length <= cap, 'compressed pixels exceed the file limit');
     compressed[index] = encoded; payloadBytes += encoded.length;
   }
-  return join([ftyp, makeMeta(overhead), free, box('mdat', ...compressed)]);
+  return join([ftyp, makeMeta(headerLength), free, box('mdat', ...compressed, ...(exif ? [exif] : []))]);
 }

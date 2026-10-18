@@ -1,0 +1,20 @@
+{
+  "setupFeatures": [
+    "u2net",
+    "u2netp",
+    "efficientsam-ti",
+    "migan"
+  ],
+  "defaultFeatures": [
+    "u2net",
+    "efficientsam-ti",
+    "migan"
+  ],
+  "generation": {
+    "erase": {
+      "model": "migan",
+      "title": "Generative erase",
+      "action": "generative-erase"
+    }
+  }
+}

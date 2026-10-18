@@ -1,0 +1,7 @@
+.image-information{display:grid;grid-template-columns:auto 1fr;gap:8px 16px;padding:0 24px}
+.image-information dd{margin:0}
+.property-units{display:flex;gap:16px;margin:12px 24px;padding:8px 12px;border:1px solid var(--border)}
+.property-units label{display:flex;align-items:center;gap:5px;margin:0}
+#properties-default{margin-left:24px;border:1px solid var(--border);padding-inline:12px}
+#file-size{white-space:nowrap}
+@media(max-width:810px){#file-size{display:none}}

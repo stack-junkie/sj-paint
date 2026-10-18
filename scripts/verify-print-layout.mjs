@@ -66,7 +66,7 @@ export async function verifyPrintLayout(page, check, { inspectPdf } = {}) {
       check(`${shape} ${theme} Print leaves document and history unchanged and removes owned styles`, before === await snapshot() &&
         await page.evaluate(() => document.head.querySelectorAll('style').length === __printLayout.styles));
     }
-    if (!inspectPdf) check('independent PDF raster inspection is provided by the focused local verifier', true, { skipped: true });
+    if (!inspectPdf) check.skip('independent PDF raster inspection', 'Run scripts/verify-print-pdf.mjs with an existing Python PyMuPDF installation.');
 
     await start();
     const calls = await page.evaluate(() => __printLayout.calls);

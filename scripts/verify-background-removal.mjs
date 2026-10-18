@@ -8,7 +8,11 @@ export async function verifyBackgroundRemoval(page, check) {
       const mock = window.__backgroundMock = { requests: [], cancels: [], pending: new Map(), cancelPending: new Map(), configured: true };
       window.paintDesktop = {
         setTitle: () => {},
-        localAiStatus: async () => ({ ok: true, value: { configured: mock.configured, bounds: { maxPixels: 16_000_000, maxPngBytes: 64 * 1024 * 1024 } } }),
+        // This fixture covers an already configured backend. Setup UI and its
+        // failure/retry/cancel lifecycle are exercised by verify-ai-workflows.
+        localAiSetup: async () => { throw new Error('Configured background fixture must not install a runtime.'); },
+        localAiStatus: async () => ({ ok: true, value: { configured: mock.configured,
+          features: { u2netp: { configured: mock.configured } }, bounds: { maxPixels: 16_000_000, maxPngBytes: 64 * 1024 * 1024 } } }),
         localAiRun: request => new Promise(resolve => {
           mock.requests.push(request); mock.pending.set(request.id, { request, resolve });
         }),
@@ -26,7 +30,8 @@ export async function verifyBackgroundRemoval(page, check) {
         const { width, height } = pending.request;
         const mask = new Uint8Array(mode === 'malformed' ? width * height - 1 : width * height);
         for (let y = 0; y < height; y++) for (let x = 0; x < width; x++) mask[y * width + x] = mode === 'graded' ? x % 256 : x < 4 ? 0 : x < 8 ? 128 : 255;
-        pending.resolve({ ok: true, value: { mask, width, height, metadata: { model: 'simulated-fixture' } } });
+        pending.resolve({ ok: true, value: { mask, width, height, metadata: { model: 'simulated-fixture',
+          ...(mode === 'drawing' ? { matte: { method: 'flat-drawing-border-flood', paperRgb: [255, 255, 255], unmixEdges: true } } : {}) } } });
       };
     });
     const target = await context.newPage(); await target.goto(page.url()); await target.waitForFunction(() => window.paintApp);
@@ -189,6 +194,33 @@ export async function verifyBackgroundRemoval(page, check) {
       }, mode));
       await closeError();
     }
+
+    await target.evaluate(() => {
+      const doc = paintApp.doc; doc.newDocument(12, 8); doc.setBackground(null); doc.begin('Opaque paper and antialiased ink');
+      const ctx = doc.activeLayer.canvas.getContext('2d');
+      for (const [x, color] of [[0, '#ffffff'], [4, '#7f7f7f'], [8, '#000000']]) { ctx.fillStyle = color; ctx.fillRect(x, 0, 4, 8); }
+      doc.commit(); doc.markSaved();
+    }); await frame(); before = await snapshot();
+    await start(); await finish('drawing');
+    const edgePreview = await target.locator('.background-preview canvas').evaluate(canvas =>
+      [...canvas.getContext('2d').getImageData(0, 0, canvas.width, canvas.height).data]);
+    check('Drawing matte preview removes paper color from antialiased black ink', edgePreview.every((value, index) => {
+      const x = Math.floor(index / 4) % 12;
+      return value === (index % 4 === 3 ? x < 4 ? 0 : x < 8 ? 128 : 255 : 0);
+    }));
+    await apply().click(); await frame(); const edgeApplied = await snapshot();
+    check('Drawing matte Apply matches preview pixels and marks the drawing dirty',
+      JSON.stringify(edgeApplied.layers[0].pixels) === JSON.stringify(edgePreview) && edgeApplied.dirty);
+    await target.locator('#overlay').focus(); await target.keyboard.press('Control+z'); await frame();
+    const edgeUndone = await snapshot();
+    check('One Undo restores exact opaque paper and saved state', edgeUndone.content === before.content && !edgeUndone.dirty);
+    await target.keyboard.press('Control+y'); await frame();
+    check('Redo restores the accepted drawing matte', (await snapshot()).content === edgeApplied.content);
+
+    await fixture(); before = await snapshot(); await start(); await finish('drawing');
+    check('Opaque-paper correction rejects a layer with existing alpha without modifying it',
+      unchanged(before, await snapshot()) && !(await apply().count() && await apply().isEnabled()));
+    await closeError();
 
     await fixture(); await target.evaluate(() => paintApp.doc.selectRect(0, 0, 4, 4)); await frame(); before = await snapshot();
     const requestCount = await target.evaluate(() => __backgroundMock.requests.length); await button.click(); await frame();

@@ -1,4 +1,5 @@
 import { verifyHeldModifiersDesktop } from './verify-held-modifiers.mjs';
+import { verifyQuitCancelDesktop } from './verify-quit-cancel.mjs';
 import { verifyResizeCursorsDesktop } from './verify-resize-cursors.mjs';
 import { verifyColorSpectrumDesktop } from './verify-color-spectrum.mjs';
 import { verifyShapeStyleMenuDesktop } from './verify-shape-style-menu.mjs';
@@ -7,10 +8,19 @@ import { verifyFontCatalogDesktop } from './verify-font-catalog.mjs';
 import { verifyViewStateDesktop } from './verify-view-state.mjs';
 import { verifyEraserDesktop } from './verify-eraser-desktop.mjs';
 import { verifyLocalAiDesktop } from './verify-local-ai-desktop.mjs';
+import { verifyManagedAiDesktop } from './verify-managed-ai-desktop.mjs';
+import { verifyManagedGenerationDesktop } from './verify-managed-generation-desktop.mjs';
+import { verifyAiReleaseBoundaryDesktop } from './verify-ai-release-boundary-desktop.mjs';
+import { windowsGenerationCapacity, pendingCapacityStreams } from './windows-generation-capacity.mjs';
+import { verifyFileInformationDesktop } from './verify-file-information-desktop.mjs';
+import { desktopVerificationArguments } from './managed-ai-test-profile.mjs';
 import { verifyKeyboardDesktop } from './verify-keyboard-desktop.mjs';
 import { verifyResourceShortcutsDesktop } from './verify-resource-shortcuts-desktop.mjs';
 import { verifyDraftAffordancesDesktop } from './verify-draft-affordances-desktop.mjs';
 import { verifyTextDesktop } from './verify-text-desktop.mjs';
+import { verifyTextSessionDesktop } from './verify-text-session.mjs';
+import { verifyCanvasResizeKeyboardDesktop } from './verify-canvas-resize-keyboard.mjs';
+import { verifyLayerKeyboardDesktop } from './verify-layer-keyboard.mjs';
 import { verifyTextFocusDesktop } from './verify-text-focus.mjs';
 import { verifyPaletteFocusDesktop } from './verify-palette-focus.mjs';
 import { verifyTextPanFocusDesktop } from './verify-text-pan-focus.mjs';
@@ -21,6 +31,7 @@ import { verifyTiffDesktop } from './verify-tiff-desktop.mjs';
 import { verifyDrawingAdmissionDesktop } from './verify-drawing-admission-desktop.mjs';
 import { verifyHeldLayerPreviewDesktop } from './verify-held-layer-preview.mjs';
 import { chromium } from 'playwright-core';
+import { createVerificationResults } from './verification-results.mjs';
 import { verifyInteractions } from './verify-interactions.mjs';
 import { verifyPendingShapesDesktop } from './verify-pending-shapes-desktop.mjs';
 import { verifySelectionDesktop } from './verify-selection-desktop.mjs';
@@ -29,26 +40,26 @@ import { verifyPaintProjectDesktop } from './verify-paint-project-desktop.mjs';
 import fs from 'node:fs/promises';
 import { fileURLToPath } from 'node:url';
 import { randomUUID } from 'node:crypto';
+import { hiddenDesktopScreenshot } from './hidden-desktop-screenshot.mjs';
 import path from 'node:path';
 import { tmpdir } from 'node:os';
 
 // Attach only to an already running, dedicated test instance. This harness
 // neither launches an app nor interacts with the operating system desktop.
 const output = new URL('../output/', import.meta.url);
-const checks = [], errors = [], pending = new Map();
+const errors = [], captures = [], pending = new Map();
 const startedAt = Date.now();
 let lastProgress = startedAt;
-let socket, browser, version, fixtureLocation, targetWindowClosed = false, fixturesOwned = false, sequence = 0;
+let socket, browser, version, fixtureLocation, capture, targetWindowClosed = false, fixturesOwned = false, sequence = 0;
+const { workflow, photoFixture } = desktopVerificationArguments(process.argv.slice(2));
 await fs.mkdir(output, { recursive: true });
 
-function check(name, ok, detail = null) {
-  checks.push({ name, ok, detail });
+const { checks, check, summary } = createVerificationResults({ onResult({ name }) {
   if (Date.now() - lastProgress >= 30000) {
     lastProgress = Date.now();
     console.log(JSON.stringify({ progress: checks.length, lastCheck: name, elapsedSeconds: Math.round((lastProgress - startedAt) / 1000) }));
   }
-  if (!ok) throw new Error(`${name}: ${JSON.stringify(detail)}`);
-}
+} });
 
 function rejectPending(error) {
   for (const request of pending.values()) {
@@ -166,15 +177,17 @@ try {
     }) === token);
   }
   page.setDefaultTimeout(15000);
+  capture = version.platform === 'win32' ? hiddenDesktopScreenshot(page, main, value => captures.push(value)) : options => page.screenshot(options);
   page.on('pageerror', error => errors.push(error.message));
   await page.waitForSelector('#overlay');
   check('packaged desktop renderer loaded', await page.title() === 'Untitled - Stack Junkie Paint', await page.title());
   check('isolated preload bridge', await page.evaluate(() => !!window.paintDesktop && typeof require === 'undefined' && typeof process === 'undefined'));
-  if (process.env.SJ_PAINT_TEST_LOCAL_AI === '1') await verifyLocalAiDesktop(page, check);
-  else {
+  await verifyAiReleaseBoundaryDesktop(page, check);
+  if (!['--workflow managed-ai','--workflow managed-generation'].includes(workflow) && process.env.SJ_PAINT_TEST_LOCAL_AI === '1') await verifyLocalAiDesktop(page, check);
+  else if (!['--workflow managed-ai','--workflow managed-generation'].includes(workflow)) {
     const status = await page.evaluate(() => window.paintDesktop.localAiStatus());
     check('packaged local AI exposes an honest capability status', status?.ok && typeof status.value.configured === 'boolean' && status.value.active === null);
-    checks.push({ name: 'actual configured local AI inference', skipped: true, reason: 'Set SJ_PAINT_TEST_LOCAL_AI=1 with an already acquired runtime/model to exercise actual inference.' });
+    check.skip('actual configured local AI inference', 'Set SJ_PAINT_TEST_LOCAL_AI=1 with an already acquired runtime/model to exercise actual inference.');
   }
 
   const fixtureOwner = randomUUID();
@@ -188,7 +201,7 @@ try {
     const original = { save: electron.dialog.showSaveDialog, open: electron.dialog.showOpenDialog, confirm: electron.dialog.showMessageBox };
     const owner = ${JSON.stringify(fixtureOwner)};
     fs.writeFileSync(path.join(directory, '.verification-owner'), owner, { flag: 'wx' });
-    const q = { fs, path, directory, owner, electron, original, confirmResponse: 1, confirmCalls: 0, saveDialogs: 0, file: path.join(directory, 'verification.sjpaint') };
+    const q = { fs, path, directory, owner, electron, original, confirmResponse: 1, confirmCalls: 0, replaceCalls: 0, saveDialogs: 0, file: path.join(directory, 'verification.sjpaint') };
     globalThis.__sjPaintVerification = q;
     electron.dialog.showSaveDialog = async (_window, options) => {
       q.saveDialogs++;
@@ -200,12 +213,53 @@ try {
       return { canceled: false, filePaths: [q.file] };
     };
     electron.dialog.showMessageBox = async (_window, options) => {
+      if (options.title === 'Replace existing file?') {
+        if (options.defaultId !== 0 || options.cancelId !== 0 || JSON.stringify(options.buttons) !== '["Cancel","Replace"]') throw new Error('Unexpected replacement confirmation contract.');
+        q.replaceCalls++; return { response: 1 };
+      }
       q.confirmCalls++; q.lastConfirmOptions = options;
       return { response: q.confirmResponse };
     };
     return { directory, temporaryRoot: os.tmpdir(), owner };
   })()`);
   fixturesOwned = true;
+  if (workflow === '--workflow managed-ai') {
+    await verifyManagedAiDesktop(page, check, main, photoFixture, {
+      outputDirectory: fileURLToPath(new URL(`managed-selection-photo-${new Date().toISOString().replace(/[:.]/g,'-')}/`, output)), capture,
+    });
+    check('managed AI workflow has no renderer errors', errors.length === 0, errors);
+    check('managed AI workflow keeps the Windows window hidden', await main("process.mainModule.require('electron').BrowserWindow.getAllWindows().every(window => !window.isVisible())"));
+  } else if (workflow === '--workflow managed-generation') {
+    const capacity=await windowsGenerationCapacity();
+    try { await verifyManagedGenerationDesktop(page, check, main, {
+      outputDirectory: fileURLToPath(new URL(`managed-generation-${new Date().toISOString().replace(/[:.]/g,'-')}/`, output)),
+      sampleCapacity: capacity.sample,
+      photoFixture,
+      scope: process.env.SJ_PAINT_TEST_GENERATION_SCOPE ?? 'all',
+    }); } finally {
+      const receipts=await capacity.close();
+      check('capacity readers close their owned processes',receipts.every(receipt=>receipt.closedUtc),receipts);
+    }
+    check('managed generation has no renderer errors', errors.length === 0, errors);
+    check('managed generation keeps every Windows window hidden', await main("process.mainModule.require('electron').BrowserWindow.getAllWindows().every(window => !window.isVisible())"));
+  } else if (workflow === '--workflow files') {
+    await verifyFileInformationDesktop(page, check, { main, waitForFile });
+    await verifyPaintProjectDesktop(page, check, { main, waitForFile });
+    await verifyTiffDesktop(page, check, { main, waitForFile });
+    check('focused desktop file workflows have no renderer errors', errors.length === 0, errors);
+  } else if (workflow === '--workflow managed-quit') {
+    const status = await page.evaluate(() => window.paintDesktop.localAiStatus());
+    check('managed quit repro starts without an active or retained worker', status.ok && !status.value.active &&
+      !status.value.retainedSelection && !status.value.generationSession && !status.value.ownsProcess && !status.value.cleanupBlocked, status);
+    check('managed quit repro has no renderer errors', errors.length === 0, errors);
+  } else if (workflow === '--workflow quit-cancel') {
+    await verifyQuitCancelDesktop(page, check, main);
+    check('focused quit workflow has no renderer errors', errors.length === 0, errors);
+  } else if (workflow) {
+    await verifyViewStateDesktop(page, check, { capture });
+    await verifyTextSessionDesktop(page, check, { capture });
+    check('focused capture workflow keeps the Windows window hidden', await main("process.mainModule.require('electron').BrowserWindow.getAllWindows().every(window => !window.isVisible())"));
+  } else {
   await verifyColorInputsDesktop(page, check);
   await verifyColorSpectrumDesktop(page, check);
   await verifyResizeCursorsDesktop(page, check);
@@ -216,7 +270,7 @@ try {
   await verifyTextControlsDesktop(page, check);
   await verifySelectionMenuDesktop(page, check);
   await verifyShapeStyleMenuDesktop(page, check);
-  await verifyViewStateDesktop(page, check);
+  await verifyViewStateDesktop(page, check, { capture });
   await verifyInteractions(page, check);
   await verifyPendingShapesDesktop(page, check);
   await verifySelectionDesktop(page, check);
@@ -224,10 +278,14 @@ try {
   await verifyPaintProjectDesktop(page, check, { main, waitForFile });
   await verifyEraserDesktop(page, check, { main });
   await verifyTiffDesktop(page, check, { main, waitForFile });
+  await verifyFileInformationDesktop(page, check, { main, waitForFile });
   await verifyKeyboardDesktop(page, check);
   await verifyResourceShortcutsDesktop(page, check);
   await verifyDraftAffordancesDesktop(page, check);
   await verifyTextDesktop(page, check);
+  await verifyTextSessionDesktop(page, check, { capture });
+  await verifyCanvasResizeKeyboardDesktop(page, check);
+  await verifyLayerKeyboardDesktop(page, check);
   await verifyTextFocusDesktop(page, check);
   await verifyCurveConstructionDesktop(page, check);
   await verifyDrawingAdmissionDesktop(page, check);
@@ -272,7 +330,10 @@ try {
   await page.getByRole('button', { name: 'Apply text', exact: true }).click();
 
   await fixture('verification.sjpaint', 'previous project fixture');
+  const replacesBeforeProjectSave = await main('__sjPaintVerification.replaceCalls');
   const project = await saveProject();
+  check('project Save As uses the platform overwrite owner', await main('__sjPaintVerification.replaceCalls') ===
+    replacesBeforeProjectSave + (version.platform === 'linux' ? 1 : 0));
   check('native IPC saves new layered project format', project.format === 'sj-paint' && project.version === 1 && project.layers.length === 2,
     { format: project.format, version: project.version, layers: project.layers.length });
   const saveOptions = await main('__sjPaintVerification.lastSaveOptions');
@@ -313,7 +374,7 @@ try {
     const size = await waitForFile();
     check(`native ${format} export`, size > 50, size);
   }
-  await page.screenshot({ path: fileURLToPath(new URL(`stack-junkie-paint-${version.platform}-runtime.png`, output)) });
+  await capture({ path: fileURLToPath(new URL(`stack-junkie-paint-${version.platform}-runtime.png`, output)) });
 
   const clipboardEnabled = process.env.SJ_PAINT_TEST_CLIPBOARD === '1' ||
     (version.platform === 'linux' && version.container && process.env.SJ_PAINT_TEST_CLIPBOARD !== '0');
@@ -326,8 +387,8 @@ try {
     await waitPixels(beforeReload);
     check('desktop clipboard copies visible layers and pastes image', beforeReload === await pixels());
   } else {
-    checks.push({ name: 'desktop clipboard copies visible layers and pastes image', skipped: true,
-      reason: 'Clipboard is untouched unless the target is an isolated Linux container or SJ_PAINT_TEST_CLIPBOARD=1.' });
+    check.skip('desktop clipboard copies visible layers and pastes image',
+      'Clipboard is untouched unless the target is an isolated Linux container or SJ_PAINT_TEST_CLIPBOARD=1.');
   }
   await fixture('verification.png');
   await command('File', 'open');
@@ -392,6 +453,7 @@ try {
   check('native close Cancel retains dirty drawing and original file', !page.isClosed() &&
     await pixels() === closePixels && (await page.title()).includes('•') &&
     beforeCloseBytes.equals(await fs.readFile(closeFile)));
+  await verifyQuitCancelDesktop(page, check, main, { draw: false, finishQuit: false, hidden: version.platform === 'win32' });
 
   // Leave a real application modal open with an unsubmitted dimension edit.
   // Closing through Save must not submit that form or silently resize pixels.
@@ -420,6 +482,7 @@ try {
   check('native close Save writes current pixels before closing without submitting Properties', targetWindowClosed &&
     closeSavedBytes.equals(Buffer.from(closePixels.split(',')[1], 'base64')) && !closeSavedBytes.equals(beforeCloseBytes));
   check('native close workflow has no renderer errors', errors.length === 0, errors);
+  }
 } catch (error) {
   checks.push({ name: 'failure', ok: false, detail: error.stack });
   try {
@@ -435,7 +498,7 @@ try {
         textDraft: document.querySelector('.text-editor')?.value,
       }));
       await fs.writeFile(new URL('desktop-failure-state.json', output), JSON.stringify(state, null, 2));
-      await page.screenshot({ path: fileURLToPath(new URL('desktop-failure.png', output)) });
+      await capture({ path: fileURLToPath(new URL('desktop-failure.png', output)) });
     }
   } catch (diagnosticError) { errors.push(`Failure capture: ${diagnosticError.message}`); }
   process.exitCode = 1;
@@ -475,17 +538,28 @@ try {
     }
   }
   const report = { timestamp: new Date().toISOString(), version,
+    workflow: workflow || 'full',
     environment: 'Already running dedicated desktop target; Windows requires hidden windows. No app launched by this harness.',
     dialogBoundary: 'Native chooser responses controlled through the main-process inspector; real preload IPC, filesystem, encoding and decoding used.',
-    checks, errors };
+    checks, errors, captures };
   try {
     await fs.writeFile(new URL('desktop-verification.json', output), JSON.stringify(report, null, 2));
     if (version) await fs.writeFile(new URL(`${version.platform}-verification.json`, output), JSON.stringify(report, null, 2));
-    console.log(JSON.stringify({ version, passed: checks.filter(item => item.ok === true).length,
-      skipped: checks.filter(item => item.skipped), failed: checks.filter(item => item.ok === false), errors }));
+    console.log(JSON.stringify({ version, ...summary(), errors }));
   } finally {
     // For a CDP-attached browser, close() disconnects the transport; it does not
     // terminate the already running Electron instance.
-    try { await browser?.close(); } finally { socket?.close(); }
+    try { await browser?.close(); } finally {
+      socket?.close();
+      const pending=pendingCapacityStreams();
+      if(pending.length){
+        const receipt={status:'cleanup pending',owners:pending.map(owner=>owner.receipt)};
+        await fs.writeFile(new URL('capacity-cleanup.json',output),JSON.stringify(receipt,null,2));
+        console.error(JSON.stringify(receipt));
+        await Promise.all(pending.map(owner=>owner.waitForClose()));
+        receipt.status='confirmed late closure';
+        await fs.writeFile(new URL('capacity-cleanup.json',output),JSON.stringify(receipt,null,2));
+      }
+    }
   }
 }

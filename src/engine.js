@@ -1,4 +1,5 @@
 import PROJECT from './project-format.json' with { type: 'json' };
+import { normalizeResolution } from './image-metadata.js';
 import { matrix, translation, multiply, inverse, mapPoint, around, rotation, selectionGeometry, hitSelectionGeometry, gestureTransform, paintSelection, ownsDocumentPoint } from './selection-transform.js';
 
 export const PAINT_LIMITS = Object.freeze({
@@ -6,6 +7,17 @@ export const PAINT_LIMITS = Object.freeze({
   maxDocumentBytes: 128 * 1024 * 1024, historyBytes: 128 * 1024 * 1024,
   maxEncodedProjectBytes: 64 * 1024 * 1024,
 });
+export const DEFAULT_DOCUMENT_SIZE = Object.freeze({ width: 1152, height: 648 });
+// Native Paint 11.2605.81.0 ICommandHost.GetDefaultDimensions uses MULSS
+// with float32 0.6, then truncates. Properties owns when to request this size.
+export function defaultDimensionsForDisplay(metrics) {
+  if (!metrics || !['width', 'height'].every(axis => Number.isSafeInteger(metrics[axis]) && metrics[axis] > 0 && metrics[axis] <= 0x7fffffff)) {
+    throw new RangeError('Invalid primary display dimensions.');
+  }
+  const scaled = axis => Math.trunc(Math.fround(Math.fround(metrics[axis]) * Math.fround(0.6)));
+  const [width, height] = dimensions(scaled('width'), scaled('height'));
+  return { width, height };
+}
 const { historyBytes: HISTORY_LIMIT, maxPixels: MAX_PIXELS, maxDimension: MAX_DIMENSION, maxLayers: MAX_LAYERS } = PAINT_LIMITS;
 
 function dimensions(width, height) {
@@ -45,12 +57,28 @@ const copy = canvas => {
   context(result).drawImage(canvas, 0, 0);
   return result;
 };
-export function maskedCanvas(source, mask) {
+export function maskedCanvas(source, mask, matte) {
   if (!(mask instanceof Uint8Array) || mask.length !== source.width * source.height) {
     throw new Error('The background mask does not match this layer.');
   }
   const image = context(source).getImageData(0, 0, source.width, source.height);
-  for (let i = 0; i < mask.length; i++) image.data[i * 4 + 3] = Math.round(image.data[i * 4 + 3] * mask[i] / 255);
+  const unmix = matte?.unmixEdges === true;
+  if (matte?.unmixEdges !== undefined && !unmix || unmix &&
+      (matte.method !== 'flat-drawing-border-flood' || !Array.isArray(matte.paperRgb) || matte.paperRgb.length !== 3 ||
+       !matte.paperRgb.every(value => Number.isInteger(value) && value >= 0 && value <= 255) ||
+       image.data.some((value, index) => index % 4 === 3 && value !== 255))) {
+    throw new Error('The background matte correction does not match this layer.');
+  }
+  for (let i = 0; i < mask.length; i++) {
+    const offset = i * 4, alpha = mask[i] / 255;
+    if (unmix && mask[i] > 0 && mask[i] < 255) {
+      // The worker estimates coverage; composition removes the known opaque
+      // paper contribution from only those antialiased boundary pixels.
+      for (let channel = 0; channel < 3; channel++) image.data[offset + channel] =
+        Math.round((image.data[offset + channel] - (1 - alpha) * matte.paperRgb[channel]) / alpha);
+    }
+    image.data[offset + 3] = Math.round(image.data[offset + 3] * alpha);
+  }
   const result = createCanvas(source.width, source.height);
   context(result).putImageData(image, 0, 0);
   return result;
@@ -88,6 +116,7 @@ function sameCanvas(a, b) {
 
 function sameState(a, b) {
   if (a.width !== b.width || a.height !== b.height || a.background !== b.background ||
+      a.resolution.xDpi !== b.resolution.xDpi || a.resolution.yDpi !== b.resolution.yDpi ||
       a.activeLayerId !== b.activeLayerId || a.layers.length !== b.layers.length ||
       Boolean(a.selection) !== Boolean(b.selection)) return false;
   if (a.selection) {
@@ -106,7 +135,8 @@ function sameState(a, b) {
 }
 
 function sameSavedContent(a, b) {
-  if (a.width !== b.width || a.height !== b.height || a.background !== b.background || a.layers.length !== b.layers.length) return false;
+  if (a.width !== b.width || a.height !== b.height || a.background !== b.background || a.layers.length !== b.layers.length ||
+      a.resolution.xDpi !== b.resolution.xDpi || a.resolution.yDpi !== b.resolution.yDpi) return false;
   return a.layers.every((layer, index) => {
     const other = b.layers[index];
     if (!['id', 'name', 'visible', 'opacity'].every(key => layer[key] === other[key])) return false;
@@ -165,7 +195,7 @@ function imageFromURL(url) {
 }
 
 export class PaintDocument extends EventTarget {
-  constructor(width = 1152, height = 648) {
+  constructor(width = DEFAULT_DOCUMENT_SIZE.width, height = DEFAULT_DOCUMENT_SIZE.height) {
     super();
     this._undo = [];
     this._redo = [];
@@ -210,17 +240,18 @@ export class PaintDocument extends EventTarget {
 
   _changed() { this.dispatchEvent(new Event('change')); }
   _snapshot() {
-    return { width: this.width, height: this.height, background: this.background,
+    return { width: this.width, height: this.height, background: this.background, resolution: this.resolution,
       activeLayerId: this.activeLayerId, revision: this._revision,
       layers: this.layers.map(layer => ({ ...layer, canvas: copy(layer.canvas) })),
       selection: copySelection(this.selection) };
   }
-  _current() { return { width: this.width, height: this.height, background: this.background,
+  _current() { return { width: this.width, height: this.height, background: this.background, resolution: this.resolution,
     activeLayerId: this.activeLayerId, layers: this.layers, selection: this.selection }; }
   _restore(state) {
     this.width = state.width;
     this.height = state.height;
     this.background = state.background;
+    this.resolution = state.resolution;
     this.activeLayerId = state.activeLayerId;
     this._revision = state.revision;
     // A restored state is removed from its stack and becomes exclusively owned by the document.
@@ -397,9 +428,10 @@ export class PaintDocument extends EventTarget {
     this._changed();
   }
 
-  newDocument(width, height) {
+  newDocument(width = DEFAULT_DOCUMENT_SIZE.width, height = DEFAULT_DOCUMENT_SIZE.height) {
     [this.width, this.height] = assertDocumentBudget(width, height, 1);
     this.background = '#ffffff';
+    this.resolution = normalizeResolution();
     this.layers = [{ id: id(), name: 'Layer 1', visible: true, opacity: 1, canvas: createCanvas(this.width, this.height) }];
     this.activeLayerId = this.layers[0].id;
     this.selection = null;
@@ -597,6 +629,9 @@ export class PaintDocument extends EventTarget {
         return { ...layer, canvas };
       });
       this.width = width; this.height = height;
+      if (angle === 90 || angle === 270) {
+        this.resolution = normalizeResolution({ xDpi: this.resolution.yDpi, yDpi: this.resolution.xDpi });
+      }
     });
   }
   flip(horizontal = true) {
@@ -623,12 +658,59 @@ export class PaintDocument extends EventTarget {
     });
   }
 
-  applyLayerMask(target, mask) {
+  applyLayerMask(target, mask, matte) {
     if (!this.matchesEditTarget(target) || this.selection || this._transaction) {
       throw new Error('Background removal canceled because the drawing changed.');
     }
-    const canvas = maskedCanvas(this.activeLayer.canvas, mask);
+    const canvas = maskedCanvas(this.activeLayer.canvas, mask, matte);
     this._edit('Remove background', () => { this.activeLayer.canvas = canvas; });
+  }
+
+  activeLayerImage() {
+    const canvas = copy(this.activeLayer.canvas);
+    if (this.selection?.layerId === this.activeLayerId) paintSelection(context(canvas), this.selection);
+    return canvas;
+  }
+  selectionMask() {
+    if (!this.selection) throw new Error('Select the area to change first.');
+    const mask = new Uint8Array(this.width * this.height), inv = inverse(this.selection.transform);
+    for (let y = 0; y < this.height; y++) for (let x = 0; x < this.width; x++) {
+      if (ownsDocumentPoint(this.selection, x + .5, y + .5, inv)) mask[y * this.width + x] = 1;
+    }
+    return mask;
+  }
+  generatedLayer(target, image, { selectionOnly = false } = {}) {
+    if (!this.matchesEditTarget(target) || this._transaction) throw new Error('The drawing changed while AI was working.');
+    const canvas = createCanvas(this.width, this.height), ctx = context(canvas);
+    ctx.drawImage(image, 0, 0, this.width, this.height);
+    if (selectionOnly) {
+      const mask = this.selectionMask(), original = context(this.activeLayerImage()).getImageData(0, 0, this.width, this.height);
+      const generated = ctx.getImageData(0, 0, this.width, this.height);
+      // The document, not model output or resized masks, defines pixel ownership.
+      for (let i = 0; i < mask.length; i++) if (!mask[i]) generated.data.set(original.data.subarray(i * 4, i * 4 + 4), i * 4);
+      ctx.putImageData(generated, 0, 0);
+    }
+    return canvas;
+  }
+  applyGeneratedLayer(target, canvas, label = 'AI edit') {
+    if (!this.matchesEditTarget(target) || this._transaction) throw new Error('The drawing changed while AI was working.');
+    if (canvas.width !== this.width || canvas.height !== this.height) throw new Error('The generated layer does not match the drawing.');
+    const owned = copy(canvas);
+    this._edit(label, () => { this.activeLayer.canvas = owned; this.selection = null; }, { selection: true, finishSelection: true });
+  }
+  insertGeneratedImage(target, image, name) {
+    if (!this.matchesEditTarget(target) || this._transaction) throw new Error('The drawing changed while AI was working.');
+    assertDocumentBudget(this.width, this.height, this.layers.length + 1);
+    const canvas = createCanvas(this.width, this.height), ctx = context(canvas);
+    const scale = Math.min(1, this.width / image.width, this.height / image.height);
+    const width = Math.max(1, Math.round(image.width * scale)), height = Math.max(1, Math.round(image.height * scale));
+    ctx.drawImage(image, Math.floor((this.width - width) / 2), Math.floor((this.height - height) / 2), width, height);
+    this._edit(name, () => {
+      this._stampSelection();
+      const layer = { id: id(), name, visible: true, opacity: 1, canvas };
+      this.layers.splice(this.layers.findIndex(item => item.id === this.activeLayerId) + 1, 0, layer);
+      this.activeLayerId = layer.id;
+    });
   }
 
   invertColors() {
@@ -735,6 +817,11 @@ export class PaintDocument extends EventTarget {
     this._edit('Background', () => { this.background = colorOrNull; });
   }
 
+  setResolution(value) {
+    const resolution = normalizeResolution(value);
+    this._edit('Image resolution', () => { this.resolution = resolution; });
+  }
+
   setSelectionTransparency(enabled, color = this.selectionKeyColor) {
     colorBytes(color);
     this.selectionTransparent = Boolean(enabled);
@@ -800,6 +887,30 @@ export class PaintDocument extends EventTarget {
     this.assertSelectionSize(x2 - x1, y2 - y1);
     if (options.transparent ?? this.selectionTransparent) colorBytes(options.color ?? this.selectionKeyColor);
     this._startSelection('Free-form select', () => this._capture(x1, y1, x2 - x1, y2 - y1, points, options));
+  }
+  selectMask(target, mask) {
+    if (!this.matchesEditTarget(target) || this.selection || this._transaction) {
+      throw new Error('The drawing changed before object selection was applied.');
+    }
+    if (!(mask instanceof Uint8Array) || mask.length !== this.width * this.height) {
+      throw new Error('The object mask does not match this drawing.');
+    }
+    let left = this.width, top = this.height, right = -1, bottom = -1;
+    for (let i = 0; i < mask.length; i++) {
+      if (mask[i] !== 0 && mask[i] !== 1) throw new Error('The object mask must contain binary selection values.');
+      if (!mask[i]) continue;
+      const x = i % this.width, y = Math.floor(i / this.width);
+      left = Math.min(left, x); right = Math.max(right, x);
+      top = Math.min(top, y); bottom = Math.max(bottom, y);
+    }
+    if (right < left) throw new Error('No object was selected. Try another point or box.');
+    const width = right - left + 1, height = bottom - top + 1;
+    this.assertSelectionSize(width, height);
+    const cropped = new Uint8Array(width * height);
+    for (let y = 0; y < height; y++) {
+      cropped.set(mask.subarray((top + y) * this.width + left, (top + y) * this.width + left + width), y * width);
+    }
+    this._startSelection('Select object', () => this._capture(left, top, width, height, null, { transparent: false }, cropped));
   }
   invertSelection() {
     if (!this.selection) { this.selectAll(); return; }
@@ -947,7 +1058,7 @@ export class PaintDocument extends EventTarget {
 
   serialize() {
     return { format: PROJECT.format, version: PROJECT.schemaVersion, width: this.width, height: this.height,
-      background: this.background, activeLayerId: this.activeLayerId,
+      background: this.background, resolution: this.resolution, activeLayerId: this.activeLayerId,
       layers: this.layers.map(layer => {
         let canvas = layer.canvas;
         if (this.selection?.layerId === layer.id) {
@@ -957,8 +1068,9 @@ export class PaintDocument extends EventTarget {
         return { id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity, png: canvas.toDataURL('image/png') };
       }) };
   }
-  _publishLoaded({ width, height, background, layers, activeLayerId }) {
+  _publishLoaded({ width, height, background, resolution, layers, activeLayerId }) {
     this.width = width; this.height = height; this.background = background;
+    this.resolution = resolution;
     this.layers = layers; this.activeLayerId = activeLayerId; this.selection = null;
     this._transaction = null; this._selectionSession = null; this._settlement = null;
     this._undo = []; this._redo = []; this._compositeScratch = null;
@@ -969,6 +1081,7 @@ export class PaintDocument extends EventTarget {
   loadRaster(data) {
     if (!data || !Number.isInteger(data.width) || !Number.isInteger(data.height)) throw new Error('Raster dimensions must be integers.');
     const { width, height, background, activeLayerId } = data;
+    const resolution = normalizeResolution(data.resolution);
     validateLoadedLayers(data);
     assertDocumentBudget(width, height, data.layers.length);
     const expectedBytes = width * height * 4;
@@ -983,7 +1096,7 @@ export class PaintDocument extends EventTarget {
       ctx.putImageData(pixels, 0, 0);
       return { id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity, canvas };
     });
-    this._publishLoaded({ width, height, background, layers, activeLayerId });
+    this._publishLoaded({ width, height, background, resolution, layers, activeLayerId });
   }
   async load(data) {
     const target = this.captureEditTarget();
@@ -992,6 +1105,7 @@ export class PaintDocument extends EventTarget {
     };
     if (!data || !PROJECT.readableFormats.includes(data.format) || data.version !== PROJECT.schemaVersion) throw new Error('Unsupported SJ Paint project format.');
     const [width, height] = dimensions(data.width, data.height);
+    const resolution = normalizeResolution(data.resolution);
     validateLoadedLayers(data);
     assertDocumentBudget(width, height, data.layers.length);
     const layers = [];
@@ -1013,6 +1127,6 @@ export class PaintDocument extends EventTarget {
       layers.push({ id: layer.id, name: layer.name, visible: layer.visible, opacity: layer.opacity, canvas });
     }
     ensureCurrent();
-    this._publishLoaded({ width, height, background: data.background, layers, activeLayerId: data.activeLayerId });
+    this._publishLoaded({ width, height, background: data.background, resolution, layers, activeLayerId: data.activeLayerId });
   }
 }

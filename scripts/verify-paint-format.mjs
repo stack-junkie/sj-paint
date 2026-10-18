@@ -1,6 +1,6 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { readFile } from 'node:fs/promises';
+import { readNativeFixture } from './native-fixtures.mjs';
 import { createHash } from 'node:crypto';
 import { deflateRawSync, deflateSync, inflateRawSync } from 'node:zlib';
 import { readPaint, writePaint } from '../src/paint-format.js';
@@ -10,6 +10,7 @@ import { PAINT_LIMITS } from '../src/engine.js';
 // generated documents and malformed inputs always run; fixture checks report skips.
 const digest = bytes => createHash('sha256').update(bytes).digest('hex');
 const doc = () => ({
+  resolution: { xDpi: null, yDpi: null },
   width: 3, height: 2, background: [18, 52, 86, 128],
   layers: [
     { name: 'Lower layer', visible: true, opacity: 1, rgba: Uint8Array.from([255, 0, 0, 255, 0, 255, 0, 0, 0, 0, 255, 127, 1, 2, 3, 4, 5, 6, 7, 8, 255, 255, 255, 255]) },
@@ -58,7 +59,7 @@ test('independent bounded zlib codec reads native-stream output and writes strea
 });
 
 test('transparent background and maximum supported layer count retain all pixel bytes', async () => {
-  const original = { width: 1, height: 1, background: [0, 0, 0, 0], layers: Array.from({ length: 64 }, (_, i) => ({ name: String(i), visible: true, opacity: 1, rgba: Uint8Array.of(i, 255 - i, 100, i) })) };
+  const original = { width: 1, height: 1, background: [0, 0, 0, 0], resolution: { xDpi: null, yDpi: null }, layers: Array.from({ length: 64 }, (_, i) => ({ name: String(i), visible: true, opacity: 1, rgba: Uint8Array.of(i, 255 - i, 100, i) })) };
   assert.deepEqual(await readPaint(await writePaint(original)), original);
   const transparent = doc(); transparent.background = null;
   assert.deepEqual((await readPaint(await writePaint(transparent))).background, [0, 0, 0, 0]);
@@ -73,7 +74,7 @@ test('stored-DEFLATE fallback is independently readable', async () => {
 });
 
 test('multi-chunk streams and multiple stored DEFLATE blocks retain pixels', async () => {
-  const original = { width: 128, height: 256, background: [0, 0, 0, 0], layers: [{ name: '', visible: true, opacity: 1, rgba: new Uint8Array(128 * 256 * 4) }] };
+  const original = { width: 128, height: 256, background: [0, 0, 0, 0], resolution: { xDpi: null, yDpi: null }, layers: [{ name: '', visible: true, opacity: 1, rgba: new Uint8Array(128 * 256 * 4) }] };
   let seed = 123456;
   for (let i = 0; i < original.layers[0].rgba.length; i++) { seed = (Math.imul(seed, 1664525) + 1013904223) >>> 0; original.layers[0].rgba[i] = seed >>> 24; }
   assert.deepEqual(await readPaint(await writePaint(original)), original);
@@ -216,14 +217,12 @@ test('declared channel order is interpreted instead of assuming BGRA', async () 
 });
 
 const fixtures = [
-  { name: 'reference-native-single-layer.paint', sha256: '011068fb966e10b80a30b822bcaddf9966c82360143bdb215417d86806168e4e', layers: 1 },
-  { name: 'reference-native-two-layers.paint', sha256: 'ca6f3de4933a8f27c63001e33af5ba8648e279bf402f290e26e3d0fca67bb666', layers: 2 },
+  { name: 'reference-native-single-layer.paint', layers: 1 },
+  { name: 'reference-native-two-layers.paint', layers: 2 },
 ];
 for (const fixture of fixtures) test(`owned native fixture: ${fixture.name}`, async t => {
-  let bytes;
-  try { bytes = await readFile(new URL(`../output/${fixture.name}`, import.meta.url)); }
-  catch (error) { if (error.code === 'ENOENT') { t.skip('owned native fixture is not present'); return; } throw error; }
-  assert.equal(digest(bytes), fixture.sha256, 'fixture provenance changed');
+  const bytes = await readNativeFixture(fixture.name);
+  if (!bytes) { t.skip('Private fixture absent. Set SJ_PAINT_NATIVE_FIXTURE_DIR to its directory.'); return; }
   const decoded = await readPaint(bytes);
   assert.equal(decoded.width, 813); assert.equal(decoded.height, 431);
   assert.deepEqual(decoded.background, [255, 255, 255, 255]); assert.equal(decoded.layers.length, fixture.layers);

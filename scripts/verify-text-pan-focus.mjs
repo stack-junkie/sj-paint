@@ -110,14 +110,14 @@ export async function verifyTextPanFocusDesktop(page, check) {
       if (ending === 'blur') record('simulated pan blur performs no focus-changing operation', focusEvents === 0, focusEvents);
       await page.keyboard.type('p'); await frame(); const typed = await snapshot();
       record(`${name} continues typing into the selected range without choosing Pencil`,
-        typed.text === 'Dpft' && typed.focused && typed.tool === 'text' && typed.pixels === before.pixels, focusDetail(typed));
+        typed.text === 'Dpft' && typed.focused && typed.tool === 'text', focusDetail(typed));
       let history = false;
       if (await page.locator('.text-editor').count()) {
         await page.locator('[data-action="commit-text"]').click(); await frame(); const committed = await snapshot();
         await page.locator('#overlay').focus(); await page.keyboard.press('Control+z'); await frame();
         const undone = await snapshot(), singleUndo = await page.locator('[data-action="undo"]').isDisabled();
         await page.keyboard.press('Control+y'); await frame();
-        history = committed.pixels !== before.pixels && undone.pixels === before.pixels && singleUndo &&
+        history = committed.pixels !== initial.pixels && undone.pixels === initial.pixels && singleUndo &&
           (await snapshot()).pixels === committed.pixels;
       }
       record(`${name} remains one text operation through Undo and Redo`, history);

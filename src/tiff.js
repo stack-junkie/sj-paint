@@ -1,11 +1,12 @@
 import { PAINT_LIMITS, assertDocumentBudget } from './engine.js';
+import { normalizeResolution, readTiffMetadata, resolutionRational } from './image-metadata.js';
 
 // Independent classic TIFF reader for the observed Paint 11.2605.81.0 profile
 // and SJ Paint's RGBA export. No third-party implementation is included.
 // Reference: TIFF 6.0 sections 7, 8, 9, 13 and 14 (RGB, PackBits and TIFF LZW).
 // https://libtiff.gitlab.io/libtiff/specification/index.html
-// This API returns pixels only. Resolution, descriptive metadata and Exif are
-// not preserved; unsupported pixel/color interpretations fail explicitly.
+// Physical resolution accompanies pixels; descriptive metadata and unrelated
+// Exif are not preserved. Unsupported pixel/color interpretations fail explicitly.
 const MAX_BYTES = PAINT_LIMITS.maxEncodedProjectBytes;
 const fail = message => { throw new Error(`Unsupported or invalid TIFF: ${message}`); };
 const check = (condition, message) => { if (!condition) fail(message); };
@@ -57,7 +58,7 @@ function encodeLzw(input, cap) {
 }
 
 // One producer owns encoding for both synchronous fixtures and cooperative saves.
-function* encodeTiff({ width, height, rgba }, { compression = 'lzw' } = {}) {
+function* encodeTiff({ width, height, rgba }, { compression = 'lzw', resolution: requestedResolution } = {}) {
   check(Number.isInteger(width) && Number.isInteger(height) && width > 0 && height > 0 &&
     width <= PAINT_LIMITS.maxDimension && height <= PAINT_LIMITS.maxDimension && width * height <= PAINT_LIMITS.maxPixels,
   'image dimensions exceed the document limits');
@@ -65,13 +66,15 @@ function* encodeTiff({ width, height, rgba }, { compression = 'lzw' } = {}) {
   check(compression === 'lzw' || compression === 'none', 'unsupported export compression');
   const pixels = rgba instanceof Uint8ClampedArray ? new Uint8Array(rgba.buffer, rgba.byteOffset, rgba.byteLength) : bytesOf(rgba);
   check(pixels.length === width * height * 4, 'pixel length does not match dimensions');
+  const resolution = normalizeResolution(requestedResolution);
+  const axes = [[282, resolution.xDpi], [283, resolution.yDpi]].filter(([, dpi]) => dpi !== null);
   const compressed = compression === 'lzw', rowBytes = width * 4;
   // A complete row always fits in 64 KiB under the shared dimension limit.
   // Uncompressed mode retains the original one-strip TIFF representation.
   const rowsPerStrip = compressed ? Math.min(height, Math.max(1, Math.floor(65536 / rowBytes))) : height;
-  const stripCount = Math.ceil(height / rowsPerStrip), entryCount = compressed ? 15 : 14;
+  const stripCount = Math.ceil(height / rowsPerStrip), entryCount = (compressed ? 12 : 11) + axes.length + (axes.length ? 1 : 0);
   const bitsOffset = 8 + 2 + entryCount * 12 + 4, resolutionOffset = bitsOffset + 8;
-  const offsetsOffset = resolutionOffset + 16, lengthsOffset = offsetsOffset + (stripCount > 1 ? stripCount * 4 : 0);
+  const offsetsOffset = resolutionOffset + axes.length * 8, lengthsOffset = offsetsOffset + (stripCount > 1 ? stripCount * 4 : 0);
   const headerLength = lengthsOffset + (stripCount > 1 ? stripCount * 4 : 0);
   check(compressed || headerLength + pixels.length <= MAX_BYTES, 'encoded image exceeds the file limit');
   const strips = []; let totalBytes = headerLength;
@@ -105,13 +108,14 @@ function* encodeTiff({ width, height, rgba }, { compression = 'lzw' } = {}) {
   tag(273, 4, stripCount, stripCount === 1 ? headerLength : offsetsOffset);
   tag(277, 3, 1, 4); tag(278, 4, 1, rowsPerStrip);
   tag(279, 4, stripCount, stripCount === 1 ? strips[0].length : lengthsOffset);
-  tag(282, 5, 1, resolutionOffset); tag(283, 5, 1, resolutionOffset + 8);
-  tag(284, 3, 1, 1); tag(296, 3, 1, 2);
+  for (let index = 0; index < axes.length; index++) tag(axes[index][0], 5, 1, resolutionOffset + index * 8);
+  tag(284, 3, 1, 1); if (axes.length) tag(296, 3, 1, 2);
   if (compressed) tag(317, 3, 1, 2);
   tag(338, 3, 1, 2); // Unassociated alpha, including RGB under zero alpha.
   for (let channel = 0; channel < 4; channel++) view.setUint16(bitsOffset + channel * 2, 8, true);
-  for (const offset of [resolutionOffset, resolutionOffset + 8]) {
-    view.setUint32(offset, 96, true); view.setUint32(offset + 4, 1, true);
+  for (let index = 0; index < axes.length; index++) {
+    const offset = resolutionOffset + index * 8, [numerator, denominator] = resolutionRational(axes[index][1]);
+    view.setUint32(offset, numerator, true); view.setUint32(offset + 4, denominator, true);
   }
   let offset = headerLength;
   for (let index = 0; index < strips.length; index++) {
@@ -336,6 +340,7 @@ export async function readTiff(input, { inflate } = {}) {
   const spans = offsets.map((offset, index) => [offset, offset + lengths[index]]).sort((a, b) => a[0] - b[0]);
   for (let index = 1; index < spans.length; index++) check(spans[index][0] >= spans[index - 1][1], 'overlapping image strips');
   // All tags, file ranges, dimensions and strip counts are validated before pixel allocation.
+  const resolution = readTiffMetadata(bytes, { fields, little, orientation }).resolution;
   const outputWidth = orientation >= 5 ? height : width, outputHeight = orientation >= 5 ? width : height;
   const rgba = new Uint8Array(width * height * 4);
   for (let index = 0; index < stripCount; index++) {
@@ -378,5 +383,5 @@ export async function readTiff(input, { inflate } = {}) {
       rgba[target + 3] = a;
     }
   }
-  return { width: outputWidth, height: outputHeight, rgba };
+  return { width: outputWidth, height: outputHeight, rgba, resolution };
 }

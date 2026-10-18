@@ -35,3 +35,13 @@
 
 #dialog:has(.color-picker){width:620px;max-height:94vh}#dialog:has(.color-picker) form{display:flex;flex-direction:column;max-height:94vh}#dialog:has(.color-picker) .dialog-content{overflow:auto;min-height:0}.color-picker-top{display:grid;grid-template-columns:256px minmax(0,1fr);gap:24px}.color-spectrum{display:block;width:256px;height:256px;max-width:100%;touch-action:none;cursor:crosshair;border-radius:4px}.color-spectrum:focus-visible{outline:2px solid var(--accent);outline-offset:3px}.color-preview{height:36px;border:1px solid var(--border);border-radius:4px}.color-picker .hint{max-width:40ch}.color-picker input[type=range]{width:100%}.color-palette-groups{display:grid;grid-template-columns:2fr 1fr;gap:24px}.color-palette-groups h3{font-size:13px;font-weight:500;margin:0}.color-palette-heading{display:flex;align-items:center;justify-content:space-between}.color-palette-groups section>h3,.color-palette-heading{height:32px;margin-bottom:8px}.dialog-basic-colors,.dialog-custom-colors{display:grid;grid-template-columns:repeat(12,20px);gap:4px}.dialog-custom-colors{grid-template-columns:repeat(6,20px)}.color-palette-groups button[data-dialog-color],.dialog-custom-colors button{padding:0;min-width:20px;min-height:20px;width:20px;height:20px;border-radius:50%;border:1px solid #8888}.color-palette-groups button:focus-visible{outline-offset:2px}.add-custom-color{font-size:19px;min-width:26px;min-height:26px;padding:0}
 @media(max-width:600px){.color-picker-top{grid-template-columns:1fr}.color-spectrum{width:min(256px,100%);height:auto}.color-palette-groups{grid-template-columns:1fr}.dialog-basic-colors{grid-template-columns:repeat(10,20px)}}
+@media(width < 972px){.statusbar #dimensions{display:none}}
+@media(width < 864px){.statusbar #selection-size{display:none}}
+.text-input-layer{position:absolute;inset:0;overflow:clip;pointer-events:none;z-index:5}
+.text-input-layer .text-editor{pointer-events:auto;overflow:hidden;min-width:1px}
+.text-editor::selection{color:transparent;background:#0078d440}
+.resize-handle:focus-visible{outline:2px solid var(--accent);outline-offset:3px}
+.resizing-canvas.keyboard-resize .resize-handle:focus-visible{opacity:1}
+.canvas-resize-announcement{position:absolute;width:1px;height:1px;margin:-1px;padding:0;overflow:hidden;clip-path:inset(50%);white-space:nowrap;border:0}
+#dialog:has(.image-properties){width:496px}
+@media(max-width:700px){.layer-actions{gap:4px}.layer-actions button{min-width:0;padding:4px}}

@@ -10,6 +10,7 @@ export async function verifyFontCatalog(page, check) {
     const requested = await target.evaluate(() => typeof window.deliverFonts === 'function');
     check('Text requests the desktop installed-font catalog', requested);
     if (!requested) return;
+    const blank = await target.locator('#canvas').evaluate(el => el.toDataURL());
     const box = await target.locator('#overlay').boundingBox(); await target.mouse.click(box.x + 30, box.y + 30);
     await target.keyboard.type('Draft'); await target.keyboard.press('Home'); await target.keyboard.press('ArrowRight');
     await target.keyboard.press('Shift+ArrowRight'); await target.keyboard.press('Shift+ArrowRight');
@@ -25,7 +26,6 @@ export async function verifyFontCatalog(page, check) {
     check('quotes in a font family retain literal identity', await target.locator('.text-editor').evaluate(el => el.style.fontFamily.includes('\\"Quote\\"')));
     await target.locator('.text-editor').focus(); await target.keyboard.type('p');
     check('typing after a catalog update replaces the retained selection', await target.locator('.text-editor').inputValue() === 'Dpft');
-    const blank = await target.locator('#canvas').evaluate(el => el.toDataURL());
     await target.locator('[data-action="commit-text"]').click(); await frame();
     const painted = await target.locator('#canvas').evaluate(el => el.toDataURL());
     await target.locator('#overlay').focus(); await target.keyboard.press('Control+z'); await frame();

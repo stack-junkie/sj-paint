@@ -1,6 +1,6 @@
 # Contributing
 
-Bug reports, small fixes and proposals are welcome. Stack Junkie Paint is an independent editor with Windows as its primary desktop platform, plus Linux support and a browser edition. The baseline goal is to match Microsoft Paint's appearance, features and behavior 1:1. That work remains unfinished, and project-specific extensions follow the completed baseline. Check the [parity ledger](PARITY.md) before opening an issue. An incomplete diagnosis is fine; distinguish what you observed from what you suspect.
+Bug reports, small fixes and proposals are welcome. Stack Junkie Paint is an independent Windows/Linux desktop editor, with Windows as its primary platform. Releases cover supported painting, image-editing, file-format and AI workflows with documented compatibility limits. Exact Microsoft Paint parity, a separate browser product, Microsoft account and cloud-service replication, physical-printer certification and exhaustive hardware certification are outside the release requirements. Check the [coverage inventory](PARITY.md) before opening an issue. An incomplete diagnosis is fine; distinguish what you observed from what you suspect.
 
 ## Development
 
@@ -12,7 +12,7 @@ npm run hooks:install
 npm run dev
 ```
 
-The browser edition uses Vite. The Electron edition loads the production build:
+The shared editor uses Vite for browser development and headless tests. The desktop application loads the production build:
 
 ```sh
 npm run build
@@ -35,6 +35,12 @@ npm run build
 ```
 
 The browser suite runs headlessly and uses installed Google Chrome by default. Set `PAINT_CHROME_PATH` to an installed Chromium executable if needed. It writes results under `output/`. The file suite uses temporary files and does not launch Electron's UI. Documentation-only changes need link and content review, not a full application test run.
+
+For focused text checks, use `npm run test:text` or pass helper names after `--`, such as `npm run test:text -- text-session layer-keyboard canvas-resize-keyboard`. `npm run test:verification` checks result reporting and private-fixture resolution. Skipped cases carry their reason and never count as passes.
+
+Private native fixtures are optional and must never be committed or redistributed. `SJ_PAINT_NATIVE_FIXTURE_DIR` can name an absolute read-only directory containing the recorded fixtures. The harness verifies pinned digests in place. An explicitly selected missing or changed fixture fails; absence from the optional default directory is a skip.
+
+`npm run test:print-pdf` uses installed Chrome and an existing Python with PyMuPDF to independently rasterize tall/wide PDF output in both themes. `PAINT_PYTHON_PATH` selects that interpreter. Reports and PDFs go to `output/pdf/`. This does not exercise a physical printer or an interactive print chooser.
 
 Keep reports precise: include commands that actually ran, their results, and coverage that was unavailable. A successful build does not prove editing behavior, desktop integration or full Microsoft Paint parity. Review AI-assisted changes yourself and describe any remaining uncertainty. Keep unfinished work in a draft PR.
 
@@ -73,8 +79,16 @@ CI also runs the packaged app under Xvfb on its disposable Ubuntu runner, using 
 
 The `--no-sandbox` switch is limited to isolated test environments. It is not part of the shipped launcher and is not a normal desktop workaround. Inspector ports and chooser overrides are test-only controls. This harness does not test native chooser interaction, physical printing or a user's real desktop environment.
 
+The separate installed-product check runs only on an owned disposable Linux X11 display after `npm run archive:linux`:
+
+```sh
+SJ_PAINT_DISPOSABLE_DISPLAY=1 xvfb-run -a python3 scripts/verify-installed-linux.py
+```
+
+It extracts the real archive into a temporary home, runs the per-user installer and launches the unmodified desktop entry through GIO with normal sandboxing. A second instrumented entry exercises drawing, project Save/reopen and close against that installed binary. Its report distinguishes original-launch readiness from the instrumented workflow. Cleanup retains ownership until the launched process group exits. A diagnostic candidate has passed this journey on Ubuntu 24.04 plus actual Xfce Graphics-menu launch and normal close. That result belongs to its recorded source snapshot; rerun against final release artifacts. See [PARITY.md](PARITY.md) for current evidence and remaining acceptance.
+
 ## Reporting a problem
 
-Include the app version, Windows version or Linux distribution, browser version when applicable, minimal reproduction steps, expected behavior and observed behavior. Attach a small sample image or project when useful and safe to share. State whether the issue occurs in the browser edition, packaged desktop app or both.
+Include the app version, Windows version or Linux distribution, browser version when applicable, minimal reproduction steps, expected behavior and observed behavior. Attach a small sample image or project when useful and safe to share. State whether the issue occurs in the development editor, packaged desktop app or both.
 
 For vulnerabilities, use [private security reporting](SECURITY.md) rather than posting exploit details in a public issue.

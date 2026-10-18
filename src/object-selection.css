@@ -1,0 +1,17 @@
+.object-selection-dialog{position:fixed;left:auto;right:12px;top:218px;margin:0;width:310px;max-width:94vw;max-height:calc(100vh - 260px);overflow:auto;z-index:12}
+.object-selection-overlay{position:absolute;inset:0;width:100%;height:100%;z-index:7;touch-action:none;cursor:crosshair}
+.object-selection-dialog h2{padding:20px 24px 8px}
+.object-selection-content{padding:0 24px 16px}
+.object-selection-content p{margin:8px 0;line-height:1.45}
+.object-selection-instructions,.object-selection-scale{font-size:13px;color:var(--muted)}
+.object-selection-preview{height:min(40vh,360px);min-height:100px;background:repeating-conic-gradient(#ddd 0% 25%,#fff 0% 50%) 0/16px 16px;border:1px solid var(--border)}
+.object-selection-preview canvas{display:block;width:100%;height:100%;object-fit:contain;touch-action:none;cursor:crosshair}
+.object-selection-controls{margin:0!important;padding:0!important;border:0!important;min-width:0}
+.object-selection-toolbar,.object-selection-coordinates{display:flex;align-items:end;gap:10px;flex-wrap:wrap}
+.object-selection-toolbar label,.object-selection-coordinates label{margin:4px 0!important;min-width:0}
+.object-selection-coordinates label{flex:1 1 78px}
+.object-selection-coordinates input{width:100%;max-width:140px}
+.object-selection-controls button{border:1px solid var(--border);background:var(--input);margin:4px 0;min-height:33px}
+.object-selection-count{font-size:12px}
+.object-selection-dialog footer{position:sticky;bottom:0}
+@media(max-width:560px){.object-selection-dialog h2{padding:16px 16px 8px}.object-selection-content{padding:0 16px 12px}.object-selection-preview{height:30vh}.object-selection-dialog footer{padding:12px 16px}.object-selection-coordinates label{flex-basis:calc(50% - 10px)}.object-selection-coordinates input{max-width:none}}

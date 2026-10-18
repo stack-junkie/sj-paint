@@ -26,11 +26,27 @@ jobs:
           node-version-file: .nvmrc
           cache: npm
       - run: npm ci
+      - name: Python for independent codec and model-free protocol checks
+        uses: actions/setup-python@a26af69be951a213d495a4c3e4e4022e16d87065 # v5.6.0
+        with:
+          python-version: '3.12'
+      - name: Install independent test decoders
+        run: python -m pip install Pillow==12.3.0 numpy==2.4.3 opencv-python-headless==4.13.0.92
       - run: npm run version:check
       - run: npm run test:files
-      - run: npm run test:paint-format
-      - run: npm run test:tiff
-      - run: npm run test:local-ai
+      - run: npm run test:display
+        env:
+          SJ_PAINT_TEST_DISPLAY_METRICS: '1'
+      - run: npm run test:verification
+      - run: npm run test:formats
+      - name: AI process, setup and model-free protocol contracts
+        shell: bash
+        run: |
+          export PAINT_AI_PROTOCOL_PYTHON="$(python -c 'import sys; print(sys.executable)')"
+          # Native model inference is a separate authorized acceptance lane.
+          unset PAINT_AI_TEST_PYTHON PAINT_AI_TEST_MODEL PAINT_AI_TEST_ENCODER PAINT_AI_TEST_DECODER
+          npm run test:local-ai
+          node --test scripts/windows-generation-capacity.test.mjs scripts/managed-generation-preflight.test.mjs scripts/managed-ai-test-profile.test.mjs
       - run: npm run build
       - name: Headless drawing workflows
         shell: bash
@@ -78,6 +94,11 @@ jobs:
       - name: Archive verified Linux app
         if: runner.os == 'Linux'
         run: npm run archive:linux
+      - name: Verify installed Linux archive through GIO with normal sandbox
+        if: runner.os == 'Linux'
+        env:
+          SJ_PAINT_DISPOSABLE_DISPLAY: '1'
+        run: xvfb-run -a python3 scripts/verify-installed-linux.py
       - name: Archive verified Windows app
         if: runner.os == 'Windows'
         run: npm run archive:windows

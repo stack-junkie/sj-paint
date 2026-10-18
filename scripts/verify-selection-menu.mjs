@@ -65,9 +65,29 @@ export async function verifySelectionMenuDesktop(page, check) {
     await page.locator('#zoom-presets').selectOption('1'); await frame();
     await page.locator('#viewport').evaluate(el => { el.scrollLeft = 0; el.scrollTop = 0; });
     await open(); const entries = await menuState();
-    record('selection menu follows the reference labels, order and separator',
-      JSON.stringify(entries.map(item => item.tag === 'HR' ? 'separator' : item.name)) ===
-      JSON.stringify(['Rectangle', 'Free-form', 'separator', 'Select all', 'Invert selection', 'Transparent selection', 'Delete']), entries);
+    // Retained menu-controls-evidence.json: SelectionToolbar.xbf, Items scope 2949,
+    // SHA-256 0fb1761c9162567fe8f925d35796571d914c4f433058d5f405aa24a9fed4329b.
+    // Object select is an SJ addition here; its placement is not native-verified.
+    // Exclude only this named extension, so other additions or baseline reordering fail.
+    record('selection menu preserves resource-backed baseline labels, commands, order and separator',
+      JSON.stringify(entries.filter(item => item.command !== 'object-select').map(item =>
+        item.tag === 'HR' ? 'separator' : [item.name, item.command])) === JSON.stringify([
+        ['Rectangle', 'tool:select'], ['Free-form', 'tool:lasso'], 'separator', ['Select all', 'select-all'],
+        ['Invert selection', 'invert-selection'], ['Transparent selection', 'transparent-selection'], ['Delete', 'delete-selection'],
+      ]), entries);
+    const objectEntries = entries.filter(item => item.command === 'object-select');
+    record('SJ Object select extension appears once as an enabled ordinary menu command',
+      objectEntries.length === 1 && objectEntries[0].tag === 'BUTTON' && objectEntries[0].name === 'Object select' &&
+      objectEntries[0].role === 'menuitem' && objectEntries[0].checked === null && objectEntries[0].disabled === false, objectEntries);
+    await page.keyboard.press('Home');
+    let objectReached = false;
+    for (let step = 0; step < entries.length; step++) {
+      if (await page.locator('#menu').evaluate(menu => menu.contains(document.activeElement) && document.activeElement.dataset.command === 'object-select')) {
+        objectReached = true; break;
+      }
+      await page.keyboard.press('ArrowDown');
+    }
+    record('SJ Object select extension is reachable by keyboard without activation', objectReached);
     const deleteEntry = entries.find(item => item.command === 'delete-selection');
     record('selection menu Delete is disabled without a selection', Boolean(deleteEntry?.disabled), deleteEntry);
     await page.keyboard.press('End');

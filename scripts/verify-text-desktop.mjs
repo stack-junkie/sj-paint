@@ -1,5 +1,6 @@
 // Public controls and rendered canvas pixels only; usable in the packaged app.
 export async function verifyTextDesktop(page, check) {
+  const frame = () => page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   const pixels = () => page.locator('#canvas').evaluate(canvas => canvas.toDataURL());
   const waitPixels = expected => page.waitForFunction(value => document.querySelector('#canvas').toDataURL() === value,
     expected, { polling: 100 });
@@ -67,16 +68,17 @@ export async function verifyTextDesktop(page, check) {
       { plain, indented, expectedSpaces });
     await page.keyboard.press('Control+z'); await waitPixels(smallBlank);
 
-    await type('Draft'); await page.locator('[data-action="bold"]').click(); await page.keyboard.press('Control+y');
+    await type('Draft'); await page.locator('[data-action="bold"]').click(); await frame();
+    const draftPixels = await pixels(); await page.keyboard.press('Control+y'); await frame();
     check('desktop redo from Bold retains the live text draft without restoring old pixels',
-      await page.locator('.text-editor').inputValue() === 'Draft' && await pixels() === smallBlank &&
+      await page.locator('.text-editor').inputValue() === 'Draft' && await pixels() === draftPixels &&
       await page.locator('[data-action="redo"]').isEnabled());
     await page.getByRole('button', { name: 'Edit colors', exact: true }).click();
     await page.waitForFunction(() => document.querySelector('#dialog').open, null, { polling: 100 });
     const retainedWhileOpen = await page.locator('.text-editor').inputValue() === 'Draft';
     await page.locator('#dialog-cancel').click();
     check('desktop Edit colors cancel retains the draft and original canvas pixels',
-      retainedWhileOpen && await page.locator('.text-editor').inputValue() === 'Draft' && await pixels() === smallBlank);
+      retainedWhileOpen && await page.locator('.text-editor').inputValue() === 'Draft' && await pixels() === draftPixels);
   } finally {
     if (await page.locator('#dialog').evaluate(dialog => dialog.open)) await page.locator('#dialog-cancel').click();
     await page.keyboard.press('Escape');

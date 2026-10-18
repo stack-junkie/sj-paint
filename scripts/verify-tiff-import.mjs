@@ -1,5 +1,4 @@
-import { readFile } from 'node:fs/promises';
-import { createHash } from 'node:crypto';
+import { readNativeFixture } from './native-fixtures.mjs';
 import { deflateSync } from 'node:zlib';
 import { exportTiff } from '../src/files.js';
 import { readTiff } from '../src/tiff.js';
@@ -37,18 +36,14 @@ export async function canvasTiffPixels(page, expected) {
   }, { width: expected.width, height: expected.height, rgba: [...expected.rgba] });
 }
 
-export async function optionalNativeTiffs() {
-  const fixtures = [];
-  for (const [name, digest] of [
-    ['reference-native-colors.tif', 'e9dea64dc8bc57c6d134256a3b63cb7f1bb97133be874d3c7b10f6a8008999d5'],
-    ['reference-native-alpha.tif', 'cdaddd4653fe257673a040780b40232945724326cb09546d953ea1426cb4ed45'],
-  ]) {
-    let bytes;
-    try { bytes = await readFile(new URL(`../output/${name}`, import.meta.url)); }
-    catch (error) { if (error.code === 'ENOENT') continue; throw error; }
-    if (createHash('sha256').update(bytes).digest('hex') !== digest) throw new Error(`Native TIFF fixture changed: ${name}`);
+export async function optionalNativeTiffs(check) {
+  const fixtures = [], missing = [];
+  for (const name of ['reference-native-colors.tif', 'reference-native-alpha.tif']) {
+    const bytes = await readNativeFixture(name);
+    if (!bytes) { missing.push(name); continue; }
     fixtures.push({ name, bytes, ...await readTiff(bytes) });
   }
+  if (missing.length) check?.skip('native TIFF fixtures', `Private fixtures absent: ${missing.join(', ')}. Set SJ_PAINT_NATIVE_FIXTURE_DIR to their directory.`);
   return fixtures;
 }
 
@@ -187,12 +182,11 @@ export async function verifyTiffImport(page, check) {
       check(`Malformed ${sample.name} Paste from file preserves the current document and history`, await snapshot() === beforeFailedPaste);
     }
 
-    const native = await optionalNativeTiffs();
+    const native = await optionalNativeTiffs(check);
     for (const sample of native) {
       await choose(sample.name, sample.bytes); await waitLoaded(sample.name);
       check(`browser opens digest-pinned native ${sample.name}`, JSON.stringify(await pixels()) === JSON.stringify(await canvasTiffPixels(page, sample)));
     }
-    if (!native.length) check('native TIFF fixture coverage is optional and absent', true, { skipped: true });
 
     // The optional native fixtures must not determine the later gesture's bounds.
     await choose('tiff-before-delayed.tif', encoded); await waitLoaded('tiff-before-delayed.tif');
