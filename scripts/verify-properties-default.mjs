@@ -37,6 +37,7 @@ export async function verifyPropertiesDefault(page, check) {
     const density = await page.evaluate(async () => (await import('/src/image-metadata.js')).readImageResolution(__propertiesDefault.writes[0].bytes));
     check('applying Default preserves imported anisotropic resolution on Save', density.xDpi === 3780 * .0254 && density.yDpi === 5669 * .0254, density);
     await shortcut('Control+z');
+    await page.waitForFunction(() => { const canvas = document.querySelector('#canvas'); return canvas.width === 96 && canvas.height === 144; });
     check('Undo after Default restores the exact imported drawing', await pixels() === originalPixels);
     await shortcut('Control+e'); await width.fill('231'); await height.fill('177');
     await mode('fail'); await reset.click(); await settle();
