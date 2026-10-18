@@ -230,7 +230,9 @@ def run():
         base = Path(temporary)
         version = (ROOT / "VERSION").read_text().strip()
         archive = ROOT / "release" / f"sj-paint-{version}-linux-x64.tar.gz"
-        subprocess.run(["tar", "-xzf", str(archive), "-C", str(base)], check=True, timeout=30)
+        system_package = os.environ.get("SJ_PAINT_TEST_SYSTEM_PACKAGE") == "1"
+        if not system_package:
+            subprocess.run(["tar", "-xzf", str(archive), "-C", str(base)], check=True, timeout=30)
         release = base / "sj-paint"
         home = base / "home"
         home.mkdir()
@@ -240,9 +242,31 @@ def run():
         Path(os.environ["XDG_RUNTIME_DIR"]).mkdir(mode=0o700)
         os.environ.pop("DBUS_SESSION_BUS_ADDRESS", None)
         os.environ.pop("WAYLAND_DISPLAY", None)
-        subprocess.run(["sh", str(release / "install-linux.sh")], check=True, timeout=30)
-        desktop = home / ".local/share/applications/io.stackjunkie.sjpaint.desktop"
-        executable = home / ".local/opt/sj-paint/sj-paint"
+        if system_package:
+            # Only on the disposable machine, after installing the real .deb.
+            desktop = Path("/usr/share/applications/io.stackjunkie.sjpaint.desktop")
+            executable = Path("/opt/Stack Junkie Paint/sj-paint")
+            installed_version = subprocess.check_output(
+                ["dpkg-query", "-W", "-f=${Version}", "sj-paint"], text=True).strip()
+            check("installed system package matches the candidate", installed_version == version)
+            subprocess.run(["desktop-file-validate", str(desktop)], check=True, timeout=10)
+            gio = ctypes.CDLL(ctypes.util.find_library("gio-2.0"))
+            gobject = ctypes.CDLL(ctypes.util.find_library("gobject-2.0"))
+            gio.g_desktop_app_info_new.argtypes = [ctypes.c_char_p]
+            gio.g_desktop_app_info_new.restype = ctypes.c_void_p
+            gio.g_app_info_should_show.argtypes = [ctypes.c_void_p]
+            gio.g_app_info_should_show.restype = ctypes.c_int
+            gobject.g_object_unref.argtypes = [ctypes.c_void_p]
+            registered = gio.g_desktop_app_info_new(desktop.name.encode())
+            check("GIO discovers the system app-menu entry", bool(registered))
+            try:
+                check("system app-menu entry is visible", bool(gio.g_app_info_should_show(registered)))
+            finally:
+                gobject.g_object_unref(registered)
+        else:
+            subprocess.run(["sh", str(release / "install-linux.sh")], check=True, timeout=30)
+            desktop = home / ".local/share/applications/io.stackjunkie.sjpaint.desktop"
+            executable = home / ".local/opt/sj-paint/sj-paint"
         original = desktop.read_bytes()
         pid = launch_gio(desktop)
         try:
@@ -297,6 +321,7 @@ except Exception as error:
     exit_code = 1
 finally:
     (OUTPUT / "linux-installed-launch.json").write_text(json.dumps({"checks": CHECKS,
+        "installation": "system-deb" if os.environ.get("SJ_PAINT_TEST_SYSTEM_PACKAGE") == "1" else "per-user-archive",
         "workflow": os.environ.get("SJ_PAINT_TEST_WORKFLOW", "editor"),
         "retainedWorkspaces": RETAINED_WORKSPACES,
         "limitations": "Owned X11 display. Original installed launcher readiness, then an instrumented desktop-entry copy for drawing/file workflow. No GNOME/KDE menu visual or Wayland acceptance."}, indent=2))

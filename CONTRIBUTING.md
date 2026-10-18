@@ -56,6 +56,12 @@ Release notes should describe observable changes and relevant validation. Do not
 
 On Windows, run `npm run package:windows` followed by `npm run archive:windows` to create the portable ZIP and checksum under `release/`. On Linux, use `npm run package:linux` followed by `npm run archive:linux` for the portable tar archive. Archive commands require the matching unpacked package and include documentation and license notices.
 
+After packaging and checking Windows, run `npm run installer:windows` to wrap that same unpacked payload in a complete per-user NSIS Setup.exe and generate its SHA-256 checksum. The script rejects a mismatched packaged version. The installer preserves application data and refuses to close a running app forcibly, including during uninstall. Build and payload checks do not establish an executed install/update/uninstall journey; exercise that lifecycle in a disposable Windows environment before claiming it verified.
+
+## Linux package verification
+
+For the Linux `.deb`, run `npm run package:linux`, check the unpacked app, then `npm run installer:linux`. This preserves the normal desktop sandbox and uses the same desktop ID as the per-user installer. It targets Debian-family x64 desktops. On a disposable Debian-family machine, install the package with `apt install ./release/sj-paint-<version>-linux-amd64.deb`, then run `SJ_PAINT_TEST_SYSTEM_PACKAGE=1 SJ_PAINT_DISPOSABLE_DISPLAY=1 xvfb-run -a python3 scripts/verify-installed-linux.py` as a normal user. This checks app-menu registration, normal GIO launch and the existing drawing/save/reopen journey against the installed package. Also exercise replacement and removal while verifying user data survives. Never run package lifecycle tests against an owner's normal installation.
+
 ## Hidden Windows verification
 
 After `npm run package:windows`, run `npm run test:windows` to exercise the packaged app in an owned, hidden window with a temporary profile. The harness refuses occupied test ports 9229 and 9231, then runs the desktop checks against its own process. It writes `output/win32-verification.json`, `output/desktop-verification.json` and `output/windows-launch.log`.

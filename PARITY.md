@@ -1,5 +1,13 @@
 # Microsoft Paint baseline: parity and verification
 
+## v0.3.1 repair and installers
+
+The Linux x64 `.deb` installs the complete application, approved icon and `io.stackjunkie.sjpaint.desktop` system app-menu entry. On disposable Ubuntu 24.04, actual installation and same-version replacement succeeded; GIO discovered the visible entry and launched the installed executable with normal sandboxing. The connected drawing/project Save/reopen/close journey passed. Removal deleted the system launcher/executable and preserved preference, model and saved-file probes. Evidence: `output/linux-installer031/linux-deb-lifecycle.json`, `linux-installed-launch.json` and `linux-installed-workflow.json`. This is not a tested historical `.deb` upgrade, graphical package-installer acceptance, or GNOME/KDE/Wayland certification.
+
+The v0.3.0 live-download path rejected GitHub's compressed MI-GAN documentation response even though its decoded bytes matched the pinned size and SHA-256. Seeded release acceptance missed this boundary. The correction distinguishes HTTP transfer size from decoded artifact size and retains size bounds, digest checks and safe range handling. A fresh isolated Windows setup completed all three retained features with the real compressed documentation response and existing verified model/runtime files. No new model acquisition or quality work was needed.
+
+Object Select Apply now activates the selection tool. A public pointer-drag regression reproduced the former brush behavior and verifies exact masked movement, Undo/Redo and unchanged tool choice on Cancel. The owner subsequently confirmed that canvas point entry works in v0.3.0; no unproven canvas-input fix was added. These are local candidate results, not a published update or renewed Linux-package acceptance.
+
 ## v0.3.0 bounded release scope
 
 The owner approved shipping the verified editor with documented compatibility limits. Exact Microsoft Paint parity is not a release gate. Fix known editing/saving defects; retain supported files, projects and workflows. Do not expand this release into additional native comparison, printer certification or AI research.

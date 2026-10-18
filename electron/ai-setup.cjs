@@ -191,16 +191,24 @@ function createManagedAiSetup({ userDataPath, manifest = publishedManifest, plat
       await fs.unlink(partial); offset = 0;
     }
     let response;
-    try { response = await fetchArtifact(item.url, { signal, redirect: 'follow', headers: offset ? { Range: `bytes=${offset}-` } : {} }); }
+    try { response = await fetchArtifact(item.url, { signal, redirect: 'follow', headers: {
+      'Accept-Encoding': 'identity', ...(offset ? { Range: `bytes=${offset}-` } : {}),
+    } }); }
     catch { aborted(signal); throw fail('NETWORK', `Could not download ${item.filename}. Check the network connection and retry.`); }
     try {
       if (!response.ok || !response.body || (response.url && new URL(response.url).protocol !== 'https:')) throw fail('NETWORK', `Could not download ${item.filename} (HTTP ${response.status}). Check the connection and retry.`);
+      const encoding = response.headers.get('content-encoding')?.trim().toLowerCase();
+      const encoded = !!encoding && encoding !== 'identity';
       if (offset && response.status === 206) {
+        // A partial decoded file can only resume in the same byte representation.
+        if (encoded) throw fail('NETWORK', `Could not resume ${item.filename}: the server compressed the byte range. Retry setup.`);
         if (response.headers.get('content-range') !== `bytes ${offset}-${item.bytes - 1}/${item.bytes}`) throw fail('NETWORK', 'AI download resumed at an unexpected byte range.');
       } else if (response.status === 200) offset = 0;
       else throw fail('NETWORK', 'Unexpected AI artifact HTTP response.');
       const length = response.headers.get('content-length');
-      if (length !== null && Number(length) !== item.bytes - offset) throw fail('INTEGRITY', 'AI download size differs from the pinned manifest.');
+      // Fetch decodes compressed bodies but leaves Content-Length describing
+      // the transfer. Always bound and hash decoded artifact bytes below.
+      if (!encoded && length !== null && Number(length) !== item.bytes - offset) throw fail('INTEGRITY', `AI download size for ${item.filename} differs from the pinned manifest.`);
     } catch (error) {
       // No pipeline owns this body yet. Release the connection before returning.
       try { await response.body?.cancel(); } catch { /* Fetch may have already aborted it. */ }

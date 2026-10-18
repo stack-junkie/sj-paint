@@ -102,6 +102,21 @@ jobs:
       - name: Archive verified Windows app
         if: runner.os == 'Windows'
         run: npm run archive:windows
+      - name: Build and verify installed Debian package
+        if: runner.os == 'Linux'
+        env:
+          SJ_PAINT_DISPOSABLE_DISPLAY: '1'
+          SJ_PAINT_TEST_SYSTEM_PACKAGE: '1'
+        run: |
+          cp output/linux-installed-launch.json output/linux-archive-installed-launch.json
+          cp output/linux-installed-workflow.json output/linux-archive-installed-workflow.json
+          npm run installer:linux
+          sudo apt-get install -y --no-install-recommends ./release/sj-paint-*-linux-amd64.deb
+          trap 'sudo apt-get remove -y sj-paint' EXIT
+          xvfb-run -a python3 scripts/verify-installed-linux.py
+      - name: Build Windows installer from verified app
+        if: runner.os == 'Windows'
+        run: npm run installer:windows
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: runner.os == 'Windows'
         with:
@@ -109,6 +124,8 @@ jobs:
           path: |
             release/sj-paint-*-windows-x64.zip
             release/sj-paint-*-windows-x64.zip.sha256
+            release/sj-paint-*-windows-x64-setup.exe
+            release/sj-paint-*-windows-x64-setup.exe.sha256
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: runner.os == 'Linux'
@@ -117,6 +134,8 @@ jobs:
           path: |
             release/sj-paint-*-linux-x64.tar.gz
             release/sj-paint-*-linux-x64.tar.gz.sha256
+            release/sj-paint-*-linux-amd64.deb
+            release/sj-paint-*-linux-amd64.deb.sha256
           if-no-files-found: error
       - uses: actions/upload-artifact@cf430e030ddbb5b0abf93d22962f4752f3646cd9 # v7.0.2
         if: always()

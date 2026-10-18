@@ -2,8 +2,8 @@
 
 Stack Junkie Paint (SJ Paint) is a Microsoft Paint-inspired desktop drawing app for Windows and Linux, with brushes, shapes, selections, text and layers. Windows is the primary desktop platform.
 
-Version: 0.3.0
-<!-- sj-paint-version: 0.3.0 -->
+Version: 0.3.1
+<!-- sj-paint-version: 0.3.1 -->
 
 SJ Paint is an independent drawing editor inspired by Microsoft Paint. It does not claim exact Microsoft Paint parity. Microsoft account and cloud-service replication are outside its scope. The [coverage inventory](PARITY.md) records supported features, compatibility limits and verification evidence.
 
@@ -11,20 +11,28 @@ SJ Paint is an independent drawing editor inspired by Microsoft Paint. It does n
 
 ## Download
 
-Portable packages are provided for Windows x64 and Linux x64.
+Download the complete Windows installer or Linux Debian package below. Portable archives are also available. All downloads are for x64 devices.
 
 ### Windows
 
-Download the [v0.3.0 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.3.0/sj-paint-0.3.0-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
+Download [SJ Paint Setup.exe](https://github.com/stack-junkie/sj-paint/releases/download/v0.3.1/sj-paint-0.3.1-windows-x64-setup.exe). This contains the complete application and installs for your Windows user, with desktop and Start menu shortcuts. No ZIP extraction or Node.js installation is needed. Save your drawing and close SJ Paint before installing. To update an installed copy, run a newer Setup.exe. Setup preserves preferences and downloaded AI assets; optional AI setup still needs its own downloads. This is a manually run installer, not an automatic update service.
 
-The Windows executable is currently unsigned; it has no Authenticode signature.
+If you previously used the portable ZIP, use the new SJ Paint shortcut after installation. Setup does not remove your old extracted folder or drawings. The installer is unsigned, like the portable executable.
+
+Alternatively, download the [v0.3.1 Windows x64 ZIP](https://github.com/stack-junkie/sj-paint/releases/download/v0.3.1/sj-paint-0.3.1-windows-x64.zip), extract it, and open `Stack Junkie Paint.exe` in the extracted folder. Keep the application files together.
 
 ### Linux
 
-Download the [v0.3.0 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.3.0/sj-paint-0.3.0-linux-x64.tar.gz), then run:
+For Ubuntu, Linux Mint and Debian on x64, download the [SJ Paint .deb installer](https://github.com/stack-junkie/sj-paint/releases/download/v0.3.1/sj-paint-0.3.1-linux-amd64.deb). Open it with your system's package installer and choose Install, then find **Stack Junkie Paint** in the app drawer under Graphics. If your file manager does not offer a package installer, use `sudo apt install ./sj-paint-0.3.1-linux-amd64.deb` from the download directory. The package bundles the app; the package manager may download missing system libraries.
+
+Save your drawing and close SJ Paint before installing a newer `.deb` to update it. Settings and downloaded AI assets stay in your user profile, including when the package is removed. Optional AI setup downloads remain separate. There is no automatic update service. This package is for Debian-family distributions; the portable archive and per-user installer below remain available for other compatible Linux desktops.
+
+If you previously ran `install-linux.sh`, its per-user menu entry takes precedence over a system package. Continue updating that per-user copy with the archive, or remove its managed launcher at `~/.local/share/applications/io.stackjunkie.sjpaint.desktop` (under `$XDG_DATA_HOME/applications` if customized) after switching to the `.deb`. Keep your drawings and user profile.
+
+Download the [v0.3.1 Linux x64 archive](https://github.com/stack-junkie/sj-paint/releases/download/v0.3.1/sj-paint-0.3.1-linux-x64.tar.gz), then run:
 
 ```sh
-tar -xzf sj-paint-0.3.0-linux-x64.tar.gz
+tar -xzf sj-paint-0.3.1-linux-x64.tar.gz
 ./sj-paint/run-paint.sh
 ```
 
@@ -36,7 +44,7 @@ To install a copy for your user and add SJ Paint to the Linux application menu:
 
 The installer copies the app to `~/.local/opt/sj-paint`, creates `~/.local/share/applications/io.stackjunkie.sjpaint.desktop`, and installs icons under `~/.local/share/icons/hicolor/`. It does not require a system-wide installation.
 
-Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.3.0). Use a normal desktop user.
+Both portable archives bundle Electron, so Node.js is not needed to run them. SHA-256 checksums are included on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.3.1). Use a normal desktop user.
 
 Linux needs Electron's GTK, NSS, X11 and ALSA system libraries. Ubuntu 22.04 package names include `libgtk-3-0`, `libnss3`, `libatk-bridge2.0-0`, `libxdamage1` and `libasound2`; names vary by distribution. Normal startup keeps Chromium sandboxing enabled and does not add `--no-sandbox`.
 
@@ -116,7 +124,7 @@ Clipboard access requires browser support and permission. Printing depends on th
 
 ## Verification and known limits
 
-Release packages and their checksums are available on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.3.0).
+Release packages and their checksums are available on the [release page](https://github.com/stack-junkie/sj-paint/releases/tag/v0.3.1).
 
 [PARITY.md](PARITY.md) is the coverage inventory for implemented behavior, verification evidence and documented limits. Checks exercise editor transactions, file failures, format round trips, AI workflow ownership and installed Linux drawing/save journeys. Native comparisons do not establish identical brush pixels, font metrics or every Microsoft file variant.
 
@@ -158,4 +166,4 @@ Only one AI operation runs at a time. Background removal accepts images up to 16
 
 For a setup network, integrity or capacity error, address the reported condition and retry. A failed operation leaves the drawing unchanged. SJ Paint does not close other applications. Models remain separate downloads, with licenses listed in [ATTRIBUTION.md](ATTRIBUTION.md). Existing acquired assets are preserved across application updates.
 
-Image creation, Cocreator, Generative Fill, Reimagine, stickers and coloring pages are excluded from v0.3.0. They are absent from the interface, rejected by the desktop bridge and unavailable in new setup.
+Image creation, Cocreator, Generative Fill, Reimagine, stickers and coloring pages are excluded from v0.3.1. They are absent from the interface, rejected by the desktop bridge and unavailable in new setup.

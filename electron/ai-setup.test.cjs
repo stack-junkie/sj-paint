@@ -359,6 +359,26 @@ test('activated attempt receipt identity and full digest mismatches fail without
   assert.equal(f.processes.length, 1);
 });
 
+test('compressed HTTP transfers verify decoded artifact bytes instead of transfer length', async t => {
+  for (const corrupt of [false, true]) {
+    const f = await fixture(t), id = f.ids[2], data = f.bytes[id];
+    const seeds = { ...f.seeds }; delete seeds[id];
+    const setup = createManagedAiSetup({ ...f.options, seedAssets: seeds }, {
+      createWorkerProcess: f.createWorkerProcess,
+      fetch: async () => new Response(corrupt ? Buffer.alloc(data.length, 42) : data, {
+        // Fetch decodes the body, but retains the encoded response headers.
+        headers: { 'content-encoding': 'gzip', 'content-length': String(gzipSync(data).length) },
+      }),
+    });
+    if (corrupt) await assert.rejects(setup.setup({ id: 'compressed-bad-digest', features: ['u2netp'] }), { code: 'INTEGRITY' });
+    else {
+      await setup.setup({ id: 'compressed', features: ['u2netp'] });
+      assert.deepEqual(await fs.readFile((await setup.resolve('u2netp')).modelPath), data);
+    }
+    await setup.close();
+  }
+});
+
 test('a verified range resume retains prior bytes and validates the complete result', async t => {
   const f = await fixture(t), id = f.ids[2], data = f.bytes[id], offset = 7;
   const seeds = { ...f.seeds }; delete seeds[id];
@@ -367,6 +387,7 @@ test('a verified range resume retains prior bytes and validates the complete res
   let downloads = 0;
   const setup = createManagedAiSetup({ ...f.options, seedAssets: seeds }, { createWorkerProcess: f.createWorkerProcess,
     fetch: async (url, options) => { downloads++; assert.equal(options.headers.Range, `bytes=${offset}-`);
+      assert.equal(options.headers['Accept-Encoding'], 'identity');
       return new Response(data.subarray(offset), { status: 206, headers: { 'content-length': String(data.length - offset),
         'content-range': `bytes ${offset}-${data.length - 1}/${data.length}` } }); } });
   await setup.setup({ id: 'resume', features: ['u2netp'] });
@@ -384,6 +405,23 @@ test('rejected download headers cancel the unread response body and preserve res
   await assert.rejects(setup.setup({ id: 'bad-range', features: ['u2netp'] }), { code: 'NETWORK' });
   assert.equal(canceled, true); assert.deepEqual(await fs.readFile(partial), prefix);
   assert.equal((await setup.status()).state, 'idle'); assert.equal(f.processes.length, 0);
+});
+
+test('compressed partial responses cannot append encoded range offsets to decoded bytes', async t => {
+  const f = await fixture(t), id = f.ids[0], data = f.bytes[id], offset = 7;
+  const dir = path.join(f.options.userDataPath, 'ai/artifacts', id); await fs.mkdir(dir, { recursive: true });
+  const partial = path.join(dir, 'python.tar.gz.part'); await fs.writeFile(partial, data.subarray(0, offset));
+  let canceled = false;
+  const setup = createManagedAiSetup({ ...f.options, seedAssets: {} }, {
+    createWorkerProcess: f.createWorkerProcess,
+    fetch: async () => new Response(new ReadableStream({ cancel() { canceled = true; } }), {
+      status: 206, headers: { 'content-encoding': 'gzip', 'content-range': `bytes ${offset}-${data.length - 1}/${data.length}` },
+    }),
+  });
+  await assert.rejects(setup.setup({ id: 'compressed-range', features: ['u2netp'] }), { code: 'NETWORK' });
+  assert(canceled); assert.deepEqual(await fs.readFile(partial), data.subarray(0, offset));
+  assert.equal(f.processes.length, 0);
+  await setup.close();
 });
 
 test('canceling an active download drains it and permits a subsequent setup', async t => {

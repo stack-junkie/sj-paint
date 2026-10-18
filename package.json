@@ -1,6 +1,6 @@
 {
   "name": "sj-paint",
-  "version": "0.3.0",
+  "version": "0.3.1",
   "private": true,
   "type": "module",
   "description": "Stack Junkie Paint: an independent Microsoft Paint-inspired editor for Windows and Linux.",
@@ -29,7 +29,9 @@
     "version:bump": "node scripts/version.mjs bump",
     "hooks:install": "node scripts/install-hooks.mjs",
     "archive:linux": "sh scripts/archive-linux.sh",
+    "installer:linux": "sh scripts/package-linux-installer.sh",
     "package:windows": "npm run build && electron-builder --win dir --x64",
+    "installer:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/package-windows-installer.ps1",
     "archive:windows": "powershell -NoProfile -ExecutionPolicy Bypass -File scripts/archive-windows.ps1",
     "test:desktop": "node scripts/verify-desktop.mjs",
     "test:windows": "node scripts/test-windows.mjs",
@@ -60,13 +62,33 @@
       ],
       "category": "Graphics",
       "executableName": "sj-paint",
+      "syncDesktopName": true,
       "icon": "assets/sj-paint.png"
+    },
+    "deb": {
+      "artifactName": "sj-paint-${version}-linux-amd64.deb",
+      "maintainer": "Stack-Junkie <stack-junkie@protonmail.com>",
+      "packageCategory": "graphics"
     },
     "win": {
       "target": [
         "dir"
       ],
       "icon": "assets/sj-paint.ico"
+    },
+    "nsis": {
+      "artifactName": "sj-paint-${version}-windows-x64-setup.${ext}",
+      "oneClick": true,
+      "perMachine": false,
+      "runAfterFinish": true,
+      "deleteAppDataOnUninstall": false,
+      "createDesktopShortcut": true,
+      "createStartMenuShortcut": true,
+      "shortcutName": "SJ Paint",
+      "packElevateHelper": false,
+      "include": "build/installer.nsh",
+      "installerIcon": "assets/sj-paint.ico",
+      "uninstallerIcon": "assets/sj-paint.ico"
     }
   },
   "license": "MIT",

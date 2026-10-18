@@ -94,6 +94,7 @@ export async function verifyAiWorkflows(page, check) {
     });
 
     phase = 'configured object selection prompts';
+    check('AI IPC fixture starts Object select from the ordinary Brush tool', await target.locator('#tool-label').textContent() === 'Brush');
     await openObject(); await ready();
     const initial = await target.evaluate(() => {
       const overlay = document.querySelector('.object-selection-overlay'), source = document.querySelector('#canvas'), dialog = document.querySelector('.object-selection-dialog');
@@ -152,9 +153,26 @@ export async function verifyAiWorkflows(page, check) {
     await panel.getByRole('button', { name: 'Apply', exact: true }).click(); await panel.waitFor({ state: 'detached' }); await frame();
     const applied = await target.evaluate(() => ({ selection: document.querySelector('#selection-size').textContent, overlays: document.querySelectorAll('.object-selection-overlay').length, releases: window.__aiWorkflowFixture.releases.length }));
     check('AI IPC fixture: Apply maps the reduced mask to a full-resolution ordinary selection and releases the session', applied.selection === '16 × 16px' && applied.overlays === 0 && applied.releases === 1, applied);
-    await key('Shift+ArrowRight'); await key('Control+Space');
+    const drawingBounds = await target.locator('#overlay').boundingBox();
+    const start = { x: drawingBounds.x + 10.5 * drawingBounds.width / 64, y: drawingBounds.y + 10.5 * drawingBounds.height / 48 };
+    await target.mouse.move(start.x, start.y); await target.mouse.down();
+    await target.mouse.move(start.x + 24 * drawingBounds.width / 64, start.y, { steps: 6 }); await target.mouse.up(); await frame();
+    const pointerMove = await target.evaluate(async before => {
+      const image = new Image(); image.src = before; await image.decode();
+      const canvas = Object.assign(document.createElement('canvas'), { width: 64, height: 48 }), ctx = canvas.getContext('2d');
+      ctx.drawImage(image, 0, 0); const source = ctx.getImageData(0, 0, 64, 48), expected = source.data.slice();
+      for (let y = 6; y < 22; y++) for (let x = 8; x < 24; x++) {
+        if (x >= 14 && x < 18 && y >= 12 && y < 16) continue;
+        const offset = (y * 64 + x) * 4; expected.fill(0, offset, offset + 4);
+        expected.set(source.data.subarray(offset, offset + 4), (y * 64 + x + 24) * 4);
+      }
+      image.src = document.querySelector('#canvas').toDataURL(); await image.decode(); ctx.clearRect(0, 0, 64, 48); ctx.drawImage(image, 0, 0);
+      const actual = ctx.getImageData(0, 0, 64, 48).data;
+      return { exact: actual.every((value, index) => value === expected[index]), selection: document.querySelector('#selection-size').textContent };
+    }, original);
+    check('AI IPC fixture: Apply from Brush hands pointer dragging to the retained mask without drawing or losing pixels', pointerMove.exact && pointerMove.selection === applied.selection, pointerMove);
+    await key('Control+Space');
     const moved = await pixels();
-    check('AI IPC fixture: ordinary selection move changes the artwork', moved !== original);
     await key('Control+z'); check('AI IPC fixture: one Undo restores exact pre-object-selection pixels', await pixels() === original);
     await key('Control+y'); check('AI IPC fixture: Redo restores exact moved pixels', await pixels() === moved);
     await key('Control+z');
@@ -258,6 +276,12 @@ export async function verifyAiWorkflows(page, check) {
     check('AI IPC fixture: pending refinement cannot select an obsolete alternative',await panel.getByLabel('Selection preview',{exact:true}).isHidden()&&await panel.getByRole('button',{name:'Apply',exact:true}).isDisabled());
     await panel.getByRole('button',{name:'Cancel',exact:true}).click();await panel.waitFor({state:'detached'});
     check('AI IPC fixture: Cancel after switching alternatives preserves source, Redo and removes the overlay',await pixels()===original&&await target.locator('[data-action="redo"]').isEnabled()&&await target.locator('.object-selection-overlay').count()===0);
+    phase = 'Object select Cancel preserves the previous drawing tool';
+    await target.getByRole('button', { name: 'Brushes', exact: true }).click();
+    await target.getByRole('menuitemradio', { name: 'Brush', exact: true }).click();
+    await openObject(); await ready();
+    await panel.getByRole('button', { name: 'Cancel', exact: true }).click(); await panel.waitFor({ state: 'detached' }); await frame();
+    check('AI IPC fixture: canceled Object select retains Brush and exact artwork', await target.locator('#tool-label').textContent() === 'Brush' && await pixels() === original && await target.locator('.object-selection-overlay').count() === 0);
     phase = 'released CPU setup and preserved legacy profiles';
     const openSetup = async () => {
       await target.locator('[data-menu="ai"]').click(); await target.locator('[data-command="ai-setup"]').click(); await setup.waitFor();

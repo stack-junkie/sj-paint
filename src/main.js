@@ -156,7 +156,10 @@ function updateCursor(){
   overlay.style.cursor=hit?.kind==='resize'?hit.cursor:hit?.kind==='move'?'move':hit?.kind==='rotate'?(drag?'grabbing':'grab'):state.tool==='eraser'?'none':state.tool==='text'?'text':state.tool==='zoom'?'zoom-in':state.tool==='picker'?'copy':'crosshair';
 }
 const loadFonts=bindFontPicker($('#font'));
-function chooseTool(tool){if(tool==='text')void loadFonts();if(activePointerId!==null&&!pendingShape)cancelPointerInteraction();commitText();finishPending();doc.deselect();if(state.tool==='eraser'&&tool!=='eraser')state.size=state.lastBrushSize;else if(state.tool!=='eraser'&&tool==='eraser'){state.lastBrushSize=state.size;state.size=state.eraserSize;}state.tool=tool;$('#size').value=$('#size-number').value=state.size;if(BRUSHES.some(b=>b.id===tool))state.brush=tool;updateToolState();closeMenu();overlay.focus({preventScroll:true});changed();}
+// Activating the tool changes routing and focus. Explicit tool choices also
+// settle the prior document edit; accepted Object select must keep its mask.
+function activateTool(tool){if(state.tool==='eraser'&&tool!=='eraser')state.size=state.lastBrushSize;else if(state.tool!=='eraser'&&tool==='eraser'){state.lastBrushSize=state.size;state.size=state.eraserSize;}state.tool=tool;$('#size').value=$('#size-number').value=state.size;if(BRUSHES.some(b=>b.id===tool))state.brush=tool;updateToolState();closeMenu();overlay.focus({preventScroll:true});changed();}
+function chooseTool(tool){if(tool==='text')void loadFonts();if(activePointerId!==null&&!pendingShape)cancelPointerInteraction();commitText();finishPending();doc.deselect();activateTool(tool);}
 function point(e){const r=overlay.getBoundingClientRect();return [(e.clientX-r.left)/state.zoom,(e.clientY-r.top)/state.zoom];}
 function box(a,b){return {x:Math.floor(Math.min(a[0],b[0])),y:Math.floor(Math.min(a[1],b[1])),width:Math.max(1,Math.round(Math.abs(b[0]-a[0]))),height:Math.max(1,Math.round(Math.abs(b[1]-a[1])))};}
 function pressure(e){return e.pointerType==='pen'?e.pressure:.5;}
@@ -496,7 +499,7 @@ async function resizeDialog(){
 }
 const actions={
   'remove-background':()=>removeBackground(doc),
-  'object-select':()=>selectObject(doc),
+  'object-select':async()=>{if(await selectObject(doc))activateTool('select');},
   'ai-setup':()=>withAiUi(()=>showAiSetup()),
   ...Object.fromEntries(Object.entries(releaseCapabilities.generation).map(([mode, value]) => [value.action, () => generateImage(doc, mode)])),
   new:async()=>{if(await canDiscard()){doc.newDocument();state.name='Untitled';state.project=false;state.format='png';fit();}},

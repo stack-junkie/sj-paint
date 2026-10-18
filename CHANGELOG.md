@@ -2,6 +2,15 @@
 
 Changes are grouped by version. New headings created by the version helper remain unreleased until publication.
 
+## [0.3.1] - 2026-10-18
+
+- Add a complete Linux x64 Debian package with an app-menu entry and icon, installable through the system package manager. Newer packages replace the app while preserving user settings and local AI assets.
+
+- Add a complete per-user Windows Setup.exe with desktop/Start menu shortcuts and replacement of an existing installed copy. Keep local AI data and settings on update or uninstall, and require the app to close without forcing it to exit.
+- Fix local AI setup rejecting valid compressed downloads, including the MI-GAN documentation required by Generative erase. Preserve decoded file size limits and SHA-256 verification.
+- Activate selection dragging after Object Select Apply, preserving its mask and the previous tool when canceled.
+- Replace the application icon with a blue palette and upright brush, with a large charcoal-and-blue SJ mark readable at desktop icon sizes.
+
 ## [0.3.0] - 2026-10-18
 
 This release consolidates the unpublished 0.2.27 work.
