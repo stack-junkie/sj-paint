@@ -111,7 +111,7 @@ jobs:
           cp output/linux-installed-launch.json output/linux-archive-installed-launch.json
           cp output/linux-installed-workflow.json output/linux-archive-installed-workflow.json
           npm run installer:linux
-          sudo apt-get install -y --no-install-recommends ./release/sj-paint-*-linux-amd64.deb
+          sudo apt-get install -y --no-install-recommends desktop-file-utils ./release/sj-paint-*-linux-amd64.deb
           trap 'sudo apt-get remove -y sj-paint' EXIT
           xvfb-run -a python3 scripts/verify-installed-linux.py
       - name: Build Windows installer from verified app
