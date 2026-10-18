@@ -121,6 +121,9 @@ try {
   const box = await page.locator('#overlay').boundingBox();
   await page.mouse.move(box.x + 15, box.y + 15); await page.mouse.down();
   await page.mouse.move(box.x + 75, box.y + 45, { steps: 8 }); await page.mouse.up();
+  // Pointer events schedule rendering. Capture the completed stroke, including
+  // its final point, only after the next rendered frame.
+  await page.evaluate(() => new Promise(resolve => requestAnimationFrame(() => requestAnimationFrame(resolve))));
   await page.waitForFunction(previous => document.querySelector('#canvas').toDataURL() !== previous, blank);
   const drawing = await pixels();
   await page.locator('#overlay').focus(); await page.keyboard.press('Control+Shift+s');
@@ -131,8 +134,12 @@ try {
   check('installed app writes real editable project bytes', saved.format === 'sj-paint' && saved.layers.length === 1);
   await page.locator('#overlay').focus(); await page.keyboard.press('Control+n');
   await page.waitForFunction(() => document.title.startsWith('Untitled - '));
+  await page.waitForFunction(expected => document.querySelector('#canvas').toDataURL() === expected, blank);
   await page.keyboard.press('Control+o');
   await page.waitForFunction(() => document.title.startsWith('drawing - '));
+  // File identity updates before the scheduled canvas render. Waiting on exact
+  // visible pixels also prevents the old drawing from falsely satisfying Open.
+  await page.waitForFunction(expected => document.querySelector('#canvas').toDataURL() === expected, drawing);
   check('installed app reopens saved drawing exactly', await pixels() === drawing);
   }
   check('installed workflow has no renderer errors', errors.length === 0, errors);
