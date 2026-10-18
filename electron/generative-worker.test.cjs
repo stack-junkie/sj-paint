@@ -159,7 +159,7 @@ cases=[b'{"x":{},"x":{}}',b'{"x":{"dtype":"F16","dtype":"I64","shape":[2],"data_
        {'x':dict(dtype='F16',shape=[1],data_offsets=[0,2])},
        {'x':dict(dtype='F16',shape=[1],data_offsets=[0,2],unknown=True)},
        dict(valid,__metadata__={'bad':False}),{},[]]
-with tempfile.TemporaryDirectory(dir=pathlib.Path(sys.argv[1]).parent.parent / 'output') as directory:
+with tempfile.TemporaryDirectory() as directory:
     path=Path(directory)/'fixture.safetensors'
     def write(header,payload=b'\0'*4):
         encoded=header if isinstance(header,bytes) else json.dumps(header).encode()
