@@ -1,12 +1,14 @@
 import test from 'node:test';
 import assert from 'node:assert/strict';
-import { mkdtemp, mkdir, writeFile, readFile, rm } from 'node:fs/promises';
+import { mkdtemp, mkdir, writeFile, readFile, realpath, rm } from 'node:fs/promises';
 import { tmpdir } from 'node:os';
 import { resolve, join, dirname } from 'node:path';
 import { managedAiTestProfile } from './managed-ai-test-profile.mjs';
 
 test('explicit managed-profile admission preserves registry and rejects mismatched or unresolved receipts', async () => {
-  const temporaryRoot=resolve(tmpdir()), owned=await mkdtemp(join(temporaryRoot,'sj-profile-admission-'));
+  // Windows runner TEMP can use an alias or short path. This fixture must name
+  // its actual owner directory, just as the production admission check requires.
+  const temporaryRoot=await realpath(tmpdir()), owned=await realpath(await mkdtemp(join(temporaryRoot,'sj-profile-admission-')));
   const profilePath=join(owned,'profile'), repository=join(owned,'checkout'), setupReceiptPath=join(owned,'setup.json');
   await mkdir(join(profilePath,'ai'),{recursive:true});
   const features=Object.fromEntries(['u2net','efficientsam-ti'].map(name=>[name,{
